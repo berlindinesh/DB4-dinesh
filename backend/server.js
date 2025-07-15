@@ -77,7 +77,7 @@ const __dirname = path.dirname(__filename);
 
 
 dotenv.config();
-app.set('trust proxy', 1); // which enable ALB/ELB to pass the real IP address of the client
+
 
 // Connect to the main database with error handling and retry
 (async function setupDatabase() {
@@ -93,6 +93,7 @@ app.set('trust proxy', 1); // which enable ALB/ELB to pass the real IP address o
 })();
 
 const app = express();
+app.set('trust proxy', 1); // which enable ALB/ELB to pass the real IP address of the client
 
 // // Start scheduled jobs after server setup
 // startAllJobs();
@@ -144,8 +145,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Handle preflight requests for all routes
-app.options('*', cors());
+
 
 
 // console.log('Notification routes registered');
