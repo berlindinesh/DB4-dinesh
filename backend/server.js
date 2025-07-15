@@ -74,9 +74,10 @@ import leaveRequestRoutes from './routes/leaveRequestRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const CLIENT_URL = process.env.CLIENT_URL;
+
 
 dotenv.config();
+app.set('trust proxy', 1); // which enable ALB/ELB to pass the real IP address of the client
 
 // Connect to the main database with error handling and retry
 (async function setupDatabase() {
@@ -151,13 +152,13 @@ app.options('*', cors());
 
 
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow requests with no origin (e.g., curl, Postman)
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
     } else {
-      return callback(new Error("Not allowed by CORS"));
+      console.error(`Blocked by CORS: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -169,7 +170,11 @@ app.use(cors({
     'Access-Control-Allow-Origin',
     'X-Company-Code'
   ]
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 // app.use(cors({
 //     origin: "http://localhost:3000", // Allow your frontend
 //     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Allowed HTTP methods
@@ -184,7 +189,7 @@ app.use(cors({
 // }));
 
 // Handle preflight requests for all routes
-app.options('*', cors()); 
+ 
 
 // Error handling middleware
 app.use((err, req, res, next) => {
