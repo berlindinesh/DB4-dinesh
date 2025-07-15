@@ -9,9 +9,11 @@
     
     COPY . .
     
+    # ✅ Increase Node.js heap size to 4GB for build
+    ENV NODE_OPTIONS="--max-old-space-size=8192"
+    
     # Build the production-ready static files
     RUN npm run build
-    
     
     # --------- Stage 2: Serve using NGINX ------------
     FROM nginx:alpine
