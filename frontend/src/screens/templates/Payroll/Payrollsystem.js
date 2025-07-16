@@ -1368,7 +1368,7 @@ const PayrollSystem = () => {
 
       // Use a direct endpoint instead of trying to construct it from API_URL
       // This is more reliable when we're not sure about the structure of API_URL
-      const endpoint = "${process.env.REACT_APP_API_URL}/api/payroll/payslips/generate";
+      const endpoint = `${process.env.REACT_APP_API_URL}/api/payroll/payslips/generate`;
 
       console.log("Using endpoint:", endpoint);
 

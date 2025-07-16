@@ -115,7 +115,7 @@ useEffect(() => {
   //     }
   
   //     const employeeId = localStorage.getItem('Emp_ID');
-  //     const response = await axios.post('${process.env.REACT_APP_API_URL}/api/employees/nomination-details', {
+  //     const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/employees/nomination-details`, {
   //       employeeId,
   //       nominationDetails: values.nominees
   //     });
@@ -132,7 +132,7 @@ useEffect(() => {
   // const handleSubmit = async (values) => {
   //   try {
   //     const employeeId = localStorage.getItem('Emp_ID');
-  //     const response = await axios.post('${process.env.REACT_APP_API_URL}/api/employees/nomination-details', {
+  //     const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/employees/nomination-details`, {
   //       employeeId,
   //       nominationDetails: values.nominees.map(nominee => ({
   //         name: nominee.name,

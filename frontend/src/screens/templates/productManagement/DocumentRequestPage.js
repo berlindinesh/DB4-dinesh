@@ -30,7 +30,7 @@ const DocumentRequestPage = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get('${process.env.REACT_APP_API_URL}/api/documents');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/documents`);
       setDocumentData(response.data);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -124,7 +124,7 @@ const DocumentRequestPage = () => {
           details: [newDocument.employee]
         };
   
-        const response = await axios.post('${process.env.REACT_APP_API_URL}/api/documents', documentToCreate);
+        const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/documents`, documentToCreate);
         setDocumentData(prev => [...prev, response.data]);
       }
       closeCreateModal();

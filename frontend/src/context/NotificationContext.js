@@ -3,7 +3,7 @@ import { FaCalendarAlt, FaClock, FaFileAlt, FaUserAlt } from 'react-icons/fa';
 import api from "../api/axiosInstance";
 import { io } from 'socket.io-client';
 
-const API_URL = '${process.env.REACT_APP_API_URL}/api';
+const API_URL = `${process.env.REACT_APP_API_URL}/api`;
 
 
 const NotificationContext = createContext();
@@ -448,7 +448,7 @@ const addRotatingWorktypeNotification = useCallback(async (employeeName, status,
 
  
 
-  const baseURL =  '${process.env.REACT_APP_API_URL}';
+  const baseURL =  `${process.env.REACT_APP_API_URL}`;
 const socket = io(baseURL, {
   reconnection: true,
   reconnectionAttempts: 5,

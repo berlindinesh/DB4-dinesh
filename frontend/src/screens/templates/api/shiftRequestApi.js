@@ -15,7 +15,7 @@
 
 import axios from 'axios';
 
-const API_URL = '${process.env.REACT_APP_API_URL}/api/shift-requests';
+const API_URL = `${process.env.REACT_APP_API_URL}/api/shift-requests`;
 
 export const fetchShiftRequests = () => axios.get(API_URL);
 

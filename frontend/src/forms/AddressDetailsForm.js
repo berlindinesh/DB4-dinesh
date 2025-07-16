@@ -113,7 +113,7 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
       // }
     
       const response = await api.post(
-        '${process.env.REACT_APP_API_URL}/api/employees/address-info',
+        `${process.env.REACT_APP_API_URL}/api/employees/address-info`,
         addressData
         ,
         {

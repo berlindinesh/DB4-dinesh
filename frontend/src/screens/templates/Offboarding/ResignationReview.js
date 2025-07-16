@@ -277,7 +277,7 @@ const getAuthToken = () => {
     setLoading(true);
     // const token = getAuthToken();
     const response = await api.get(
-      "${process.env.REACT_APP_API_URL}/api/resignations"
+      `${process.env.REACT_APP_API_URL}/api/resignations`
       // ,
       // {
       //   headers: {
@@ -574,7 +574,7 @@ const handleSendEmail = async (resignation) => {
   try {
     setLoading(true);
     // const token = getAuthToken();
-    await api.post("${process.env.REACT_APP_API_URL}/api/resignations/email", {
+    await api.post(`${process.env.REACT_APP_API_URL}/api/resignations/email`, {
       name: resignation.name,
       email: resignation.email,
       position: resignation.position,
@@ -638,7 +638,7 @@ const sendStatusNotification = async (resignation) => {
   try {
     // const token = getAuthToken();
     await api.post(
-      "${process.env.REACT_APP_API_URL}/api/resignations/email",
+      `${process.env.REACT_APP_API_URL}/api/resignations/email`,
       {
         name: resignation.name,
         email: resignation.email,

@@ -156,7 +156,7 @@ const RegisterPage = () => {
     console.log('Sending registration data:', apiData);
     
     try {
-      await axios.post('${process.env.REACT_APP_API_URL}/api/auth/register', apiData);
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/register`, apiData);
       alert('OTP sent to email. Please verify.');
       setOtpSent(true);
       navigate('/verifyOtp', { state: { email: formData.email } });
