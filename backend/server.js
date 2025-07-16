@@ -154,13 +154,28 @@ io.on('connection', (socket) => {
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.toLowerCase();
+    const normalizedAllowed = allowedOrigins.map(o => o.toLowerCase());
+
+    if (normalizedAllowed.includes(normalizedOrigin)) {
+      return callback(null, true);
     } else {
       console.error(`Blocked by CORS: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
+      return callback(new Error("Not allowed by CORS"));
     }
   },
+
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       console.error(`Blocked by CORS: ${origin}`);
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
   allowedHeaders: [
