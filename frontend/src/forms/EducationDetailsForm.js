@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from "../api/axiosInstance";
 import './styles.css'
 
-const API_URL = '/employees';
+// const API_URL = '/employees';
  
 const EducationTrainingDetailsForm = ({ savedEducationDetails, nextStep, prevStep }) => {
 const [educationDetails, setEducationDetails] = useState(savedEducationDetails?.educationDetails || {
@@ -216,18 +216,9 @@ const handleSubmit = async (e) => {
   console.log('Final payload:', JSON.stringify(payload, null, 2));
 
   try {
-    // // Get the authentication token
-    // const token = getAuthToken();
-    // const companyCode = localStorage.getItem('companyCode');
     
-    const response = await api.post('/employees/education-details', 
+    const response = await api.post('employees/education-details', 
       payload,
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'X-Company-Code': companyCode
-      //   }
-      // }
     );
     
     console.log('Server response:', response.data);

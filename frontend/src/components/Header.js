@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import api from "../api/axiosInstance";
+import api, { getAssetUrl } from "../api/axiosInstance";
 import {
   Container,
   Navbar,
@@ -145,20 +145,30 @@ useEffect(() => {
     fetchUserProfile();
   }, []);
 
-  // Get profile image URL
-  const getProfileImageUrl = () => {
-    if (profileData?.personalInfo?.employeeImage) {
-      const imagePath = profileData.personalInfo.employeeImage;
-      if (imagePath.startsWith("http")) {
-        return imagePath;
-      } else {
-        return `${process.env.REACT_APP_API_URL}${imagePath}`;
-      }
-    }
-    return null;
-  };
+ // Get profile image URL
+
+
+  // const getProfileImageUrl = () => {
+  //   if (profileData?.personalInfo?.employeeImage) {
+  //     const imagePath = profileData.personalInfo.employeeImage;
+  //     if (imagePath.startsWith("http")) {
+  //       return imagePath;
+  //     } else {
+  //       return `${process.env.REACT_APP_API_URL}${imagePath}`;
+  //     }
+  //   }
+  //   return null;
+  // };
 
   // Add this function to toggle the notification sidebar
+
+const getProfileImageUrl = () => {
+  if (profileData?.personalInfo?.employeeImage) {
+    return getAssetUrl(profileData.personalInfo.employeeImage);
+  }
+  return null;
+};
+
   const toggleNotificationSidebar = () => {
     setShowNotificationSidebar(!showNotificationSidebar);
   };

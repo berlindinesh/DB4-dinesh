@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Formik, Form, Field } from 'formik';
-import * as Yup from 'yup';
+import React, { useState, useEffect } from "react";
+import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
 import {
   TextField,
   Button,
@@ -8,66 +8,66 @@ import {
   Typography,
   Paper,
   FormControlLabel,
-  Checkbox
-} from '@mui/material';
+  Checkbox,
+} from "@mui/material";
 import api from "../api/axiosInstance";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 
 const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
   const [sameAsPresent, setSameAsPresent] = useState(false);
   const [formValues, setFormValues] = useState({
-    presentAddress: '',
-    presentCity: '',
-    presentDistrict: '',
-    presentState: '',
-    presentPinCode: '',
-    presentCountry: '',
-    permanentAddress: '',
-    permanentCity: '',
-    permanentDistrict: '',
-    permanentState: '',
-    permanentPinCode: '',
-    permanentCountry: ''
+    presentAddress: "",
+    presentCity: "",
+    presentDistrict: "",
+    presentState: "",
+    presentPinCode: "",
+    presentCountry: "",
+    permanentAddress: "",
+    permanentCity: "",
+    permanentDistrict: "",
+    permanentState: "",
+    permanentPinCode: "",
+    permanentCountry: "",
   });
 
   const validationSchema = Yup.object({
-    presentAddress: Yup.string().required('Present address is required'),
-    presentCity: Yup.string().required('City is required'),
-    presentDistrict: Yup.string().required('District is required'),
-    presentState: Yup.string().required('State is required'),
-    presentPinCode: Yup.string().required('PIN code is required'),
-    presentCountry: Yup.string().required('Country is required'),
+    presentAddress: Yup.string().required("Present address is required"),
+    presentCity: Yup.string().required("City is required"),
+    presentDistrict: Yup.string().required("District is required"),
+    presentState: Yup.string().required("State is required"),
+    presentPinCode: Yup.string().required("PIN code is required"),
+    presentCountry: Yup.string().required("Country is required"),
     // Only validate permanent address fields if sameAsPresent is false
-    permanentAddress: Yup.string().when('sameAsPresent', {
+    permanentAddress: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('Permanent address is required')
+      then: Yup.string().required("Permanent address is required"),
     }),
-    permanentCity: Yup.string().when('sameAsPresent', {
+    permanentCity: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('City is required')
+      then: Yup.string().required("City is required"),
     }),
-    permanentDistrict: Yup.string().when('sameAsPresent', {
+    permanentDistrict: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('District is required')
+      then: Yup.string().required("District is required"),
     }),
-    permanentState: Yup.string().when('sameAsPresent', {
+    permanentState: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('State is required')
+      then: Yup.string().required("State is required"),
     }),
-    permanentPinCode: Yup.string().when('sameAsPresent', {
+    permanentPinCode: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('PIN code is required')
+      then: Yup.string().required("PIN code is required"),
     }),
-    permanentCountry: Yup.string().when('sameAsPresent', {
+    permanentCountry: Yup.string().when("sameAsPresent", {
       is: false,
-      then: Yup.string().required('Country is required')
-    })
+      then: Yup.string().required("Country is required"),
+    }),
   });
 
   const handleSubmit = async (values) => {
     try {
-      console.log('Form values being submitted:', values);
-      
+      console.log("Form values being submitted:", values);
+
       // Create the address data object with the exact field names expected by the backend
       const addressData = {
         employeeId: employeeId,
@@ -77,16 +77,16 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
           district: values.presentDistrict,
           state: values.presentState,
           pincode: values.presentPinCode,
-          country: values.presentCountry
+          country: values.presentCountry,
         },
-        permanentAddress: sameAsPresent 
+        permanentAddress: sameAsPresent
           ? {
               street: values.presentAddress,
               city: values.presentCity,
               district: values.presentDistrict,
               state: values.presentState,
               pincode: values.presentPinCode,
-              country: values.presentCountry
+              country: values.presentCountry,
             }
           : {
               street: values.permanentAddress,
@@ -94,64 +94,59 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
               district: values.permanentDistrict,
               state: values.permanentState,
               pincode: values.permanentPinCode,
-              country: values.permanentCountry
-            }
+              country: values.permanentCountry,
+            },
       };
-      
-      console.log('Data being sent to API:', addressData);
-      
+
+      console.log("Data being sent to API:", addressData);
+
       // // Get the authentication token and company code
       // const token = localStorage.getItem('token');
       // const companyCode = localStorage.getItem('companyCode');
-      
+
       // if (!token) {
       //   throw new Error('Authentication token not found. Please log in again.');
       // }
-      
+
       // if (!companyCode) {
       //   throw new Error('Company code not found. Please log in again.');
       // }
-    
-      const response = await api.post(
-        `${process.env.REACT_APP_API_URL}/api/employees/address-info`,
-        addressData
-        ,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            // 'Authorization': `Bearer ${token}`,
-            // 'X-Company-Code': companyCode
-          }
-        }
-      );
-  
-      console.log('API Response:', response.data);
-    
+
+      // const response = await api.post(
+      //   `${process.env.REACT_APP_API_URL}/api/employees/address-info`,
+      //   addressData
+      const response = await api.post("employees/address-info", addressData, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+      });
+
+      console.log("API Response:", response.data);
+
       if (response.data.success) {
-        toast.success('Address information saved successfully');
+        toast.success("Address information saved successfully");
         nextStep();
       } else {
-        toast.error('Failed to save address information');
+        toast.error("Failed to save address information");
       }
     } catch (error) {
-      console.error('API Error:', error.response?.data || error.message);
-      toast.error('Failed to save address information');
+      console.error("API Error:", error.response?.data || error.message);
+      toast.error("Failed to save address information");
     }
   };
-  
 
   const handleSameAddressChange = (e, setFieldValue) => {
     const checked = e.target.checked;
     setSameAsPresent(checked);
-    
+
     if (checked) {
       // Copy present address values to permanent address fields
-      setFieldValue('permanentAddress', formValues.presentAddress);
-      setFieldValue('permanentCity', formValues.presentCity);
-      setFieldValue('permanentDistrict', formValues.presentDistrict);
-      setFieldValue('permanentState', formValues.presentState);
-      setFieldValue('permanentPinCode', formValues.presentPinCode);
-      setFieldValue('permanentCountry', formValues.presentCountry);
+      setFieldValue("permanentAddress", formValues.presentAddress);
+      setFieldValue("permanentCity", formValues.presentCity);
+      setFieldValue("permanentDistrict", formValues.presentDistrict);
+      setFieldValue("permanentState", formValues.presentState);
+      setFieldValue("permanentPinCode", formValues.presentPinCode);
+      setFieldValue("permanentCountry", formValues.presentCountry);
     }
   };
 
@@ -160,35 +155,47 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
       <Typography variant="h5" gutterBottom color="primary">
         Address Details
       </Typography>
-      
+
       <Formik
         initialValues={formValues}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
         enableReinitialize
       >
-        {({ values, errors, touched, handleChange, handleBlur, setFieldValue }) => (
+        {({
+          values,
+          errors,
+          touched,
+          handleChange,
+          handleBlur,
+          setFieldValue,
+        }) => (
           <Form>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Typography variant="h6">Present Address</Typography>
               </Grid>
-              
+
               <Grid item xs={12}>
                 <Field
                   as={TextField}
                   name="presentAddress"
                   label="Street Address"
                   fullWidth
-                  error={touched.presentAddress && Boolean(errors.presentAddress)}
+                  error={
+                    touched.presentAddress && Boolean(errors.presentAddress)
+                  }
                   helperText={touched.presentAddress && errors.presentAddress}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentAddress: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentAddress: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Field
                   as={TextField}
@@ -199,26 +206,34 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
                   helperText={touched.presentCity && errors.presentCity}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentCity: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentCity: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <Field
                   as={TextField}
                   name="presentDistrict"
                   label="District"
                   fullWidth
-                  error={touched.presentDistrict && Boolean(errors.presentDistrict)}
+                  error={
+                    touched.presentDistrict && Boolean(errors.presentDistrict)
+                  }
                   helperText={touched.presentDistrict && errors.presentDistrict}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentDistrict: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentDistrict: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={4}>
                 <Field
                   as={TextField}
@@ -229,152 +244,211 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
                   helperText={touched.presentState && errors.presentState}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentState: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentState: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={4}>
                 <Field
                   as={TextField}
                   name="presentPinCode"
                   label="PIN Code"
                   fullWidth
-                  error={touched.presentPinCode && Boolean(errors.presentPinCode)}
+                  error={
+                    touched.presentPinCode && Boolean(errors.presentPinCode)
+                  }
                   helperText={touched.presentPinCode && errors.presentPinCode}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentPinCode: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentPinCode: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={4}>
                 <Field
                   as={TextField}
                   name="presentCountry"
                   label="Country"
                   fullWidth
-                  error={touched.presentCountry && Boolean(errors.presentCountry)}
+                  error={
+                    touched.presentCountry && Boolean(errors.presentCountry)
+                  }
                   helperText={touched.presentCountry && errors.presentCountry}
                   onChange={(e) => {
                     handleChange(e);
-                    setFormValues(prev => ({ ...prev, presentCountry: e.target.value }));
+                    setFormValues((prev) => ({
+                      ...prev,
+                      presentCountry: e.target.value,
+                    }));
                   }}
                 />
               </Grid>
-              
+
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Checkbox
                       checked={sameAsPresent}
-                      onChange={(e) => handleSameAddressChange(e, setFieldValue)}
+                      onChange={(e) =>
+                        handleSameAddressChange(e, setFieldValue)
+                      }
                       name="sameAsPresent"
                     />
                   }
                   label="Permanent Address same as Present Address"
                 />
               </Grid>
-              
+
               {!sameAsPresent && (
                 <>
                   <Grid item xs={12}>
                     <Typography variant="h6">Permanent Address</Typography>
                   </Grid>
-                  
+
                   <Grid item xs={12}>
                     <Field
                       as={TextField}
                       name="permanentAddress"
                       label="Street Address"
                       fullWidth
-                      error={touched.permanentAddress && Boolean(errors.permanentAddress)}
-                      helperText={touched.permanentAddress && errors.permanentAddress}
+                      error={
+                        touched.permanentAddress &&
+                        Boolean(errors.permanentAddress)
+                      }
+                      helperText={
+                        touched.permanentAddress && errors.permanentAddress
+                      }
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentAddress: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentAddress: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} sm={6}>
                     <Field
                       as={TextField}
                       name="permanentCity"
                       label="City"
                       fullWidth
-                      error={touched.permanentCity && Boolean(errors.permanentCity)}
+                      error={
+                        touched.permanentCity && Boolean(errors.permanentCity)
+                      }
                       helperText={touched.permanentCity && errors.permanentCity}
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentCity: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentCity: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} sm={6}>
                     <Field
                       as={TextField}
                       name="permanentDistrict"
                       label="District"
                       fullWidth
-                      error={touched.permanentDistrict && Boolean(errors.permanentDistrict)}
-                      helperText={touched.permanentDistrict && errors.permanentDistrict}
+                      error={
+                        touched.permanentDistrict &&
+                        Boolean(errors.permanentDistrict)
+                      }
+                      helperText={
+                        touched.permanentDistrict && errors.permanentDistrict
+                      }
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentDistrict: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentDistrict: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} sm={4}>
                     <Field
                       as={TextField}
                       name="permanentState"
                       label="State"
                       fullWidth
-                      error={touched.permanentState && Boolean(errors.permanentState)}
-                      helperText={touched.permanentState && errors.permanentState}
+                      error={
+                        touched.permanentState && Boolean(errors.permanentState)
+                      }
+                      helperText={
+                        touched.permanentState && errors.permanentState
+                      }
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentState: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentState: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} sm={4}>
                     <Field
                       as={TextField}
                       name="permanentPinCode"
                       label="PIN Code"
                       fullWidth
-                      error={touched.permanentPinCode && Boolean(errors.permanentPinCode)}
-                      helperText={touched.permanentPinCode && errors.permanentPinCode}
+                      error={
+                        touched.permanentPinCode &&
+                        Boolean(errors.permanentPinCode)
+                      }
+                      helperText={
+                        touched.permanentPinCode && errors.permanentPinCode
+                      }
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentPinCode: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentPinCode: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
-                  
+
                   <Grid item xs={12} sm={4}>
                     <Field
                       as={TextField}
                       name="permanentCountry"
                       label="Country"
                       fullWidth
-                      error={touched.permanentCountry && Boolean(errors.permanentCountry)}
-                      helperText={touched.permanentCountry && errors.permanentCountry}
+                      error={
+                        touched.permanentCountry &&
+                        Boolean(errors.permanentCountry)
+                      }
+                      helperText={
+                        touched.permanentCountry && errors.permanentCountry
+                      }
                       onChange={(e) => {
                         handleChange(e);
-                        setFormValues(prev => ({ ...prev, permanentCountry: e.target.value }));
+                        setFormValues((prev) => ({
+                          ...prev,
+                          permanentCountry: e.target.value,
+                        }));
                       }}
                     />
                   </Grid>
                 </>
               )}
-              
+
               <Grid item xs={12} sx={{ mt: 2 }}>
                 <Button
                   type="button"
@@ -384,11 +458,7 @@ const AddressDetailsForm = ({ nextStep, prevStep, employeeId }) => {
                 >
                   Back
                 </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                >
+                <Button type="submit" variant="contained" color="primary">
                   Next
                 </Button>
               </Grid>
@@ -445,7 +515,7 @@ export default AddressDetailsForm;
 //     try {
 //       // Log the form values to verify what's being submitted
 //       console.log('Form values being submitted:', values);
-      
+
 //       // Create the address data object with the exact field names expected by the backend
 //       const addressData = {
 //         employeeId: employeeId,
@@ -466,10 +536,10 @@ export default AddressDetailsForm;
 //           country: values.permanentCountry || ''
 //         }
 //       };
-      
+
 //       // Log the data being sent to the API
 //       console.log('Data being sent to API:', addressData);
-    
+
 //       const response = await axios.post(
 //         '${process.env.REACT_APP_API_URL}/api/employees/address-info',
 //         addressData,
@@ -479,9 +549,9 @@ export default AddressDetailsForm;
 //           }
 //         }
 //       );
-  
+
 //       console.log('API Response:', response.data);
-    
+
 //       if (response.data.success) {
 //         toast.success('Address information saved successfully');
 //         nextStep();
@@ -493,9 +563,7 @@ export default AddressDetailsForm;
 //       toast.error('Failed to save address information');
 //     }
 //   };
-  
-  
-  
+
 //   // const handleSubmit = async (values) => {
 //   //   try {
 //   //     console.log('Submitting address details:', values);
@@ -513,7 +581,7 @@ export default AddressDetailsForm;
 //   //         pincode: values.permanentPincode
 //   //       }
 //   //     };
-  
+
 //   //     const response = await axios.post(
 //   //       '${process.env.REACT_APP_API_URL}/api/employees/address-info',
 //   //       addressData,
@@ -525,7 +593,7 @@ export default AddressDetailsForm;
 //   //     );
 
 //   //     console.log('API Response:', response.data);
-  
+
 //   //     // Only navigate to next step if submission is successful
 //   //     if (response.data.success) {
 //   //       toast.success('Address information saved successfully');
@@ -539,8 +607,6 @@ export default AddressDetailsForm;
 //   //     // No navigation on error
 //   //   }
 //   // };
-  
-  
 
 //   const AnimatedTextField = ({ field, form, label, ...props }) => {
 //     const handleChange = (e) => {
@@ -574,7 +640,7 @@ export default AddressDetailsForm;
 //       validationSchema={validationSchema}
 //       enableReinitialize={true}
 //       onSubmit={(values) => {
-//         handleSubmit("addressInfo", values);       
+//         handleSubmit("addressInfo", values);
 //       }}
 //     >
 //       {({ errors, touched, values, setFieldValue }) => (
@@ -583,7 +649,7 @@ export default AddressDetailsForm;
 //             <Typography variant="h5" gutterBottom color="primary">
 //               Present Address
 //             </Typography>
-            
+
 //             <Grid container spacing={3}>
 //               <Grid item xs={12}>
 //                 <Field

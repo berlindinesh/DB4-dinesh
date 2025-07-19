@@ -276,14 +276,10 @@ const getAuthToken = () => {
   try {
     setLoading(true);
     // const token = getAuthToken();
+    // const response = await api.get(
+    //   `${process.env.REACT_APP_API_URL}/api/resignations`
     const response = await api.get(
-      `${process.env.REACT_APP_API_URL}/api/resignations`
-      // ,
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // }
+      'resignations'
     );
 
     // Get employee data for each resignation
@@ -378,8 +374,11 @@ const getAuthToken = () => {
   const handleDeleteConfirm = async () => {
     try {
       setLoading(true);
+      // await api.delete(
+      //   `${process.env.REACT_APP_API_URL}/api/resignations/${resignationToDelete._id}`
       await api.delete(
-        `${process.env.REACT_APP_API_URL}/api/resignations/${resignationToDelete._id}`
+        `resignations/${resignationToDelete._id}`
+
       );
 
       setSnackbar({
@@ -480,8 +479,11 @@ const handleReviewSubmit = async () => {
     setLoading(true);
     // const token = getAuthToken();
 
+    // const response = await api.put(
+    //   `${process.env.REACT_APP_API_URL}/api/resignations/${selectedResignation._id}`,
     const response = await api.put(
-      `${process.env.REACT_APP_API_URL}/api/resignations/${selectedResignation._id}`,
+  `resignations/${selectedResignation._id}`,
+
       {
         status: reviewStatus,
         reviewNotes: reviewNotes,
@@ -574,7 +576,8 @@ const handleSendEmail = async (resignation) => {
   try {
     setLoading(true);
     // const token = getAuthToken();
-    await api.post(`${process.env.REACT_APP_API_URL}/api/resignations/email`, {
+    // await api.post(`${process.env.REACT_APP_API_URL}/api/resignations/email`
+    await api.post('resignations/email', {
       name: resignation.name,
       email: resignation.email,
       position: resignation.position,
@@ -637,8 +640,11 @@ const handleSendEmail = async (resignation) => {
 const sendStatusNotification = async (resignation) => {
   try {
     // const token = getAuthToken();
+    // await api.post(
+    //   `${process.env.REACT_APP_API_URL}/api/resignations/email`,
     await api.post(
-      `${process.env.REACT_APP_API_URL}/api/resignations/email`,
+  'resignations/email',
+
       {
         name: resignation.name,
         email: resignation.email,

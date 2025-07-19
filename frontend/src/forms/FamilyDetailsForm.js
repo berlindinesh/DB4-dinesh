@@ -70,23 +70,11 @@ const formik = useFormik({
     try {
       const employeeId = localStorage.getItem('Emp_ID');
       
-      // // Get the authentication token
-      // const token = getAuthToken();
-
-      // const companyCode = localStorage.getItem('companyCode');
-
-      
-      const response = await api.post('/employees/family-details', 
+      const response = await api.post('employees/family-details', 
         {
           employeeId,
           familyDetails: values.familyDetails
         }
-        // {
-        //   headers: {
-        //     'Authorization': `Bearer ${token}`,
-        //     'X-Company-Code': companyCode
-        //   }
-        // }
       );
 
       if (response.data.success) {

@@ -39,7 +39,7 @@ import {
   Add,
 } from "@mui/icons-material";
 
-import api from "../../../api/axiosInstance";
+import api, { getAssetUrl } from "../../../api/axiosInstance";
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -272,7 +272,7 @@ useEffect(() => {
       //   return;
       // }
       
-      const response = await api.get("/employees/registered", 
+      const response = await api.get("employees/registered", 
       //   {
       //   // headers: {
       //   //   'Authorization': `Bearer ${token}`
@@ -295,9 +295,13 @@ useEffect(() => {
         role: employee.joiningDetails?.initialDesignation || "Not Assigned",
         location:
           employee.addressDetails?.presentAddress?.city || "Not Specified",
+        // profileImage: employee.personalInfo?.employeeImage
+        //   ? `${process.env.REACT_APP_API_URL}${employee.personalInfo.employeeImage}`
+        //   : null,
         profileImage: employee.personalInfo?.employeeImage
-          ? `${process.env.REACT_APP_API_URL}${employee.personalInfo.employeeImage}`
-          : null,
+  ? getAssetUrl(employee.personalInfo.employeeImage)
+  : null,
+
       }));
 
       console.log("Processed employee data:", employeeData);

@@ -176,12 +176,6 @@ const handleSubmit = async (values) => {
         nominationDetails: values.nominees
       }
       
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'X-Company-Code': companyCode
-      //   }
-      // }
     );
 
     if (response.data.success) {

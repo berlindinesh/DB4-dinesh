@@ -257,7 +257,7 @@ const fetchContracts = async () => {
   try {
     setLoading(true);
     
-    const response = await api.get("/payroll-contracts");
+    const response = await api.get("payroll-contracts");
     
     if (response.data.success) {
       setContracts(response.data.data);
@@ -282,7 +282,7 @@ const fetchEmployees = async () => {
     // const token = getAuthToken();
     
     const response = await api.get(
-      "/employees/registered"
+      "employees/registered"
       // ,
       // {
       //   headers: {
@@ -360,7 +360,7 @@ const handleEmployeeSelect = async (employeeId) => {
   try {
     setLoading(true);
     
-    const response = await api.get(`/employees/get-employee/${employeeId}`);
+    const response = await api.get(`employees/get-employee/${employeeId}`);
     console.log("Employee details response:", response.data); // Debug log
     
     if (response.data) {
@@ -439,7 +439,7 @@ const fetchDashboardStats = async () => {
   try {
     setLoading(true);
     
-    const response = await api.get("/payroll-contracts/dashboard");
+    const response = await api.get("payroll-contracts/dashboard");
     
     if (response.data && response.data.success) {
       setDashboardStats(response.data.data);
@@ -580,7 +580,7 @@ const handleSaveCreate = async () => {
     let response;
     if (editingId) {
       response = await api.put(
-        `/payroll-contracts/${editingId}`,
+        `payroll-contracts/${editingId}`,
         contractData,
         {
           headers: {
@@ -643,7 +643,7 @@ const handleSave = async () => {
     // const token = getAuthToken();
     
     const response = await api.put(
-      `/payroll-contracts/${editedData._id}`,
+      `payroll-contracts/${editedData._id}`,
       {
         contract: editedData.contract,
         employee: editedData.employee,
@@ -713,7 +713,7 @@ const handleConfirmDelete = async () => {
   try {
     setLoading(true);
     
-    const response = await api.delete(`/payroll-contracts/${contractToDelete._id}`);
+    const response = await api.delete(`payroll-contracts/${contractToDelete._id}`);
     
     if (response.data.success) {
       toast.success("Contract deleted successfully");
@@ -818,7 +818,7 @@ const handleApplyFilter = async () => {
     // Convert filter params to query string
     const queryString = new URLSearchParams(filterParams).toString();
 
-    const response = await api.get(`/payroll-contracts/filter?${queryString}`);
+    const response = await api.get(`payroll-contracts/filter?${queryString}`);
     
     if (response.data.success) {
       setFilteredContracts(response.data.data);
@@ -886,7 +886,7 @@ const handleBulkUpdate = async () => {
     
     // In a real app with API calls:
     const response = await api.post(
-      "/payroll-contracts/bulk-update",
+      "payroll-contracts/bulk-update",
       {
         contractIds: selectedContracts,
         field: bulkUpdateData.field,
