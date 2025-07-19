@@ -533,7 +533,10 @@ router.get('/registered', async (req, res) => {
   }
 });
 
-router.get('/bank-info/:employeeId', async (req, res) => {
+// Replace your existing bank-info routes (lines 536-582) with these updated versions:
+
+// GET bank info - Keep this route
+router.get('/bank-info/:employeeId', authenticate, async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
@@ -545,17 +548,46 @@ router.get('/bank-info/:employeeId', async (req, res) => {
       });
     }
     
+    const { employeeId } = req.params;
+    
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID is required'
+      });
+    }
+    
     // Get company-specific Employee model
     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
     
-    const employee = await CompanyEmployee.findOne({ Emp_ID: req.params.employeeId });
-    res.json(employee.bankInfo);
+    const employee = await CompanyEmployee.findOne({ Emp_ID: employeeId });
+    
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        bankInfo: employee.bankInfo || {}
+      }
+    });
+    
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching bank info' });
+    console.error('Error fetching bank info:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching bank info',
+      error: error.message 
+    });
   }
 });
 
-router.put('/bank-info/:id', async (req, res) => {
+// PUT bank info - Update this route (fix the parameter name issue)
+router.put('/bank-info/:employeeId', authenticate, async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
@@ -564,6 +596,26 @@ router.put('/bank-info/:id', async (req, res) => {
       return res.status(401).json({ 
         error: 'Authentication required', 
         message: 'Company code not found in request' 
+      });
+    }
+    
+    const { employeeId } = req.params; // Fixed: was using :id in route but req.params.employeeId
+    const { bankInfo } = req.body;
+    
+    console.log('Updating bank info for employee:', employeeId);
+    console.log('Bank info data:', bankInfo);
+    
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID is required'
+      });
+    }
+    
+    if (!bankInfo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bank information is required'
       });
     }
     
@@ -571,15 +623,84 @@ router.put('/bank-info/:id', async (req, res) => {
     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
     
     const employee = await CompanyEmployee.findOneAndUpdate(
-      { Emp_ID: req.params.employeeId },
-      { bankInfo: req.body },
-      { new: true }
+      { Emp_ID: employeeId },
+      { $set: { bankInfo: bankInfo } },
+      { new: true, runValidators: true }
     );
-    res.json(employee.bankInfo);
+    
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Bank information updated successfully',
+      data: {
+        bankInfo: employee.bankInfo
+      }
+    });
+    
   } catch (error) {
-    res.status(500).json({ message: 'Error updating bank info' });
+    console.error('Error updating bank info:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error updating bank info',
+      error: error.message 
+    });
   }
 });
+
+
+// router.get('/bank-info/:employeeId', async (req, res) => {
+//   try {
+//     // Get company code from authenticated user
+//     const companyCode = req.companyCode;
+    
+//     if (!companyCode) {
+//       return res.status(401).json({ 
+//         error: 'Authentication required', 
+//         message: 'Company code not found in request' 
+//       });
+//     }
+    
+//     // Get company-specific Employee model
+//     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
+    
+//     const employee = await CompanyEmployee.findOne({ Emp_ID: req.params.employeeId });
+//     res.json(employee.bankInfo);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching bank info' });
+//   }
+// });
+
+// router.put('/bank-info/:id', async (req, res) => {
+//   try {
+//     // Get company code from authenticated user
+//     const companyCode = req.companyCode;
+    
+//     if (!companyCode) {
+//       return res.status(401).json({ 
+//         error: 'Authentication required', 
+//         message: 'Company code not found in request' 
+//       });
+//     }
+    
+//     // Get company-specific Employee model
+//     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
+    
+//     const employee = await CompanyEmployee.findOneAndUpdate(
+//       { Emp_ID: req.params.employeeId },
+//       { bankInfo: req.body },
+//       { new: true }
+//     );
+//     res.json(employee.bankInfo);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error updating bank info' });
+//   }
+// });
 
 router.put('/work-info/:id', async (req, res) => {
   try {

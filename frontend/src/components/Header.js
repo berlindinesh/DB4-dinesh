@@ -149,14 +149,45 @@ useEffect(() => {
   const getProfileImageUrl = () => {
     if (profileData?.personalInfo?.employeeImage) {
       const imagePath = profileData.personalInfo.employeeImage;
+      
+      // If it's already a full URL, return as is
       if (imagePath.startsWith("http")) {
         return imagePath;
       } else {
-        return `${process.env.REACT_APP_API_URL}${imagePath}`;
+        // Get the API URL from environment or use default
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5002';
+        
+        // Ensure the path starts with /uploads/
+        let cleanPath = imagePath;
+        if (!cleanPath.startsWith('/uploads/')) {
+          // If path starts with just '/', remove it first
+          if (cleanPath.startsWith('/')) {
+            cleanPath = cleanPath.substring(1);
+          }
+          // Add /uploads/ prefix
+          cleanPath = `/uploads/${cleanPath}`;
+        }
+        
+        const fullUrl = `${apiUrl}${cleanPath}`;
+        console.log('Profile image URL constructed:', fullUrl); // Debug log
+        return fullUrl;
       }
     }
-    return null;
+    
+    // Return default avatar if no image
+    return "https://res.cloudinary.com/dgglbbh4d/image/upload/v1752920009/avatar_ux17jt.avif";
   };
+  // const getProfileImageUrl = () => {
+  //   if (profileData?.personalInfo?.employeeImage) {
+  //     const imagePath = profileData.personalInfo.employeeImage;
+  //     if (imagePath.startsWith("http")) {
+  //       return imagePath;
+  //     } else {
+  //       return `${process.env.REACT_APP_API_URL}${imagePath}`;
+  //     }
+  //   }
+  //   return null;
+  // };
 
   // Add this function to toggle the notification sidebar
   const toggleNotificationSidebar = () => {
@@ -777,7 +808,7 @@ const handleTimerClick = async () => {
                               }}
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = `${process.env.PUBLIC_URL}/default-avatar.png`;
+                                e.target.src = `https://res.cloudinary.com/dgglbbh4d/image/upload/v1752920009/avatar_ux17jt.avif`;
                               }}
                             />
                           ) : (
@@ -923,7 +954,7 @@ const handleTimerClick = async () => {
                               }}
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = `${process.env.PUBLIC_URL}/default-avatar.png`;
+                                e.target.src = `https://res.cloudinary.com/dgglbbh4d/image/upload/v1752920009/avatar_ux17jt.avif`;
                               }}
                             />
                           ) : (
