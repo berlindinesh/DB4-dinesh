@@ -53,7 +53,7 @@ const BonusPoints = () => {
                 border: "2px solid #ddd",
                 boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
               }}
-              src={"/path-to-your-uploaded-image/Screenshot-2025-01-09-100335.png"} // Update the path here
+              src={`${process.env.REACT_APP_API_URL}/uploads/image.jpg`} // Update the path here
             />
                <Button
               startIcon={<AddIcon />}
