@@ -2,23 +2,21 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
-    env_file:
-      - ./backend/.env
+    build: ./backend
     ports:
       - "5002:5002"
     networks:
-      - hrms-net
+      - app-net
 
   frontend:
-    build:
-      context: ./frontend
+    build: ./frontend
     ports:
-      - "80:80"  # Host 3000 -> Container 80 (NGINX default)
+      - "80:80"
+    depends_on:
+      - backend
     networks:
-      - hrms-net
+      - app-net
 
 networks:
-  hrms-net:
+  app-net:
     driver: bridge

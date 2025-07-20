@@ -3,15 +3,14 @@ name: CI/CD Deployment to EC2 with Docker and ALB
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - main
 
 jobs:
   deploy:
-    name: Deploy Project to EC2 Instance
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Source Code
+    - name: Checkout Code
       uses: actions/checkout@v3
 
     - name: Set up SSH
@@ -19,19 +18,21 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Rsync Project Files to EC2
+    - name: Sync project files to EC2
       run: |
-        rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./ ${{ secrets.HOST_SSH }}:${{ secrets.DEPLOY_PATH }}
+        rsync -avz --exclude 'node_modules' --exclude '.git' ./ ${{ secrets.HOST_SSH }}:${{ secrets.DEPLOY_PATH }}
 
-    - name: SSH and deploy on EC2
+    - name: SSH and Deploy with Cache
       run: |
         ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no ${{ secrets.HOST_SSH }} << 'EOF'
           set -e
           cd ${{ secrets.DEPLOY_PATH }}
-          echo "Stopping existing containers..."
-          docker-compose down || true
-          echo "Rebuilding and restarting containers..."
-          docker-compose build --no-cache
+
+          echo "Building Docker images with cache..."
+          docker-compose build
+
+          echo "Restarting containers..."
           docker-compose up -d --remove-orphans
-          echo "Deployment completed!"
+
+          echo "Deployment completed! ✅"
         EOF
