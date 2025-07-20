@@ -23,11 +23,15 @@ jobs:
       run: |
         rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./ ${{ secrets.HOST_SSH }}:${{ secrets.DEPLOY_PATH }}
 
-    - name: Deploy on EC2 via SSH
+    - name: SSH and deploy on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.HOST_SSH }} << 'EOF'
+        ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no ${{ secrets.HOST_SSH }} << 'EOF'
+          set -e
           cd ${{ secrets.DEPLOY_PATH }}
-          docker-compose down
+          echo "Stopping existing containers..."
+          docker-compose down || true
+          echo "Rebuilding and restarting containers..."
           docker-compose build --no-cache
           docker-compose up -d --remove-orphans
+          echo "Deployment completed!"
         EOF
