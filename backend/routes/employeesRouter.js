@@ -653,55 +653,6 @@ router.put('/bank-info/:employeeId', authenticate, async (req, res) => {
   }
 });
 
-
-// router.get('/bank-info/:employeeId', async (req, res) => {
-//   try {
-//     // Get company code from authenticated user
-//     const companyCode = req.companyCode;
-    
-//     if (!companyCode) {
-//       return res.status(401).json({ 
-//         error: 'Authentication required', 
-//         message: 'Company code not found in request' 
-//       });
-//     }
-    
-//     // Get company-specific Employee model
-//     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
-    
-//     const employee = await CompanyEmployee.findOne({ Emp_ID: req.params.employeeId });
-//     res.json(employee.bankInfo);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching bank info' });
-//   }
-// });
-
-// router.put('/bank-info/:id', async (req, res) => {
-//   try {
-//     // Get company code from authenticated user
-//     const companyCode = req.companyCode;
-    
-//     if (!companyCode) {
-//       return res.status(401).json({ 
-//         error: 'Authentication required', 
-//         message: 'Company code not found in request' 
-//       });
-//     }
-    
-//     // Get company-specific Employee model
-//     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
-    
-//     const employee = await CompanyEmployee.findOneAndUpdate(
-//       { Emp_ID: req.params.employeeId },
-//       { bankInfo: req.body },
-//       { new: true }
-//     );
-//     res.json(employee.bankInfo);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error updating bank info' });
-//   }
-// });
-
 router.put('/work-info/:id', async (req, res) => {
   try {
     // Get company code from authenticated user
