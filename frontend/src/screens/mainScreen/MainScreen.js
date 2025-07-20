@@ -71,12 +71,12 @@ const MainScreen = () => {
       <div className="hrms-content-container">
         <div className="hrms-intro-container">
           <h1 className="hrms-intro-title">
-            Welcome to <span className="company-name">DB4Cloud</span> HRMS
+            Welcome to <span className="company-name">DB4People</span> HRMS
           </h1>
 
           <p className="hrms-intro-text">
             Transform your HR operations with our comprehensive Human Resource
-            Management System. DB4Cloud HRMS streamlines your workforce
+            Management System. DB4People HRMS streamlines your workforce
             management with powerful tools for employee data management,
             attendance tracking, payroll processing, and performance evaluation.
           </p>
