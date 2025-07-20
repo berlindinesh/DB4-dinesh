@@ -20,7 +20,8 @@ jobs:
 
     - name: Sync project files to EC2
       run: |
-        rsync -avz --exclude 'node_modules' --exclude '.git' ./ ${{ secrets.HOST_SSH }}:${{ secrets.DEPLOY_PATH }}
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" --exclude 'node_modules' --exclude '.git' ./ ${{ secrets.HOST_SSH }}:${{ secrets.DEPLOY_PATH }}
+
 
     - name: SSH and Deploy with Cache
       run: |
