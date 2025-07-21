@@ -264,7 +264,8 @@ const PayrollSystem = () => {
         }`,
         department: selectedEmp.joiningDetails?.department || "",
         designation: selectedEmp.joiningDetails?.initialDesignation || "",
-        email: selectedEmp.personalInfo?.email || "",
+        // email: selectedEmp.personalInfo?.email || "",
+        workEmail: selectedEmp.personalInfo?.workemail || "",
         basicPay: basicPay,
         dateOfJoining: formattedDateOfJoining,
         // Add the PAN, UAN, and PF numbers from the correct locations
@@ -574,6 +575,7 @@ const PayrollSystem = () => {
           "PAN Number": emp.panNo,
           "Payable Days": emp.payableDays,
           "LOP Days": emp.lop,
+          "Work Email": emp.workEmail,
           Status: emp.status,
         };
       })
@@ -635,7 +637,8 @@ const PayrollSystem = () => {
                 payableDays: parseInt(row["Payable Days"]) || 30,
                 lop: parseFloat(row["LOP Days"]) || 0,
                 status: "Active",
-                email: row["Email"] || "",
+                workEmail: row["Work Email"] || "",
+                // email: row["Email"] || "",
               };
             })
             .filter((emp) => emp.empId && emp.empName && emp.basicPay > 0);
@@ -720,7 +723,8 @@ const PayrollSystem = () => {
     lop: 0.0,
     department: "",
     designation: "",
-    email: "",
+    workEmail: "",
+    // email: "",
     dateOfJoining: "",
     status: "Active",
   });
@@ -1202,7 +1206,8 @@ const PayrollSystem = () => {
       lop: 0,
       department: "",
       designation: "",
-      email: "",
+      // email: "",
+      workEmail: "", 
       status: "Active",
     });
   };
@@ -1301,7 +1306,8 @@ const PayrollSystem = () => {
         pfNo: employee.pfNo || "",
         uanNo: employee.uanNo || "",
         panNo: employee.panNo || "",
-        email: employee.email || "",
+        // email: employee.email || "",
+        workEmail: employee.workEmail || "",
         dateOfJoining: employee.dateOfJoining || employee.joiningDate, // Check both fields
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
@@ -1588,7 +1594,8 @@ const PayrollSystem = () => {
                     lop: 0,
                     department: "",
                     designation: "",
-                    email: "",
+                    // email: "",
+                    workEmail: "",
                     status: "Active",
                   });
                   setOpenEmployeeDialog(true);
@@ -3417,14 +3424,14 @@ const PayrollSystem = () => {
               </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
-                  label="Email"
+                  label="Work Email"
                   type="email"
                   fullWidth
-                  value={newEmployee.email}
+                  value={newEmployee.workEmail}
                   onChange={(e) =>
                     setNewEmployee({
                       ...newEmployee,
-                      email: e.target.value,
+                      workEmail: e.target.value,
                     })
                   }
                 />

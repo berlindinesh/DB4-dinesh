@@ -61,7 +61,8 @@ const unifiedPayrollSchema = new mongoose.Schema({
     }
   },
   payableDays: { type: Number, default: 30 },
-  email: { type: String }, // This already exists
+  // email: { type: String }, // This already exists
+  workEmail: { type: String }, // Changed from email to workEmail
   status: { type: String, default: 'Active' },
   joiningDate: { type: Date, required: true }, // Added joining date field
   
@@ -114,7 +115,8 @@ unifiedPayrollSchema.statics.findByUser = async function(userId, userEmail) {
     employee = await this.findOne({ 
       $or: [
         { userEmail: userEmail },
-        { email: userEmail }
+        { workEmail: userEmail }
+        // { email: userEmail }
       ]
     });
   }
@@ -142,14 +144,16 @@ unifiedPayrollSchema.statics.findByEmpIdAndUser = async function(empId, userId, 
   
   const isOwner = (employeeUserIdStr && employeeUserIdStr === requestUserIdStr) || 
                   (employee.userEmail && employee.userEmail === userEmail) || 
-                  (employee.email && employee.email === userEmail);
+                  (employee.workEmail && employee.workEmail === userEmail);
+                  // (employee.email && employee.email === userEmail);
   
   console.log(`Employee ownership check:`, {
     empId,
     employeeUserId: employeeUserIdStr,
     requestUserId: requestUserIdStr,
     employeeUserEmail: employee.userEmail,
-    employeeEmail: employee.email,
+    employeeWorkEmail: employee.workEmail,
+    // employeeEmail: employee.email,
     requestUserEmail: userEmail,
     isOwner,
     isLinkedToUser: employee.isLinkedToUser
@@ -167,7 +171,8 @@ unifiedPayrollSchema.statics.findAllByUser = async function(userId, userEmail) {
     $or: [
       { userId: userId },
       { userEmail: userEmail },
-      { email: userEmail }
+      { workEmail: userEmail }
+      // { email: userEmail }
     ]
   });
   
