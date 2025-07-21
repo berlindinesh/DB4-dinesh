@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 
-const BonusPoints = () => {
+const BonusPoints = ({ profileImage }) => {
   const [open, setOpen] = useState(false);
   const [points, setPoints] = useState(0);
   const [log, setLog] = useState([
@@ -53,7 +53,7 @@ const BonusPoints = () => {
                 border: "2px solid #ddd",
                 boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
               }}
-              src={"/path-to-your-uploaded-image/Screenshot-2025-01-09-100335.png"} // Update the path here
+              src={profileImage || "https://res.cloudinary.com/dgglbbh4d/image/upload/v1752920009/avatar_ux17jt.avif"}
             />
                <Button
               startIcon={<AddIcon />}

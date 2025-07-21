@@ -183,7 +183,7 @@ const updateBankInfo = async () => {
   try {
     setLoading(true);
     const response = await api.put(
-      `employees/bank-info/${id}`, // Make sure 'id' is the employee ID
+      `employees/bank-info/${employeeId}`, // Make sure 'id' is the employee ID
       { bankInfo }, // Send bankInfo in the correct format
       {
         headers: {
@@ -1721,7 +1721,7 @@ const fetchContracts = async () => {
                   </Tab.Pane>
 
                   <Tab.Pane eventKey="bonusPoints">
-                    <BonusPoints employeeId={employeeId} />
+                    <BonusPoints employeeId={employeeId} profileImage={profileImage} />
                   </Tab.Pane>
 
                   <Tab.Pane eventKey="scheduledInterview">
