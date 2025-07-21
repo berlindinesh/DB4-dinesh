@@ -1,17 +1,13 @@
 FROM node:18
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Cache npm install step
 COPY package*.json ./
 RUN npm install
 
-# Copy the rest of the app
+# Copy only app code (changing this will invalidate cache from here down)
 COPY . .
 
-# Expose backend port
 EXPOSE 5002
-
-# Start using dev script (e.g., nodemon)
-CMD ["npm", "run", "dev"]
+CMD ["node", "server.js"]

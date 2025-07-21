@@ -356,7 +356,7 @@ function OnboardingView() {
     }
 
     try {
-      const response = await api.post("/onboarding", newCandidate);
+      const response = await api.post("onboarding", newCandidate);
       setCandidates([...candidates, response.data]);
       setNewCandidate({
         name: "",
@@ -385,7 +385,7 @@ function OnboardingView() {
     try {
       // const token = getAuthToken();
       const response = await api.put(
-        `/onboarding/${id}`,
+        `onboarding/${id}`,
         updatedData
         // {
         //   headers: {
@@ -408,7 +408,7 @@ function OnboardingView() {
     try {
       // const token = getAuthToken();
       await api.delete(
-        `/onboarding/${id}`
+        `onboarding/${id}`
         //   {
         //   headers: {
         //     'Authorization': `Bearer ${token}`
@@ -448,7 +448,7 @@ function OnboardingView() {
 
   const sendMailToCandidate = async (candidate) => {
     try {
-      await api.post("/onboarding/send-email", {
+      await api.post("onboarding/send-email", {
         email: candidate.email,
         name: candidate.name,
         jobPosition: candidate.jobPosition,
@@ -470,7 +470,7 @@ function OnboardingView() {
       if (candidate) {
         const updatedCandidate = { ...candidate, stage: newStage };
         await api.put(
-          `/onboarding/${id}`,
+          `onboarding/${id}`,
           updatedCandidate
           // {
           //   headers: {
@@ -490,7 +490,7 @@ function OnboardingView() {
     try {
       // const token = getAuthToken();
       await api.delete(
-        `/onboarding/${selectedCandidateId}`
+        `onboarding/${selectedCandidateId}`
         // {
         //   headers: {
         //     'Authorization': `Bearer ${token}`
@@ -509,7 +509,7 @@ function OnboardingView() {
     try {
       // const token = getAuthToken();
       await api.post(
-        "/onboarding/send-email",
+        "onboarding/send-email",
         {
           email: selectedCandidateForMail.email,
           name: selectedCandidateForMail.name,

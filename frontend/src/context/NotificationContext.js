@@ -3,7 +3,7 @@ import { FaCalendarAlt, FaClock, FaFileAlt, FaUserAlt } from 'react-icons/fa';
 import api from "../api/axiosInstance";
 import { io } from 'socket.io-client';
 
-const API_URL = `${process.env.REACT_APP_API_URL}/api`;
+
 
 
 const NotificationContext = createContext();
@@ -448,7 +448,8 @@ const addRotatingWorktypeNotification = useCallback(async (employeeName, status,
 
  
 
-  const baseURL =  `${process.env.REACT_APP_API_URL}`;
+  // const baseURL =  `${process.env.REACT_APP_API_URL}`;
+  const baseURL = process.env.REACT_APP_API_URL;
 const socket = io(baseURL, {
   reconnection: true,
   reconnectionAttempts: 5,
@@ -505,8 +506,10 @@ const sendRotatingShiftNotification = async (userId, message, status, relatedId)
     // const token = getAuthToken();
     // if (!token) return null;
 
+    // const response = await api.post(
+    //   `${API_URL}/notifications`,
     const response = await api.post(
-      `${API_URL}/notifications`,
+      'notifications',
       {
         userId,
         message,
@@ -533,8 +536,10 @@ const markRotatingShiftNotificationAsRead = async (notificationId) => {
     // const token = getAuthToken();
     // if (!token) return;
 
+    // const response = await api.put(
+    //   `${API_URL}/notifications/${notificationId}/read`,
     const response = await api.put(
-      `${API_URL}/notifications/${notificationId}/read`,
+  `notifications/${notificationId}/read`,
       {}
     );
     

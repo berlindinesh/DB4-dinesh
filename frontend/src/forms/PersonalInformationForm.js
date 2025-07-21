@@ -93,7 +93,7 @@ useEffect(() => {
         // const companyCode = localStorage.getItem('companyCode');
         
         // First get the userId
-        const userIdResponse = await api.post('/auth/get-user-id', 
+        const userIdResponse = await api.post('auth/get-user-id', 
           {
             email: userEmail
           }
@@ -104,7 +104,7 @@ useEffect(() => {
           
           // Then fetch the user details
           const userDetailsResponse = await api.get(
-            `/auth/user/${userIdResponse.data.userId}`
+            `auth/user/${userIdResponse.data.userId}`
           );
           
           if (userDetailsResponse.data.success) {
@@ -237,7 +237,7 @@ useEffect(() => {
         // If we have userEmail but no userId, try to fetch it
         if (userEmail) {
           try {
-            const response = await api.post('/auth/get-user-id', {
+            const response = await api.post('auth/get-user-id', {
               email: userEmail
             });
             
@@ -391,13 +391,12 @@ useEffect(() => {
     // }
   
     const response = await api.post(
-      '/employees/personal-info',
+      'employees/personal-info',
       formData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
-          // 'Authorization': `Bearer ${token}`,
-          // 'X-Company-Code': companyCode  // Add the company code header
+
         }
       }
     );

@@ -241,17 +241,22 @@ const handleSubmit = async (values) => {
     });
   
     
+    // const response = await api.post(
+    //   `${process.env.REACT_APP_API_URL}/api/employees/joining-details`,
+    //   {
+    //     employeeId,
+    //     formData
+    //   },
     const response = await api.post(
-      `${process.env.REACT_APP_API_URL}/api/employees/joining-details`,
-      {
-        employeeId,
-        formData
-      },
+  'employees/joining-details',
+  {
+    employeeId,
+    formData
+  },
       {
         headers: { 
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}`,
-          // 'X-Company-Code': companyCode
+          
         }
       }
     );

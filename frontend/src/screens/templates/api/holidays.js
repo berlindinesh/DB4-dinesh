@@ -1,6 +1,6 @@
 import api from "../../../api/axiosInstance";
 
-const API_URL = "/holidays";
+const API_URL = "holidays";
 // Fetch all holidays
 export const fetchHolidays = () => api.get(API_URL);
 

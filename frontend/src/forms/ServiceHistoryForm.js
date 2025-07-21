@@ -70,13 +70,6 @@ const handleSubmit = async (values) => {
         serviceHistory: hasPreviousExperience ? values.serviceHistory : []
       }
 
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //     'X-Company-Code': companyCode 
-      //   }
-      // }
-
     );
 
     if (response.data.success) {

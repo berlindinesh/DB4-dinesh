@@ -86,7 +86,7 @@ const OrganizationChart = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
-  const API_URL = `${process.env.REACT_APP_API_URL}/api/organization`; 
+  // const API_URL = `${process.env.REACT_APP_API_URL}/api/organization`; 
 
   useEffect(() => {
     fetchOrganizationChart();
@@ -490,7 +490,8 @@ const canViewChart = () => {
 const fetchOrganizationChart = async () => {
   try {
     setIsLoading(true);
-    const response = await api.get(`${API_URL}/chart`);
+    // const response = await api.get(`${API_URL}/chart`);
+    const response = await api.get('organization/chart');
     setTreeData(response.data);
     setIsLoading(false);
   } catch (error) {
@@ -532,7 +533,9 @@ const fetchOrganizationChart = async () => {
 const fetchRegisteredEmployees = async () => {
   try {
     setLoadingEmployees(true);
-    const response = await api.get(`${process.env.REACT_APP_API_URL}/api/employees/registered`);
+    // const response = await api.get(`${process.env.REACT_APP_API_URL}/api/employees/registered`);
+    const response = await api.get('employees/registered');
+
     setRegisteredEmployees(response.data);
     setLoadingEmployees(false);
   } catch (error) {
@@ -555,7 +558,9 @@ const handleAddPosition = async () => {
     };
     delete positionData.designation;
 
-    const response = await api.post(`${API_URL}/positions`, positionData);
+    // const response = await api.post(`${API_URL}/positions`, positionData);
+    const response = await api.post('organization/positions', positionData);
+
 
     await fetchOrganizationChart();
     setIsDialogOpen(false);
@@ -599,7 +604,9 @@ const handleUpdatePosition = async () => {
 
     // const token = getAuthToken();
     // Use the editingNodeId directly
-    await api.put(`${API_URL}/positions/${editingNodeId}`, positionData
+    // await api.put(`${API_URL}/positions/${editingNodeId}`, positionData
+    await api.put(`organization/positions/${editingNodeId}`, positionData
+
     //   , {
     //   headers: {
     //     'Authorization': `Bearer ${token}`
@@ -634,12 +641,8 @@ const handleConfirmDelete = async () => {
   try {
     setIsLoading(true);
     // const token = getAuthToken();
-    await api.delete(`${API_URL}/positions/${positionToDelete._id}`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
+    // await api.delete(`${API_URL}/positions/${positionToDelete._id}`
+    await api.delete(`organization/positions/${positionToDelete._id}`
   );
     await fetchOrganizationChart();
     setAlert({

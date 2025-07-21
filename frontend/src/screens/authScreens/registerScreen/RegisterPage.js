@@ -1,6 +1,6 @@
 // RegisterPage.js
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../../../api/axiosInstance';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Box, Button, TextField, Typography, Container, InputAdornment, IconButton, Grid, LinearProgress } from '@mui/material';
@@ -156,7 +156,7 @@ const RegisterPage = () => {
     console.log('Sending registration data:', apiData);
     
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/register`, apiData);
+      await api.post('auth/register', apiData);
       alert('OTP sent to email. Please verify.');
       setOtpSent(true);
       navigate('/verifyOtp', { state: { email: formData.email } });
