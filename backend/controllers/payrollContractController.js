@@ -1,5 +1,67 @@
 import Contract, { contractSchema } from '../models/payrollContractModel.js';
 import getModelForCompany from '../models/genericModelFactory.js';
+import path from 'path';
+import fs from 'fs';
+
+// Add this new function to handle document downloads
+export const downloadContractDocument = async (req, res) => {
+  try {
+    const { filename } = req.params;
+    
+    if (!filename) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Filename is required' 
+      });
+    }
+    
+    // Construct the file path
+    const filePath = path.join(process.cwd(), 'uploads', 'contracts', filename);
+    
+    console.log('Attempting to download file:', filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.log('File not found:', filePath);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'File not found' 
+      });
+    }
+    
+    // Get file stats
+    const stats = fs.statSync(filePath);
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', stats.size);
+    
+    // Create read stream and pipe to response
+    const fileStream = fs.createReadStream(filePath);
+    
+    fileStream.on('error', (error) => {
+      console.error('Error reading file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          success: false, 
+          error: 'Error reading file' 
+        });
+      }
+    });
+    
+    fileStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error' 
+      });
+    }
+  }
+};
 
 export const getContracts = async (req, res) => {
   try {
@@ -67,8 +129,150 @@ export const getContractById = async (req, res) => {
   }
 };
 
+// export const createContract = async (req, res) => {
+//   try {
+//     console.log('Creating contract - received data:', req.body);
+//     console.log('Uploaded file:', req.file);
+    
+//     // Get company code from authenticated user
+//     const companyCode = req.companyCode;
+    
+//     if (!companyCode) {
+//       return res.status(401).json({ 
+//         error: 'Authentication required', 
+//         message: 'Company code not found in request' 
+//       });
+//     }
+    
+//     console.log(`Creating contract for company: ${companyCode}`);
+    
+//     // Get company-specific Contract model
+//     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
+    
+//     // Prepare contract data
+//     const contractData = { ...req.body };
+    
+//     // Handle file upload if present
+//     if (req.file) {
+//       console.log('Processing uploaded file:', req.file);
+      
+//       contractData.contractDocument = {
+//         filename: req.file.filename,
+//         originalName: req.file.originalname,
+//         path: req.file.path,
+//         size: req.file.size,
+//         mimetype: req.file.mimetype,
+//         uploadDate: new Date()
+//       };
+      
+//       console.log('Contract document data:', contractData.contractDocument);
+//     }
+    
+//     // Convert string numbers to actual numbers
+//     if (contractData.basicSalary) {
+//       contractData.basicSalary = Number(contractData.basicSalary);
+//     }
+//     if (contractData.noticePeriod) {
+//       contractData.noticePeriod = Number(contractData.noticePeriod);
+//     }
+    
+//     console.log('Final contract data:', contractData);
+    
+//     const newContract = new CompanyContract(contractData);
+//     const savedContract = await newContract.save();
+    
+//     console.log(`Contract created successfully with ID: ${savedContract._id}`);
+//     res.status(201).json({ success: true, data: savedContract });
+//   }
+//   catch (error) {
+//     console.error('Error creating contract:', error);
+//     res.status(400).json({ success: false, error: error.message });
+//   }
+// };
+
+// // Update the updateContract function
+// export const updateContract = async (req, res) => {
+//   try {
+//     console.log('Updating contract - received data:', req.body);
+//     console.log('Uploaded file:', req.file);
+    
+//     // Get company code from authenticated user
+//     const companyCode = req.companyCode;
+    
+//     if (!companyCode) {
+//       return res.status(401).json({ 
+//         error: 'Authentication required', 
+//         message: 'Company code not found in request' 
+//       });
+//     }
+    
+//     const { id } = req.params;
+//     if (!id) {
+//       return res.status(400).json({ 
+//         success: false, 
+//         error: 'Contract ID is required' 
+//       });
+//     }
+    
+//     console.log(`Updating contract ${id} for company: ${companyCode}`);
+    
+//     // Get company-specific Contract model
+//     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
+    
+//     const contract = await CompanyContract.findById(id);
+//     if (!contract) {
+//       return res.status(404).json({ success: false, error: 'Contract not found' });
+//     }
+    
+//     // Prepare update data
+//     const updateData = { ...req.body };
+    
+//     // Handle file upload if present
+//     if (req.file) {
+//       console.log('Processing uploaded file for update:', req.file);
+      
+//       updateData.contractDocument = {
+//         filename: req.file.filename,
+//         originalName: req.file.originalname,
+//         path: req.file.path,
+//         size: req.file.size,
+//         mimetype: req.file.mimetype,
+//         uploadDate: new Date()
+//       };
+      
+//       console.log('Updated contract document data:', updateData.contractDocument);
+//     }
+    
+//     // Convert string numbers to actual numbers
+//     if (updateData.basicSalary) {
+//       updateData.basicSalary = Number(updateData.basicSalary);
+//     }
+//     if (updateData.noticePeriod) {
+//       updateData.noticePeriod = Number(updateData.noticePeriod);
+//     }
+    
+//     console.log('Final update data:', updateData);
+    
+//     const updatedContract = await CompanyContract.findByIdAndUpdate(
+//       id,
+//       updateData,
+//       { new: true, runValidators: true }
+//     );
+    
+//     console.log(`Contract ${id} updated successfully`);
+//     res.status(200).json({ success: true, data: updatedContract });
+//   } catch (error) {
+//     console.error(`Error updating contract ${req.params.id}:`, error);
+//     res.status(400).json({ success: false, error: error.message });
+//   }
+// };
+
 export const createContract = async (req, res) => {
   try {
+    console.log('=== CREATE CONTRACT START ===');
+    console.log('Creating contract - received data:', req.body);
+    console.log('Uploaded file:', req.file);
+    
     // Get company code from authenticated user
     const companyCode = req.companyCode;
     
@@ -84,42 +288,21 @@ export const createContract = async (req, res) => {
     // Get company-specific Contract model
     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
     
-    // Check if filing status is valid (if provided)
-    if (req.body.filingStatus) {
-      const validFilingStatuses = [
-        'Individual', 
-        'Head of Household (HOH)', 
-        'Married Filing Jointly (MFJ)', 
-        'Married Filing Separately (MFS)', 
-        'Single Filer'
-      ];
-      
-      if (!validFilingStatuses.includes(req.body.filingStatus)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Invalid filing status provided' 
-        });
-      }
-    }
+    // Prepare contract data
+    const contractData = { ...req.body };
     
-    // Check if this is a renewal
-    if (req.body.previousContractId) {
-      const previousContract = await CompanyContract.findById(req.body.previousContractId);
-      if (previousContract) {
-        // Add renewal history
-        req.body.renewalHistory = [{
-          previousContractId: req.body.previousContractId,
-          renewalDate: new Date(),
-          reason: req.body.renewalReason || 'Contract renewal'
-        }];
-        
-        // Copy salary history if it exists
-        if (previousContract.salaryHistory && previousContract.salaryHistory.length > 0) {
-          req.body.salaryHistory = [...previousContract.salaryHistory];
-        }
-         // Handle file upload if present
+    // Handle file upload if present
     if (req.file) {
-      req.body.contractDocument = {
+      console.log('✅ Processing uploaded file:', req.file);
+      console.log('File details:', {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+      
+      contractData.contractDocument = {
         filename: req.file.filename,
         originalName: req.file.originalname,
         path: req.file.path,
@@ -127,41 +310,48 @@ export const createContract = async (req, res) => {
         mimetype: req.file.mimetype,
         uploadDate: new Date()
       };
-    }
-        // Add current salary to history if it's different
-        if (previousContract.basicSalary !== req.body.basicSalary) {
-          if (!req.body.salaryHistory) req.body.salaryHistory = [];
-          req.body.salaryHistory.push({
-            amount: req.body.basicSalary,
-            effectiveDate: new Date(),
-            reason: 'Contract renewal with salary adjustment'
-          });
-        }
-      }
-    } else if (req.body.basicSalary) {
-      // For new contracts, initialize salary history
-      req.body.salaryHistory = [{
-        amount: req.body.basicSalary,
-        effectiveDate: req.body.startDate || new Date(),
-        reason: 'Initial contract'
-      }];
+      
+      console.log('✅ Contract document data saved:', contractData.contractDocument);
+    } else {
+      console.log('⚠️ No file uploaded');
     }
     
-    const newContract = new CompanyContract(req.body);
+    // Convert string numbers to actual numbers
+    if (contractData.basicSalary) {
+      contractData.basicSalary = Number(contractData.basicSalary);
+    }
+    if (contractData.noticePeriod) {
+      contractData.noticePeriod = Number(contractData.noticePeriod);
+    }
+    
+    console.log('Final contract data:', contractData);
+    
+    const newContract = new CompanyContract(contractData);
     const savedContract = await newContract.save();
     
-    console.log(`Contract created successfully for ${req.body.employee}`);
+    console.log(`✅ Contract created successfully with ID: ${savedContract._id}`);
+    
+    // Log the saved contract document info
+    if (savedContract.contractDocument) {
+      console.log('✅ Saved contract document info:', savedContract.contractDocument);
+    }
+    
+        console.log('=== CREATE CONTRACT END ===');
+    
     res.status(201).json({ success: true, data: savedContract });
   }
-  
   catch (error) {
-    console.error('Error creating contract:', error);
+    console.error('❌ Error creating contract:', error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
 
 export const updateContract = async (req, res) => {
   try {
+    console.log('=== UPDATE CONTRACT START ===');
+    console.log('Updating contract - received data:', req.body);
+    console.log('Uploaded file:', req.file);
+    
     // Get company code from authenticated user
     const companyCode = req.companyCode;
     
@@ -185,47 +375,31 @@ export const updateContract = async (req, res) => {
     // Get company-specific Contract model
     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
     
-    // Check if filing status is valid (if being updated)
-    if (req.body.filingStatus) {
-      const validFilingStatuses = [
-        'Individual', 
-        'Head of Household (HOH)', 
-        'Married Filing Jointly (MFJ)', 
-        'Married Filing Separately (MFS)', 
-        'Single Filer'
-      ];
-      
-      if (!validFilingStatuses.includes(req.body.filingStatus)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Invalid filing status provided' 
-        });
-      }
-    }
-    
-    const contract = await CompanyContract.findById(req.params.id);
+    const contract = await CompanyContract.findById(id);
     if (!contract) {
       return res.status(404).json({ success: false, error: 'Contract not found' });
     }
     
-    // Check if salary is being updated
-    if (req.body.basicSalary && req.body.basicSalary !== contract.basicSalary) {
-      if (!contract.salaryHistory) contract.salaryHistory = [];
-      
-      // Add to salary history
-      req.body.salaryHistory = [
-        ...(contract.salaryHistory || []),
-        {
-          amount: req.body.basicSalary,
-          effectiveDate: new Date(),
-          reason: req.body.salaryChangeReason || 'Salary adjustment'
-        }
-      ];
+    console.log('Existing contract found:', contract._id);
+    if (contract.contractDocument) {
+      console.log('Existing document:', contract.contractDocument);
     }
-
+    
+    // Prepare update data
+    const updateData = { ...req.body };
+    
     // Handle file upload if present
     if (req.file) {
-      req.body.contractDocument = {
+      console.log('✅ Processing uploaded file for update:', req.file);
+      console.log('File details:', {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+      
+      updateData.contractDocument = {
         filename: req.file.filename,
         originalName: req.file.originalname,
         path: req.file.path,
@@ -233,22 +407,45 @@ export const updateContract = async (req, res) => {
         mimetype: req.file.mimetype,
         uploadDate: new Date()
       };
+      
+      console.log('✅ Updated contract document data:', updateData.contractDocument);
+    } else {
+      console.log('⚠️ No new file uploaded, keeping existing document');
     }
     
+    // Convert string numbers to actual numbers
+    if (updateData.basicSalary) {
+      updateData.basicSalary = Number(updateData.basicSalary);
+    }
+    if (updateData.noticePeriod) {
+      updateData.noticePeriod = Number(updateData.noticePeriod);
+    }
+    
+    console.log('Final update data:', updateData);
     
     const updatedContract = await CompanyContract.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+      id,
+      updateData,
       { new: true, runValidators: true }
     );
     
-    console.log(`Contract ${id} updated successfully`);
+    console.log(`✅ Contract ${id} updated successfully`);
+    
+    // Log the updated contract document info
+    if (updatedContract.contractDocument) {
+      console.log('✅ Updated contract document info:', updatedContract.contractDocument);
+    }
+    
+    console.log('=== UPDATE CONTRACT END ===');
+    
     res.status(200).json({ success: true, data: updatedContract });
   } catch (error) {
-    console.error(`Error updating contract ${req.params.id}:`, error);
+    console.error(`❌ Error updating contract ${req.params.id}:`, error);
     res.status(400).json({ success: false, error: error.message });
   }
 };
+
+
 
 export const deleteContract = async (req, res) => {
   try {

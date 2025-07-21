@@ -378,102 +378,114 @@ const Contract = () => {
     }
   };
 
-  const handleSaveCreate = async () => {
-    try {
-      setLoading(true);
+ const handleSaveCreate = async () => {
+  try {
+    setLoading(true);
 
-      // Validate required fields
-      if (
-        !formData.contractTitle ||
-        !formData.employee ||
-        !formData.startDate ||
-        !formData.wageType ||
-        !formData.basicSalary
-      ) {
-        toast.error("Please fill all required fields");
-        setLoading(false);
-        return;
-      }
-
-      const contractData = {
-        contract: formData.contractTitle,
-        contractStatus: formData.contractStatus,
-        employee: formData.employee,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        wageType: formData.wageType,
-        payFrequency: formData.payFrequency,
-        basicSalary: Number(formData.basicSalary),
-        filingStatus: formData.filingStatus,
-        department: formData.department,
-        position: formData.position,
-        role: formData.role,
-        shift: formData.shift,
-        workType: formData.workType,
-        noticePeriod: Number(formData.noticePeriod),
-        deductFromBasicPay: formData.deductFromBasicPay,
-        calculateDailyLeave: formData.calculateDailyLeave,
-        note: formData.note,
-      };
-
-      let response;
-      if (editingId) {
-        response = await api.put(
-          `/payroll-contracts/${editingId}`,
-          contractData,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      } else {
-        response = await api.post("/payroll-contracts", contractData, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-      }
-
-      if (response.data.success) {
-        toast.success(
-          editingId
-            ? "Contract updated successfully"
-            : "Contract created successfully"
-        );
-
-        // Update the contracts list
-        if (editingId) {
-          setContracts(
-            contracts.map((contract) =>
-              contract._id === editingId ? response.data.data : contract
-            )
-          );
-          setFilteredContracts(
-            filteredContracts.map((contract) =>
-              contract._id === editingId ? response.data.data : contract
-            )
-          );
-        } else {
-          setContracts([...contracts, response.data.data]);
-          setFilteredContracts([...filteredContracts, response.data.data]);
-        }
-
-        // Reset form and close create/edit page
-        setShowCreatePage(false);
-        setEditingId(null);
-        setSelectedEmployee("");
-      } else {
-        toast.error(response.data.error || "Failed to process contract");
-      }
-    } catch (error) {
-      console.error("Contract operation error:", error);
-      toast.error(error.response?.data?.error || "Failed to process contract");
-    } finally {
+    // Validate required fields
+    if (
+      !formData.contractTitle ||
+      !formData.employee ||
+      !formData.startDate ||
+      !formData.wageType ||
+      !formData.basicSalary
+    ) {
+      toast.error("Please fill all required fields");
       setLoading(false);
+      return;
     }
-  };
 
+    // Create FormData for file upload
+    const formDataToSend = new FormData();
+    
+    // Append all form fields
+    formDataToSend.append('contract', formData.contractTitle);
+    formDataToSend.append('contractStatus', formData.contractStatus);
+    formDataToSend.append('employee', formData.employee);
+    formDataToSend.append('startDate', formData.startDate);
+    formDataToSend.append('endDate', formData.endDate);
+    formDataToSend.append('wageType', formData.wageType);
+    formDataToSend.append('payFrequency', formData.payFrequency);
+    formDataToSend.append('basicSalary', Number(formData.basicSalary));
+    formDataToSend.append('filingStatus', formData.filingStatus);
+    formDataToSend.append('department', formData.department);
+    formDataToSend.append('position', formData.position);
+    formDataToSend.append('role', formData.role);
+    formDataToSend.append('shift', formData.shift);
+    formDataToSend.append('workType', formData.workType);
+    formDataToSend.append('noticePeriod', Number(formData.noticePeriod));
+    formDataToSend.append('deductFromBasicPay', formData.deductFromBasicPay);
+    formDataToSend.append('calculateDailyLeave', formData.calculateDailyLeave);
+    formDataToSend.append('note', formData.note);
+
+    // Append file if present
+    if (formData.contractDocument) {
+      console.log('Appending file to FormData:', formData.contractDocument);
+      formDataToSend.append('contractDocument', formData.contractDocument);
+    }
+
+    // Log FormData contents for debugging
+    console.log('FormData contents:');
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(key, value);
+    }
+
+    let response;
+    if (editingId) {
+      response = await api.put(`/payroll-contracts/${editingId}`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } else {
+      response = await api.post("/payroll-contracts", formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    }
+
+    if (response.data.success) {
+      toast.success(
+        editingId
+          ? "Contract updated successfully"
+          : "Contract created successfully"
+      );
+
+      // Update the contracts list
+      if (editingId) {
+        setContracts(
+          contracts.map((contract) =>
+            contract._id === editingId ? response.data.data : contract
+          )
+        );
+        setFilteredContracts(
+          filteredContracts.map((contract) =>
+            contract._id === editingId ? response.data.data : contract
+          )
+        );
+      } else {
+        setContracts([...contracts, response.data.data]);
+        setFilteredContracts([...filteredContracts, response.data.data]);
+      }
+
+      // Reset form and close create/edit page
+      setShowCreatePage(false);
+      setEditingId(null);
+      setSelectedEmployee("");
+    } else {
+      toast.error(response.data.error || "Failed to process contract");
+    }
+  } catch (error) {
+    console.error("Contract operation error:", error);
+    toast.error(error.response?.data?.error || "Failed to process contract");
+  } finally {
+    setLoading(false);
+  }
+};
+
+ 
+ 
   // HandleSave function (for inline editing)
   const handleSave = async () => {
     try {
@@ -588,14 +600,24 @@ const Contract = () => {
   };
 
   // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+const handleInputChange = (e) => {
+  const { name, value, type, checked, files } = e.target;
+  
+  if (type === "file") {
+    const file = files[0];
+    console.log('File selected:', file); // Debug log
     setFormData({
       ...formData,
-      [name]:
-        type === "checkbox" ? checked : type === "file" ? files[0] : value,
+      [name]: file
     });
-  };
+  } else {
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  }
+};
+
 
   // Handle sorting
   const handleSort = (key) => {
@@ -2752,7 +2774,7 @@ const Contract = () => {
                         </Typography>
                       </Box>
 
-                      <Button
+                      {/* <Button
                         variant="outlined"
                         size="small"
                         startIcon={<FaFileExport />}
@@ -2806,7 +2828,119 @@ const Contract = () => {
                         }}
                       >
                         View/Download
-                      </Button>
+                      </Button> */}
+<Button
+  variant="outlined"
+  size="small"
+  startIcon={<FaFileExport />}
+  onClick={async () => {
+    try {
+      const contractDoc = previewContract.contractDocument;
+
+      if (!contractDoc || !contractDoc.filename) {
+        toast.warning("No document available for download");
+        return;
+      }
+
+      console.log("=== FRONTEND DOWNLOAD START ===");
+      console.log("Contract document:", contractDoc);
+
+      // Show loading toast
+      toast.info("Preparing download...");
+
+      // Use the payroll contracts download route
+      const downloadUrl = `payroll-contracts/download/${contractDoc.filename}`;
+      
+      console.log("Download URL:", downloadUrl);
+      console.log("Filename to download:", contractDoc.filename);
+
+      try {
+        // First, let's check what files are available (debug)
+        const debugResponse = await api.get('payroll-contracts/debug/files');
+        console.log("Available files:", debugResponse.data);
+        
+        // Check if our file is in the list
+        const availableFiles = debugResponse.data.files || [];
+        const fileExists = availableFiles.includes(contractDoc.filename);
+        console.log("File exists in directory:", fileExists);
+        
+        if (!fileExists) {
+          console.log("Available files:", availableFiles);
+          toast.error(`File ${contractDoc.filename} not found in uploads directory`);
+          return;
+        }
+
+        // Now try to download
+        const response = await api.get(downloadUrl, {
+          responseType: 'blob',
+          headers: {
+            'Accept': 'application/octet-stream'
+          },
+          timeout: 30000
+        });
+
+        console.log("Download response received, size:", response.data.size);
+
+        // Create blob URL and trigger download
+        const blob = new Blob([response.data]);
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create temporary link and trigger download
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = contractDoc.originalName || contractDoc.filename;
+        
+        // Add to DOM, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Download completed successfully");
+        console.log("=== FRONTEND DOWNLOAD END ===");
+
+      } catch (downloadError) {
+        console.error("Download request failed:", downloadError);
+        
+        if (downloadError.response) {
+          console.log("Error response:", downloadError.response.data);
+          console.log("Error status:", downloadError.response.status);
+        }
+        
+        throw downloadError;
+      }
+
+    } catch (error) {
+      console.error("Download error:", error);
+      
+      if (error.response?.status === 404) {
+        toast.error("Document file not found on server");
+      } else if (error.response?.status === 400) {
+        toast.error("Invalid file request");
+      } else if (error.code === 'ECONNABORTED') {
+        toast.error("Download timeout - file may be too large");
+      } else {
+        toast.error(`Failed to download document: ${error.message}`);
+      }
+    }
+  }}
+  sx={{
+    borderColor: "#1976d2",
+    color: "#1976d2",
+    "&:hover": {
+      backgroundColor: "#e3f2fd",
+      borderColor: "#1976d2",
+    },
+  }}
+>
+  View/Download
+</Button>
+
+
+
+         
                     </Box>
                   </Paper>
                 </Grid>
