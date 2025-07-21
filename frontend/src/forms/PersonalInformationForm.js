@@ -42,6 +42,9 @@ const PersonalInformationForm = ({ nextStep, setEmployeeId, onSave, userEmail, u
     email: userEmail || '',
     workemail: '' ,
   });
+  
+  const [isFormLocked, setIsFormLocked] = useState(false);
+  const [lockMessage, setLockMessage] = useState('');
 
   const userIdentifier = userId || userID || getUserIdFromToken() || localStorage.getItem('userId');
 
@@ -83,7 +86,7 @@ const PersonalInformationForm = ({ nextStep, setEmployeeId, onSave, userEmail, u
   //   fetchUserData();
   // }, [userEmail]);
 
-  // Update the useEffect for fetching user data
+  // Update the useEffect for fetching user data and checking existing registration
 useEffect(() => {
   const fetchUserData = async () => {
     if (userEmail) {
@@ -101,6 +104,24 @@ useEffect(() => {
         
         if (userIdResponse.data.success) {
           setUserId(userIdResponse.data.userId);
+          
+          // Check if employee already exists for this user
+          try {
+            const existingEmployeeResponse = await api.get(`employees/by-user/${userIdResponse.data.userId}`);
+            
+            if (existingEmployeeResponse.data.success) {
+              // Employee already exists, lock the form
+              setIsFormLocked(true);
+              setLockMessage('You have already completed the onboarding form. Each user can only fill the form once.');
+              toast.warning('Onboarding form already completed for this account.');
+              return;
+            }
+          } catch (employeeError) {
+            // If 404, employee doesn't exist yet - that's fine, proceed with form
+            if (employeeError.response?.status !== 404) {
+              console.error('Error checking existing employee:', employeeError);
+            }
+          }
           
           // Then fetch the user details
           const userDetailsResponse = await api.get(
@@ -140,21 +161,36 @@ useEffect(() => {
     bloodGroup: Yup.string().required('Blood group is required'),
     nationality: Yup.string().required('Nationality is required'),
     aadharNumber: Yup.string()
-      .matches(/^[0-9]{12}$/, 'Aadhar number must be 12 digits')
+      .matches(/^[0-9]{12}$/, 'Aadhar number must be exactly 12 digits')
+      .test('unique-aadhar', 'This Aadhar number is already registered', function(value) {
+        // Server-side validation can be added here
+        return true;
+      })
       .required('Aadhar number is required'),
     panNumber: Yup.string()
-      .matches(/^[A-Z0-9]{10}$/, 'PAN number must be 10 characters')
+      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'PAN format: ABCDE1234F (5 letters, 4 numbers, 1 letter)')
+      .test('unique-pan', 'This PAN number is already registered', function(value) {
+        // Server-side validation can be added here
+        return true;
+      })
       .required('PAN number is required'),
     mobileNumber: Yup.string()
-      .matches(/^[0-9]{10}$/, 'Mobile number must be 10 digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Please enter a valid 10-digit Indian mobile number')
+      .test('unique-mobile', 'This mobile number is already registered', function(value) {
+        // Server-side validation can be added here
+        return true;
+      })
       .required('Mobile number is required'),
     email: Yup.string()
-      .email('Invalid email format')
-      .required('Email is required')
+      .email('Please enter a valid email address')
+      .required('Personal email is required')
       .trim(),
     workemail: Yup.string()
-      .email('Invalid email format')
-      .required('Email is required')
+      .email('Please enter a valid work email address')
+      .required('Work email is required')
+      .test('different-from-personal', 'Work email should be different from personal email', function(value) {
+        return value !== this.parent.email;
+      })
       .trim(),
     prefix: Yup.string().required('Prefix is required'),
     employeeImage: Yup.mixed().required('Profile photo is required'),
@@ -504,6 +540,7 @@ useEffect(() => {
           {...props}
           label={label}
           onChange={handleChange}
+          disabled={isFormLocked || props.disabled}
           error={form.touched[field.name] && Boolean(form.errors[field.name])}
           helperText={form.touched[field.name] && form.errors[field.name]}
           sx={{
@@ -549,6 +586,12 @@ useEffect(() => {
               </Alert>
             )}
 
+            {isFormLocked && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                {lockMessage}
+              </Alert>
+            )}
+
             <Grid container spacing={3}>
               {/* Name fields */}
               <Grid item container spacing={2}>
@@ -561,6 +604,7 @@ useEffect(() => {
                           {...field}
                           label="Title"
                           displayEmpty
+                          disabled={isFormLocked}
                           error={touched.prefix && Boolean(errors.prefix)}
                           onChange={(e) => {
                             const selectedPrefix = prefixOptions.find(p => p.value === e.target.value);
@@ -624,6 +668,7 @@ useEffect(() => {
                           <Select
                             {...field}
                             label="Date"
+                            disabled={isFormLocked}
                             error={touched.dobDay && Boolean(errors.dobDay)}
                             onChange={(e) => {
                               form.setFieldValue('dobDay', e.target.value);
@@ -655,6 +700,7 @@ useEffect(() => {
                           <Select
                             {...field}
                             label="Month"
+                            disabled={isFormLocked}
                             error={touched.dobMonth && Boolean(errors.dobMonth)}
                             onChange={(e) => {
                               form.setFieldValue('dobMonth', e.target.value);
@@ -686,6 +732,7 @@ useEffect(() => {
                           <Select
                             {...field}
                             label="Year"
+                            disabled={isFormLocked}
                             error={touched.dobYear && Boolean(errors.dobYear)}
                             onChange={(e) => {
                               form.setFieldValue('dobYear', e.target.value);
@@ -723,6 +770,7 @@ useEffect(() => {
                       <Select
                         {...field}
                         label="Gender"
+                        disabled={isFormLocked}
                         error={touched.gender && Boolean(errors.gender)}
                       >
                         <MenuItem value="">Select Gender</MenuItem>
@@ -747,6 +795,7 @@ useEffect(() => {
                       <Select
                         {...field}
                         label="Marital Status"
+                        disabled={isFormLocked}
                         error={touched.maritalStatus && Boolean(errors.maritalStatus)}
                       >
                         <MenuItem value="">Select Marital Status</MenuItem>
@@ -771,6 +820,7 @@ useEffect(() => {
                       <Select
                         {...field}
                         label="Blood Group"
+                        disabled={isFormLocked}
                         error={touched.bloodGroup && Boolean(errors.bloodGroup)}
                       >
                         <MenuItem value="">Select Blood Group</MenuItem>
@@ -845,6 +895,13 @@ useEffect(() => {
                   fullWidth
                   required
                 />
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary" 
+                  sx={{ mt: 0.5, display: 'block', fontStyle: 'italic' }}
+                >
+                  Note: Should be same as registered email ID
+                </Typography>
               </Grid>
 
               <Grid item xs={12}>
@@ -855,6 +912,7 @@ useEffect(() => {
                       <input
                         type="file"
                         accept="image/*"
+                        disabled={isFormLocked}
                         onChange={(event) => {
                           const file = event.currentTarget.files[0];
                           if (file) {
@@ -892,10 +950,12 @@ useEffect(() => {
                 variant="contained"
                 color="primary"
                 fullWidth
-                disabled={isSubmitting}
+                disabled={isSubmitting || isFormLocked}
                 sx={{ mt: 2, py: 1.5 }}
               >
-                {isSubmitting ? (
+                {isFormLocked ? (
+                  'Form Already Completed'
+                ) : isSubmitting ? (
                   <>
                     <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
                     Saving...
