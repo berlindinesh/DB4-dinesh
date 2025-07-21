@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // Update the personal-info route handler to include userId validation
-router.post('/personal-info', uploads.single('employeeImage'), async (req, res) => {
+router.post('/personal-info/:emplyeeId', uploads.single('employeeImage'), async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
@@ -555,9 +555,34 @@ router.get('/bank-info/:employeeId', async (req, res) => {
   }
 });
 
-router.put('/bank-info/:id', async (req, res) => {
+// router.put('/bank-info/:employeeId', async (req, res) => {
+//   try {
+//     // Get company code from authenticated user
+//     const companyCode = req.companyCode;
+    
+//     if (!companyCode) {
+//       return res.status(401).json({ 
+//         error: 'Authentication required', 
+//         message: 'Company code not found in request' 
+//       });
+//     }
+    
+//     // Get company-specific Employee model
+//     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
+    
+//     const employee = await CompanyEmployee.findOneAndUpdate(
+//       { Emp_ID: req.params.employeeId },
+//       { bankInfo: req.body },
+//       { new: true }
+//     );
+//     res.json(employee.bankInfo);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error updating bank info' });
+//   }
+// });
+
+router.put('/bank-info/:employeeId', async (req, res) => {
   try {
-    // Get company code from authenticated user
     const companyCode = req.companyCode;
     
     if (!companyCode) {
@@ -567,19 +592,35 @@ router.put('/bank-info/:id', async (req, res) => {
       });
     }
     
-    // Get company-specific Employee model
     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
     
     const employee = await CompanyEmployee.findOneAndUpdate(
-      { Emp_ID: req.params.employeeId },
-      { bankInfo: req.body },
+      { Emp_ID: req.params.employeeId }, // Use employeeId here
+      { $set: { bankInfo: req.body.bankInfo } }, // Make sure to access bankInfo from body
       { new: true }
     );
-    res.json(employee.bankInfo);
+    
+    if (!employee) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Employee not found' 
+      });
+    }
+    
+    res.json({ 
+      success: true,
+      data: { bankInfo: employee.bankInfo }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating bank info' });
+    console.error('Error updating bank info:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating bank info',
+      error: error.message 
+    });
   }
 });
+
 
 router.put('/work-info/:id', async (req, res) => {
   try {
