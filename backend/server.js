@@ -216,6 +216,30 @@ app.use((err, req, res, next) => {
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+// Add this route for secure file downloads
+app.get('/api/contracts/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(process.cwd(), 'uploads', 'contracts', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Set appropriate headers
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Failed to download file' });
+  }
+});
+
+
 app.use('/api/users', userRoutes);
 
 // IMPORTANT: Do NOT apply authentication middleware globally here

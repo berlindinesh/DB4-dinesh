@@ -117,7 +117,17 @@ export const createContract = async (req, res) => {
         if (previousContract.salaryHistory && previousContract.salaryHistory.length > 0) {
           req.body.salaryHistory = [...previousContract.salaryHistory];
         }
-        
+         // Handle file upload if present
+    if (req.file) {
+      req.body.contractDocument = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        uploadDate: new Date()
+      };
+    }
         // Add current salary to history if it's different
         if (previousContract.basicSalary !== req.body.basicSalary) {
           if (!req.body.salaryHistory) req.body.salaryHistory = [];
@@ -142,7 +152,9 @@ export const createContract = async (req, res) => {
     
     console.log(`Contract created successfully for ${req.body.employee}`);
     res.status(201).json({ success: true, data: savedContract });
-  } catch (error) {
+  }
+  
+  catch (error) {
     console.error('Error creating contract:', error);
     res.status(400).json({ success: false, error: error.message });
   }
@@ -210,6 +222,19 @@ export const updateContract = async (req, res) => {
         }
       ];
     }
+
+    // Handle file upload if present
+    if (req.file) {
+      req.body.contractDocument = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        uploadDate: new Date()
+      };
+    }
+    
     
     const updatedContract = await CompanyContract.findByIdAndUpdate(
       req.params.id,

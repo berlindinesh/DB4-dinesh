@@ -29,6 +29,17 @@ const contractSchema = new mongoose.Schema({
   note: { type: String },
   payFrequency: { type: String, enum: ['Weekly', 'Monthly', 'Semi-Monthly'] },
   documentUrl: { type: String },
+
+    // Add contract document fields
+  contractDocument: {
+    filename: { type: String },
+    originalName: { type: String },
+    path: { type: String },
+    size: { type: Number },
+    mimetype: { type: String },
+    uploadDate: { type: Date, default: Date.now }
+  },
+  
   renewalHistory: [{
     previousContractId: { type: mongoose.Schema.Types.ObjectId, ref: 'payrollContractModel' },
     renewalDate: { type: Date, default: Date.now },
