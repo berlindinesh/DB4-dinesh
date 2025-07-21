@@ -406,10 +406,23 @@ export const retryRequest = async (apiCall, maxRetries = 3) => {
 };
 
 // Add this helper function at the end of your axiosInstance.js file, before the export
+// export const getAssetUrl = (path) => {
+//   if (!path) return null;
+//   if (path.startsWith('http')) return path;
+//   return `${process.env.REACT_APP_API_URL}${path}`;
+// };
 export const getAssetUrl = (path) => {
   if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${process.env.REACT_APP_API_URL}${path}`;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  
+  // Remove any leading slash to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  // Construct the full URL
+  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5002';
+  return `${baseUrl}/${cleanPath}`;
 };
+
+
 
 export default api;
