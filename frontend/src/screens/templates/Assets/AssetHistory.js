@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import api from "../../../api/axiosInstance";
 import {
@@ -96,16 +97,29 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
+// Add validation functions
+const isAlphabeticOnly = (str) => {
+  return /^[A-Za-z\s]+$/.test(str);
+};
+
+const validateEmployeeName = (name) => {
+  if (!name) return true; // Empty is valid (optional field)
+  return isAlphabeticOnly(name);
+};
+
 const AssetHistory = () => {
   const theme = useTheme();
   const [assets, setAssets] = useState([]);
   const [batches, setBatches] = useState([]);
   const [editingAssetId, setEditingAssetId] = useState(null);
   const [editData, setEditData] = useState({
+    name: "",
+    category: "",
     status: "",
     returnDate: "",
     allottedDate: "",
     currentEmployee: "",
+    previousEmployees: [],
     batch: "",
   });
   const [newAssetData, setNewAssetData] = useState({
@@ -130,342 +144,163 @@ const AssetHistory = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
 
-
-
-  // const handleAssetNameClick = async (asset) => {
-  //   setSelectedAsset(asset);
-
-  //   // If the asset has a batch, fetch the batch details
-  //   if (asset.batch) {
-  //     try {
-  //       // First try to find the batch in the already loaded batches
-  //       const batchDetails = batches.find((b) => b.batchNumber === asset.batch);
-
-  //       if (batchDetails) {
-  //         setSelectedBatchDetails(batchDetails);
-  //         setIsBatchDetailsOpen(true);
-  //       } else {
-  //         // If not found locally, fetch from API
-  //         const response = await axios.get(
-  //           `${API_URL}/api/asset-batches/by-number/${asset.batch}`
-  //         );
-  //         if (response.data) {
-  //           setSelectedBatchDetails(response.data);
-  //           setIsBatchDetailsOpen(true);
-  //         } else {
-  //           // Show a more user-friendly message
-  //           alert(
-  //             `No batch found with number ${asset.batch}. Please check the batch number.`
-  //           );
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching batch details:", error);
-  //       alert("Failed to load batch details. Please try again later.");
-  //     }
-  //   } else {
-  //     // Show a more user-friendly message
-  //     alert(
-  //       "This asset is not associated with any batch. You can edit the asset to add a batch."
-  //     );
-  //   }
-  // };
-
-  // const fetchAssets = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await axios.get(`${API_URL}/api/assets`);
-  //     console.log("Fetched assets:", response.data);
-
-  //     // Update the assets state with the fresh data
-  //     setAssets(response.data);
-
-  //     setLoading(false);
-  //   } catch (error) {
-  //     console.error("Error fetching asset history:", error);
-  //     setError("Failed to load assets");
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleAssetNameClick = async (asset) => {
-  setSelectedAsset(asset);
+    setSelectedAsset(asset);
 
-  // If the asset has a batch, fetch the batch details
-  if (asset.batch) {
-    try {
-      // First try to find the batch in the already loaded batches
-      const batchDetails = batches.find((b) => b.batchNumber === asset.batch);
+    // If the asset has a batch, fetch the batch details
+    if (asset.batch) {
+      try {
+        // First try to find the batch in the already loaded batches
+        const batchDetails = batches.find((b) => b.batchNumber === asset.batch);
 
-      if (batchDetails) {
-        setSelectedBatchDetails(batchDetails);
-        setIsBatchDetailsOpen(true);
-      } else {
-        // If not found locally, fetch from API
-        // const token = getAuthToken();
-        const response = await api.get(
-          `${API_URL}/api/asset-batches/by-number/${asset.batch}`,
-        );
-        if (response.data) {
-          setSelectedBatchDetails(response.data);
+        if (batchDetails) {
+          setSelectedBatchDetails(batchDetails);
           setIsBatchDetailsOpen(true);
         } else {
-          // Show a more user-friendly message
-          alert(
-            `No batch found with number ${asset.batch}. Please check the batch number.`
+          // If not found locally, fetch from API
+          const response = await api.get(
+            `${API_URL}/api/asset-batches/by-number/${asset.batch}`,
           );
+          if (response.data) {
+            setSelectedBatchDetails(response.data);
+            setIsBatchDetailsOpen(true);
+          } else {
+            // Show a more user-friendly message
+            alert(
+              `No batch found with number ${asset.batch}. Please check the batch number.`
+            );
+          }
         }
+      } catch (error) {
+        console.error("Error fetching batch details:", error);
+        alert("Failed to load batch details. Please try again later.");
       }
-    } catch (error) {
-      console.error("Error fetching batch details:", error);
-      alert("Failed to load batch details. Please try again later.");
+    } else {
+      // Show a more user-friendly message
+      alert(
+        "This asset is not associated with any batch. You can edit the asset to add a batch."
+      );
     }
-  } else {
-    // Show a more user-friendly message
-    alert(
-      "This asset is not associated with any batch. You can edit the asset to add a batch."
-    );
-  }
-};
-
+  };
 
   const fetchAssets = async () => {
-  try {
-    setLoading(true);
-    const response = await api.get(`${API_URL}/api/assets`
-  );
-    console.log("Fetched assets:", response.data);
-
-    // Update the assets state with the fresh data
-    setAssets(response.data);
-
-    setLoading(false);
-  } catch (error) {
-    console.error("Error fetching asset history:", error);
-    setError("Failed to load assets");
-    setLoading(false);
-  }
-};
-
-
-  // const fetchBatches = async () => {
-  //   try {
-  //     const response = await axios.get(`${API_URL}/api/asset-batches`);
-  //     console.log("Fetched batches:", response.data);
-  //     setBatches(response.data);
-  //   } catch (error) {
-  //     console.error("Error fetching batches:", error);
-  //   }
-  // };
-
-const fetchBatches = async () => {
-  try {
-    const response = await api.get(`${API_URL}/api/asset-batches`
-  );
-    console.log("Fetched batches:", response.data);
-    setBatches(response.data);
-  } catch (error) {
-    console.error("Error fetching batches:", error);
-  }
-};
-
-
-  // useEffect(() => {
-  //   // Initial data fetch
-  //   fetchAssets();
-  //   fetchBatches();
-
-  //   // Listen for asset updates from AssetView or other components
-  //   const handleAssetsUpdated = () => {
-  //     console.log("Assets updated event received, refreshing assets list");
-  //     fetchAssets();
-  //   };
-
-  //   // Listen for batch updates from AssetBatch
-  //   const handleBatchesUpdated = () => {
-  //     console.log("Batches updated event received, refreshing batches list");
-  //     fetchBatches();
-  //   };
-
-  //   window.addEventListener("assetsUpdated", handleAssetsUpdated);
-  //   window.addEventListener("batchesUpdated", handleBatchesUpdated);
-  //   window.addEventListener("storage", (e) => {
-  //     if (e.key === "assetsUpdated") {
-  //       fetchAssets();
-  //     }
-  //     if (e.key === "batchesUpdated") {
-  //       fetchBatches();
-  //     }
-  //   });
-
-  //   return () => {
-  //     window.removeEventListener("assetsUpdated", handleAssetsUpdated);
-  //     window.removeEventListener("batchesUpdated", handleBatchesUpdated);
-  //   };
-  // }, []);
-
-
-  // const handleDelete = async (id) => {
-  //   if (window.confirm("Are you sure you want to delete this asset?")) {
-  //     try {
-  //       setLoading(true);
-  //       await axios.delete(`${API_URL}/api/assets/${id}`);
-  //       fetchAssets();
-
-  //       // Notify other components about the update
-  //       const timestamp = Date.now().toString();
-  //       localStorage.setItem("assetsUpdated", timestamp);
-
-  //       const event = new CustomEvent("assetsUpdated", {
-  //         detail: { timestamp },
-  //       });
-  //       window.dispatchEvent(event);
-  //     } catch (error) {
-  //       console.error("Error deleting asset:", error);
-  //       setError("Failed to delete asset");
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   }
-  // };
-
-  // const handleEditClick = (asset) => {
-  //   setEditingAssetId(asset._id);
-  //   setEditData({
-  //     name: asset.name || "",
-  //     category: asset.category || "",
-  //     status: asset.status || "",
-  //     returnDate: asset.returnDate
-  //       ? new Date(asset.returnDate).toISOString().split("T")[0]
-  //       : "",
-  //     allottedDate: asset.allottedDate
-  //       ? new Date(asset.allottedDate).toISOString().split("T")[0]
-  //       : "",
-  //     currentEmployee: asset.currentEmployee || "",
-  //     previousEmployees: asset.previousEmployees || [],
-  //     batch: asset.batch || "",
-  //   });
-  //   console.log("Editing asset:", asset);
-  //   console.log("Edit data initialized:", editData);
-  // };
-
-useEffect(() => {
-  // Initial data fetch
-  fetchAssets();
-  fetchBatches();
-
-  // Listen for asset updates from AssetView or other components
-  const handleAssetsUpdated = () => {
-    console.log("Assets updated event received, refreshing assets list");
-    fetchAssets();
-  };
-
-  // Listen for batch updates from AssetBatch
-  const handleBatchesUpdated = () => {
-    console.log("Batches updated event received, refreshing batches list");
-    fetchBatches();
-  };
-
-  window.addEventListener("assetsUpdated", handleAssetsUpdated);
-  window.addEventListener("batchesUpdated", handleBatchesUpdated);
-  window.addEventListener("storage", (e) => {
-    if (e.key === "assetsUpdated") {
-      fetchAssets();
-    }
-    if (e.key === "batchesUpdated") {
-      fetchBatches();
-    }
-  });
-
-  return () => {
-    window.removeEventListener("assetsUpdated", handleAssetsUpdated);
-    window.removeEventListener("batchesUpdated", handleBatchesUpdated);
-  };
-}, []);
-
-
-  const handleDelete = async (id) => {
-  if (window.confirm("Are you sure you want to delete this asset?")) {
     try {
       setLoading(true);
-      await api.delete(`${API_URL}/api/assets/${id}`
-    );
-      fetchAssets();
+      const response = await api.get(`${API_URL}/api/assets`);
+      console.log("Fetched assets:", response.data);
 
-      // Notify other components about the update
-      const timestamp = Date.now().toString();
-      localStorage.setItem("assetsUpdated", timestamp);
+      // Update the assets state with the fresh data
+      setAssets(response.data);
 
-      const event = new CustomEvent("assetsUpdated", {
-        detail: { timestamp },
-      });
-      window.dispatchEvent(event);
+      setLoading(false);
     } catch (error) {
-      console.error("Error deleting asset:", error);
-      setError("Failed to delete asset");
-    } finally {
+      console.error("Error fetching asset history:", error);
+      setError("Failed to load assets");
       setLoading(false);
     }
-  }
-};
+  };
 
+  const fetchBatches = async () => {
+    try {
+      const response = await api.get(`${API_URL}/api/asset-batches`);
+      console.log("Fetched batches:", response.data);
+      setBatches(response.data);
+    } catch (error) {
+      console.error("Error fetching batches:", error);
+    }
+  };
 
-  // const handleEditClick = (asset) => {
-  //   setEditingAssetId(asset._id);
-  //   setEditData({
-  //     name: asset.name || "",
-  //     category: asset.category || "",
-  //     status: asset.status || "",
-  //     returnDate: asset.returnDate
-  //       ? new Date(asset.returnDate).toISOString().split("T")[0]
-  //       : "",
-  //     allottedDate: asset.allottedDate
-  //       ? new Date(asset.allottedDate).toISOString().split("T")[0]
-  //       : "",
-  //     currentEmployee: asset.currentEmployee || "",
-  //     previousEmployees: Array.isArray(asset.previousEmployees)
-  //       ? asset.previousEmployees
-  //       : [],
-  //     batch: asset.batch || "",
-  //   });
-  //   console.log("Editing asset:", asset);
-  //   console.log("Edit data initialized:", editData);
-  // };
+  useEffect(() => {
+    // Initial data fetch
+    fetchAssets();
+    fetchBatches();
 
+    // Listen for asset updates from AssetView or other components
+    const handleAssetsUpdated = () => {
+      console.log("Assets updated event received, refreshing assets list");
+      fetchAssets();
+    };
+
+    // Listen for batch updates from AssetBatch
+    const handleBatchesUpdated = () => {
+      console.log("Batches updated event received, refreshing batches list");
+      fetchBatches();
+    };
+
+    window.addEventListener("assetsUpdated", handleAssetsUpdated);
+    window.addEventListener("batchesUpdated", handleBatchesUpdated);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "assetsUpdated") {
+        fetchAssets();
+      }
+      if (e.key === "batchesUpdated") {
+        fetchBatches();
+      }
+    });
+
+    return () => {
+      window.removeEventListener("assetsUpdated", handleAssetsUpdated);
+      window.removeEventListener("batchesUpdated", handleBatchesUpdated);
+    };
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this asset?")) {
+      try {
+        setLoading(true);
+        await api.delete(`${API_URL}/api/assets/${id}`);
+        fetchAssets();
+
+        // Notify other components about the update
+        const timestamp = Date.now().toString();
+        localStorage.setItem("assetsUpdated", timestamp);
+
+        const event = new CustomEvent("assetsUpdated", {
+          detail: { timestamp },
+        });
+        window.dispatchEvent(event);
+      } catch (error) {
+        console.error("Error deleting asset:", error);
+        setError("Failed to delete asset");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const handleEditClick = (asset) => {
-  if (!asset || !asset._id) {
-    console.error("Invalid asset object:", asset);
-    alert("Cannot edit this asset: Invalid asset data");
-    return;
-  }
+    if (!asset || !asset._id) {
+      console.error("Invalid asset object:", asset);
+      alert("Cannot edit this asset: Invalid asset data");
+      return;
+    }
 
-  setEditingAssetId(asset._id);
-  
-  // Initialize with default empty values to prevent undefined errors
-  const editDataInitial = {
-    name: asset.name || "",
-    category: asset.category || "",
-    status: asset.status || "",
-    returnDate: asset.returnDate
-      ? new Date(asset.returnDate).toISOString().split("T")[0]
-      : "",
-    allottedDate: asset.allottedDate
-      ? new Date(asset.allottedDate).toISOString().split("T")[0]
-      : "",
-    currentEmployee: asset.currentEmployee || "",
-    previousEmployees: Array.isArray(asset.previousEmployees)
-      ? [...asset.previousEmployees] // Create a copy to avoid reference issues
-      : [],
-    batch: asset.batch || "",
+    setEditingAssetId(asset._id);
+    
+    // Initialize with default empty values to prevent undefined errors
+    const editDataInitial = {
+      name: asset.name || "",
+      category: asset.category || "",
+      status: asset.status || "",
+      returnDate: asset.returnDate
+        ? new Date(asset.returnDate).toISOString().split("T")[0]
+        : "",
+      allottedDate: asset.allottedDate
+        ? new Date(asset.allottedDate).toISOString().split("T")[0]
+        : "",
+      currentEmployee: asset.currentEmployee || "",
+      previousEmployees: Array.isArray(asset.previousEmployees)
+        ? [...asset.previousEmployees] // Create a copy to avoid reference issues
+        : [],
+      batch: asset.batch || "",
+    };
+    
+    setEditData(editDataInitial);
+    console.log("Editing asset:", asset);
+    console.log("Edit data initialized:", editDataInitial);
   };
-  
-  setEditData(editDataInitial);
-  console.log("Editing asset:", asset);
-  console.log("Edit data initialized:", editDataInitial);
-};
 
-
+  // Handler for previous employees in EDIT modal
   const handlePreviousEmployeesChangeEdit = (e) => {
     const employees = e.target.value
       .split(",")
@@ -478,616 +313,180 @@ useEffect(() => {
     }));
   };
 
+  // Handler for previous employees in ADD modal
+  const handlePreviousEmployeesChange = (e) => {
+    const employees = e.target.value
+      .split(",")
+      .map((emp) => emp.trim())
+      .filter((emp) => emp !== "");
+    setNewAssetData((prev) => ({
+      ...prev,
+      previousEmployees: employees,
+    }));
+  };
 
-
-  // const handleAddAsset = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     setLoading(true);
-  //     const formattedData = {
-  //       name: newAssetData.name,
-  //       category: newAssetData.category,
-  //       status: newAssetData.status,
-  //       currentEmployee: newAssetData.currentEmployee,
-  //       previousEmployees: newAssetData.previousEmployees || [],
-  //       batch: newAssetData.batch || "", // Make sure batch is included and properly formatted
-  //       allottedDate: newAssetData.allottedDate
-  //         ? new Date(newAssetData.allottedDate).toISOString()
-  //         : null,
-  //       returnDate: newAssetData.returnDate
-  //         ? new Date(newAssetData.returnDate).toISOString()
-  //         : null,
-  //     };
-
-  //     console.log("Sending asset data:", formattedData);
-
-  //     const response = await axios.post(`${API_URL}/api/assets`, formattedData);
-  //     console.log("Response from server:", response.data); // Add this to debug the response
-
-  //     // Immediately fetch the updated assets to ensure we have the latest data
-  //     await fetchAssets();
-
-  //     setNewAssetData({
-  //       name: "",
-  //       category: "",
-  //       status: "",
-  //       returnDate: "",
-  //       allottedDate: "",
-  //       currentEmployee: "",
-  //       previousEmployees: [],
-  //       batch: "",
-  //     });
-  //     setIsAddModalOpen(false);
-
-  //     // Notify other components about the update
-  //     const timestamp = Date.now().toString();
-  //     localStorage.setItem("assetsUpdated", timestamp);
-
-  //     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-  //     window.dispatchEvent(event);
-  //   } catch (error) {
-  //     console.error("Error adding new asset:", error);
-  //     setError("Failed to add asset: " + error.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-// const handleAddAsset = async (e) => {
-//   e.preventDefault();
-//   try {
-//     setLoading(true);
-//     const formattedData = {
-//       name: newAssetData.name,
-//       category: newAssetData.category,
-//       status: newAssetData.status,
-//       currentEmployee: newAssetData.currentEmployee,
-//       previousEmployees: newAssetData.previousEmployees || [],
-//       batch: newAssetData.batch || "", // Make sure batch is included and properly formatted
-//       allottedDate: newAssetData.allottedDate
-//         ? new Date(newAssetData.allottedDate).toISOString()
-//         : null,
-//       returnDate: newAssetData.returnDate
-//         ? new Date(newAssetData.returnDate).toISOString()
-//         : null,
-//     };
-
-//     console.log("Sending asset data:", formattedData);
-
-//     const response = await api.post(`${API_URL}/api/assets`, formattedData
-//   );
-//     console.log("Response from server:", response.data); // Add this to debug the response
-
-//     // Immediately fetch the updated assets to ensure we have the latest data
-//     await fetchAssets();
-
-//     setNewAssetData({
-//       name: "",
-//       category: "",
-//       status: "",
-//       returnDate: "",
-//       allottedDate: "",
-//       currentEmployee: "",
-//       previousEmployees: [],
-//       batch: "",
-//     });
-//     setIsAddModalOpen(false);
-
-//     // Notify other components about the update
-//     const timestamp = Date.now().toString();
-//     localStorage.setItem("assetsUpdated", timestamp);
-
-//     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-//     window.dispatchEvent(event);
-//   } catch (error) {
-//     console.error("Error adding new asset:", error);
-//     setError("Failed to add asset: " + error.message);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-// const handleAddAsset = async (e) => {
-//   e.preventDefault();
-  
-//   // Validate required fields
-//   if (!newAssetData.name || !newAssetData.category || !newAssetData.status) {
-//     alert("Please fill in all required fields: Asset Name, Category, and Status");
-//     return;
-//   }
-  
-//   try {
-//     setLoading(true);
+  // Update the handleAddAsset function to properly handle employee data
+  const handleAddAsset = async (e) => {
+    e.preventDefault();
     
-//     // Format the data properly
-//     const formattedData = {
-//       name: newAssetData.name.trim(),
-//       category: newAssetData.category.trim(),
-//       status: newAssetData.status.trim(),
-//       // Only include these fields if they have values
-//       ...(newAssetData.currentEmployee ? { currentEmployee: newAssetData.currentEmployee.trim() } : {}),
-//       ...(newAssetData.batch ? { batch: newAssetData.batch.trim() } : {}),
-//       // Handle arrays properly
-//       previousEmployees: Array.isArray(newAssetData.previousEmployees) 
-//         ? newAssetData.previousEmployees.filter(emp => emp.trim() !== "") 
-//         : [],
-//       // Format dates properly or exclude them
-//       ...(newAssetData.allottedDate 
-//         ? { allottedDate: new Date(newAssetData.allottedDate).toISOString() } 
-//         : {}),
-//       ...(newAssetData.returnDate 
-//         ? { returnDate: new Date(newAssetData.returnDate).toISOString() } 
-//         : {})
-//     };
-
-//     console.log("Sending asset data:", formattedData);
-
-//     const response = await api.post(`${API_URL}/api/assets`, formattedData);
-//     console.log("Response from server:", response.data);
-
-//     // Success handling
-//     await fetchAssets();
-//     setNewAssetData({
-//       name: "",
-//       category: "",
-//       status: "",
-//       returnDate: "",
-//       allottedDate: "",
-//       currentEmployee: "",
-//       previousEmployees: [],
-//       batch: "",
-//     });
-//     setIsAddModalOpen(false);
-
-//     // Notify other components about the update
-//     const timestamp = Date.now().toString();
-//     localStorage.setItem("assetsUpdated", timestamp);
-//     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-//     window.dispatchEvent(event);
-    
-//     // Show success message
-//     alert("Asset added successfully!");
-//   } catch (error) {
-//     console.error("Error adding new asset:", error);
-    
-//     // Extract the error message from the response
-//     let errorMessage = "Failed to add asset";
-//     if (error.response && error.response.data) {
-//       errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
-//     } else {
-//       errorMessage += ": " + error.message;
-//     }
-    
-//     setError(errorMessage);
-//     alert(errorMessage);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-// Update the handleAddAsset function to properly handle employee data
-const handleAddAsset = async (e) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  if (!newAssetData.name || !newAssetData.category || !newAssetData.status) {
-    alert("Please fill in all required fields: Asset Name, Category, and Status");
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    
-    // Format the data properly
-    const formattedData = {
-      name: newAssetData.name.trim(),
-      category: newAssetData.category.trim(),
-      status: newAssetData.status.trim(),
-      // Make sure to include employee data even if empty
-      currentEmployee: newAssetData.currentEmployee ? newAssetData.currentEmployee.trim() : "",
-      batch: newAssetData.batch || "",
-      // Ensure previousEmployees is always an array
-      previousEmployees: Array.isArray(newAssetData.previousEmployees) 
-        ? newAssetData.previousEmployees.filter(emp => emp && emp.trim() !== "") 
-        : [],
-      // Format dates properly or exclude them
-      ...(newAssetData.allottedDate 
-        ? { allottedDate: new Date(newAssetData.allottedDate).toISOString() } 
-        : {}),
-      ...(newAssetData.returnDate 
-        ? { returnDate: new Date(newAssetData.returnDate).toISOString() } 
-        : {})
-    };
-
-    console.log("Sending asset data:", formattedData);
-
-    const response = await api.post(`${API_URL}/api/assets`, formattedData);
-    console.log("Response from server:", response.data);
-
-    // Success handling
-    await fetchAssets();
-    setNewAssetData({
-      name: "",
-      category: "",
-      status: "",
-      returnDate: "",
-      allottedDate: "",
-      currentEmployee: "",
-      previousEmployees: [],
-      batch: "",
-    });
-    setIsAddModalOpen(false);
-
-    // Notify other components about the update
-    const timestamp = Date.now().toString();
-    localStorage.setItem("assetsUpdated", timestamp);
-    const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-    window.dispatchEvent(event);
-    
-    // Show success message
-    alert("Asset added successfully!");
-  } catch (error) {
-    console.error("Error adding new asset:", error);
-    
-    // Extract the error message from the response
-    let errorMessage = "Failed to add asset";
-    if (error.response && error.response.data) {
-      errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
-    } else {
-      errorMessage += ": " + error.message;
-    }
-    
-    setError(errorMessage);
-    alert(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-  // const handleUpdate = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     setLoading(true);
-
-  //     // Log the current state before formatting
-  //     console.log("Current edit data before formatting:", editData);
-
-  //     const updatedData = {
-  //       name: editData.name,
-  //       category: editData.category,
-  //       status: editData.status,
-  //       currentEmployee: editData.currentEmployee,
-  //       previousEmployees: Array.isArray(editData.previousEmployees)
-  //         ? editData.previousEmployees
-  //         : editData.previousEmployees
-  //         ? editData.previousEmployees.split(",").map((emp) => emp.trim())
-  //         : [],
-  //       batch: editData.batch || "",
-  //       // Format the dates
-  //       allottedDate: editData.allottedDate
-  //         ? new Date(editData.allottedDate).toISOString()
-  //         : null,
-  //       returnDate: editData.returnDate
-  //         ? new Date(editData.returnDate).toISOString()
-  //         : null,
-  //     };
-
-  //     console.log("Updating asset with data:", updatedData);
-  //     console.log("Asset ID being updated:", editingAssetId);
-
-  //     const response = await axios.put(
-  //       `${API_URL}/api/assets/${editingAssetId}`,
-  //       updatedData
-  //     );
-  //     console.log("Update response:", response.data);
-
-  //     // Close the edit modal
-  //     setEditingAssetId(null);
-
-  //     // Immediately fetch the updated assets to ensure we have the latest data
-  //     await fetchAssets();
-
-  //     // Show success message
-  //     alert("Asset updated successfully!");
-
-  //     // Notify other components about the update
-  //     const timestamp = Date.now().toString();
-  //     localStorage.setItem("assetsUpdated", timestamp);
-
-  //     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-  //     window.dispatchEvent(event);
-  //   } catch (error) {
-  //     console.error("Error updating asset:", error);
-  //     console.error(
-  //       "Error details:",
-  //       error.response ? error.response.data : "No response data"
-  //     );
-  //     setError(
-  //       "Failed to update asset: " +
-  //         (error.response ? error.response.data.message : error.message)
-  //     );
-  //     alert("Failed to update asset. Please try again.");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // Update this whenever assets or searchTerm changes
-  
-//   const handleUpdate = async (e) => {
-//   e.preventDefault();
-  
-//   // Validate employee names
-//   if (!validateEmployeeName(editData.currentEmployee)) {
-//     alert("Current employee name should contain only alphabetic characters");
-//     return;
-//   }
-  
-//   // Validate previous employees
-//   // const previousEmployees = Array.isArray(editData.previousEmployees)
-//   //   ? editData.previousEmployees
-//   //   : editData.previousEmployees
-//   //     ? editData.previousEmployees.split(",").map(emp => emp.trim())
-//   //     : [];
-
-//    if (!validateEmployeeName(newAssetData.currentEmployee)) {
-//     alert("Current employee name should contain only alphabetic characters");
-//     return;
-//   }
-      
-//   // for (const emp of previousEmployees) {
-//   //   if (!validateEmployeeName(emp)) {
-//   //     alert("Previous employee names should contain only alphabetic characters");
-//   //     return;
-//   //   }
-//   // }
-
-
-//     for (const emp of newAssetData.previousEmployees) {
-//     if (!validateEmployeeName(emp)) {
-//       alert("Previous employee names should contain only alphabetic characters");
-//       return;
-//     }
-//   }
-//   try {
-//     setLoading(true);
-
-
-    
-//     // Log the current state before formatting
-//     console.log("Current edit data before formatting:", editData);
-
-//     const updatedData = {
-//       name: editData.name,
-//       category: editData.category,
-//       status: editData.status,
-//       currentEmployee: editData.currentEmployee,
-//       previousEmployees: Array.isArray(editData.previousEmployees)
-//         ? editData.previousEmployees
-//         : editData.previousEmployees
-//         ? editData.previousEmployees.split(",").map((emp) => emp.trim())
-//         : [],
-//       batch: editData.batch || "",
-//       // Format the dates
-//       allottedDate: editData.allottedDate
-//         ? new Date(editData.allottedDate).toISOString()
-//         : null,
-//       returnDate: editData.returnDate
-//         ? new Date(editData.returnDate).toISOString()
-//         : null,
-//     };
-
-//     console.log("Updating asset with data:", updatedData);
-//     console.log("Asset ID being updated:", editingAssetId);
-
-//     const response = await api.put(
-//       `${API_URL}/api/assets/${editingAssetId}`,
-//       updatedData
-//     );
-//     console.log("Update response:", response.data);
-
-//     // Close the edit modal
-//     setEditingAssetId(null);
-
-//     await fetchAssets();
-
-//     // Show success message
-//     alert("Asset updated successfully!");
-
-//     // Notify other components about the update
-//     const timestamp = Date.now().toString();
-//     localStorage.setItem("assetsUpdated", timestamp);
-
-//     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-//     window.dispatchEvent(event);
-//   } catch (error) {
-//     console.error("Error updating asset:", error);
-//     console.error(
-//       "Error details:",
-//       error.response ? error.response.data : "No response data"
-//     );
-//     setError(
-//       "Failed to update asset: " +
-//         (error.response ? error.response.data.message : error.message)
-//     );
-//     alert("Failed to update asset. Please try again.");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-
-// const handleUpdate = async (e) => {
-//   e.preventDefault();
-//   try {
-//     setLoading(true);
-
-//     // Validate required fields
-//     if (!editData.name || !editData.category || !editData.status) {
-//       alert("Please fill in all required fields: Asset Name, Category, and Status");
-//       setLoading(false);
-//       return;
-//     }
-
-//     // Format the data properly
-//     const updatedData = {
-//       name: editData.name.trim(),
-//       category: editData.category.trim(),
-//       status: editData.status.trim(),
-//       // Only include these fields if they have values
-//       ...(editData.currentEmployee ? { currentEmployee: editData.currentEmployee.trim() } : {}),
-//       ...(editData.batch ? { batch: editData.batch.trim() } : {}),
-//       // Handle arrays properly
-//       previousEmployees: Array.isArray(editData.previousEmployees)
-//         ? editData.previousEmployees.filter(emp => emp.trim() !== "")
-//         : typeof editData.previousEmployees === 'string'
-//           ? editData.previousEmployees.split(',').map(emp => emp.trim()).filter(emp => emp !== '')
-//           : [],
-//       // Format dates properly or exclude them
-//       ...(editData.allottedDate
-//         ? { allottedDate: new Date(editData.allottedDate).toISOString() }
-//         : {}),
-//       ...(editData.returnDate
-//         ? { returnDate: new Date(editData.returnDate).toISOString() }
-//         : {})
-//     };
-
-//     console.log("Updating asset with data:", updatedData);
-//     console.log("Asset ID being updated:", editingAssetId);
-
-//     if (!editingAssetId) {
-//       throw new Error("No asset ID provided for update");
-//     }
-
-//     const response = await api.put(
-//       `${API_URL}/api/assets/${editingAssetId}`,
-//       updatedData
-//     );
-    
-//     console.log("Update response:", response.data);
-
-//     // Close the edit modal
-//     setEditingAssetId(null);
-
-//     // Refresh the asset list
-//     await fetchAssets();
-
-//     // Show success message
-//     alert("Asset updated successfully!");
-
-//     // Notify other components about the update
-//     const timestamp = Date.now().toString();
-//     localStorage.setItem("assetsUpdated", timestamp);
-
-//     const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-//     window.dispatchEvent(event);
-//   } catch (error) {
-//     console.error("Error updating asset:", error);
-    
-//     // Extract the error message from the response
-//     let errorMessage = "Failed to update asset";
-//     if (error.response && error.response.data) {
-//       errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
-//     } else {
-//       errorMessage += ": " + error.message;
-//     }
-    
-//     setError(errorMessage);
-//     alert(errorMessage);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-const handleUpdate = async (e) => {
-  e.preventDefault();
-  try {
-    setLoading(true);
-
     // Validate required fields
-    if (!editData.name || !editData.category || !editData.status) {
+    if (!newAssetData.name || !newAssetData.category || !newAssetData.status) {
       alert("Please fill in all required fields: Asset Name, Category, and Status");
-      setLoading(false);
       return;
     }
-
-    // Format the data properly
-    const updatedData = {
-      name: editData.name.trim(),
-      category: editData.category.trim(),
-      status: editData.status.trim(),
-      // Always include employee data
-      currentEmployee: editData.currentEmployee ? editData.currentEmployee.trim() : "",
-      batch: editData.batch || "",
-      // Ensure previousEmployees is always an array
-      previousEmployees: Array.isArray(editData.previousEmployees)
-        ? editData.previousEmployees.filter(emp => emp && emp.trim() !== "")
-        : typeof editData.previousEmployees === 'string'
-          ? editData.previousEmployees.split(',').map(emp => emp.trim()).filter(emp => emp !== '')
+    
+    try {
+      setLoading(true);
+      
+      // Format the data properly
+      const formattedData = {
+        name: newAssetData.name.trim(),
+        category: newAssetData.category.trim(),
+        status: newAssetData.status.trim(),
+        // Make sure to include employee data even if empty
+        currentEmployee: newAssetData.currentEmployee ? newAssetData.currentEmployee.trim() : "",
+        batch: newAssetData.batch || "",
+        // Ensure previousEmployees is always an array
+        previousEmployees: Array.isArray(newAssetData.previousEmployees) 
+          ? newAssetData.previousEmployees.filter(emp => emp && emp.trim() !== "") 
           : [],
-      // Format dates properly or exclude them
-      ...(editData.allottedDate
-        ? { allottedDate: new Date(editData.allottedDate).toISOString() }
-        : {}),
-      ...(editData.returnDate
-        ? { returnDate: new Date(editData.returnDate).toISOString() }
-        : {})
-    };
+        // Format dates properly or exclude them
+        ...(newAssetData.allottedDate 
+          ? { allottedDate: new Date(newAssetData.allottedDate).toISOString() } 
+          : {}),
+        ...(newAssetData.returnDate 
+          ? { returnDate: new Date(newAssetData.returnDate).toISOString() } 
+          : {})
+      };
 
-    console.log("Updating asset with data:", updatedData);
-    console.log("Asset ID being updated:", editingAssetId);
+      console.log("Sending asset data:", formattedData);
 
-    if (!editingAssetId) {
-      throw new Error("No asset ID provided for update");
+      const response = await api.post(`${API_URL}/api/assets`, formattedData);
+      console.log("Response from server:", response.data);
+
+      // Success handling
+      await fetchAssets();
+      setNewAssetData({
+        name: "",
+        category: "",
+        status: "",
+        returnDate: "",
+        allottedDate: "",
+        currentEmployee: "",
+        previousEmployees: [],
+        batch: "",
+      });
+      setIsAddModalOpen(false);
+
+      // Notify other components about the update
+      const timestamp = Date.now().toString();
+      localStorage.setItem("assetsUpdated", timestamp);
+      const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
+      window.dispatchEvent(event);
+      
+      // Show success message
+      alert("Asset added successfully!");
+    } catch (error) {
+      console.error("Error adding new asset:", error);
+      
+      // Extract the error message from the response
+      let errorMessage = "Failed to add asset";
+      if (error.response && error.response.data) {
+        errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
+      } else {
+        errorMessage += ": " + error.message;
+      }
+      
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const response = await api.put(
-      `${API_URL}/api/assets/${editingAssetId}`,
-      updatedData
-    );
-    
-    console.log("Update response:", response.data);
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
 
-    // Close the edit modal
-    setEditingAssetId(null);
+      // Validate required fields
+      if (!editData.name || !editData.category || !editData.status) {
+        alert("Please fill in all required fields: Asset Name, Category, and Status");
+        setLoading(false);
+        return;
+      }
 
-    // Refresh the asset list
-    await fetchAssets();
+      // Format the data properly
+      const updatedData = {
+        name: editData.name.trim(),
+        category: editData.category.trim(),
+        status: editData.status.trim(),
+        // Always include employee data
+        currentEmployee: editData.currentEmployee ? editData.currentEmployee.trim() : "",
+        batch: editData.batch || "",
+        // Ensure previousEmployees is always an array
+        previousEmployees: Array.isArray(editData.previousEmployees)
+          ? editData.previousEmployees.filter(emp => emp && emp.trim() !== "")
+          : typeof editData.previousEmployees === 'string'
+            ? editData.previousEmployees.split(',').map(emp => emp.trim()).filter(emp => emp !== '')
+            : [],
+        // Format dates properly or exclude them
+        ...(editData.allottedDate
+          ? { allottedDate: new Date(editData.allottedDate).toISOString() }
+          : {}),
+        ...(editData.returnDate
+                ? { returnDate: new Date(editData.returnDate).toISOString() }
+          : {})
+      };
 
-    // Show success message
-    alert("Asset updated successfully!");
+      console.log("Updating asset with data:", updatedData);
+      console.log("Asset ID being updated:", editingAssetId);
 
-    // Notify other components about the update
-    const timestamp = Date.now().toString();
-    localStorage.setItem("assetsUpdated", timestamp);
+      if (!editingAssetId) {
+        throw new Error("No asset ID provided for update");
+      }
 
-    const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
-    window.dispatchEvent(event);
-  } catch (error) {
-    console.error("Error updating asset:", error);
-    
-    // Extract the error message from the response
-    let errorMessage = "Failed to update asset";
-    if (error.response && error.response.data) {
-      errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
-    } else {
-      errorMessage += ": " + error.message;
+      const response = await api.put(
+        `${API_URL}/api/assets/${editingAssetId}`,
+        updatedData
+      );
+      
+      console.log("Update response:", response.data);
+
+      // Close the edit modal
+      setEditingAssetId(null);
+
+      // Refresh the asset list
+      await fetchAssets();
+
+      // Show success message
+      alert("Asset updated successfully!");
+
+      // Notify other components about the update
+      const timestamp = Date.now().toString();
+      localStorage.setItem("assetsUpdated", timestamp);
+
+      const event = new CustomEvent("assetsUpdated", { detail: { timestamp } });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Error updating asset:", error);
+      
+      // Extract the error message from the response
+      let errorMessage = "Failed to update asset";
+      if (error.response && error.response.data) {
+        errorMessage += ": " + (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data));
+      } else {
+        errorMessage += ": " + error.message;
+      }
+      
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    
-    setError(errorMessage);
-    alert(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-
-
-
+  // Update this whenever assets or searchTerm changes
   const filteredAssets = React.useMemo(() => {
     return assets.filter(
       (asset) =>
@@ -1104,27 +503,6 @@ const handleUpdate = async (e) => {
         (asset.batch?.toLowerCase() || "").includes(searchTerm.toLowerCase())
     );
   }, [assets, searchTerm]);
-
-  const handlePreviousEmployeesChange = (e) => {
-    const employees = e.target.value.split(",").map((emp) => emp.trim());
-    setNewAssetData((prev) => ({
-      ...prev,
-      previousEmployees: employees,
-    }));
-  };
-
-
-  // Add these validation functions at the top of the file, near other helper functions
-const isAlphabeticOnly = (str) => {
-  return /^[A-Za-z\s]+$/.test(str);
-};
-
-const validateEmployeeName = (name) => {
-  if (!name) return true; // Empty is valid (optional field)
-  return isAlphabeticOnly(name);
-};
-
-
 
   return (
     <Box
@@ -1491,7 +869,8 @@ const validateEmployeeName = (name) => {
             </Box>
           )}
         </DialogContent>
-      </Dialog>{" "}
+      </Dialog>
+      
       <TableContainer
         component={Paper}
         sx={{
@@ -1532,7 +911,7 @@ const validateEmployeeName = (name) => {
               <StyledTableCell sx={{ minWidth: 150 }}>Category</StyledTableCell>
               <StyledTableCell sx={{ minWidth: 150 }}>Batch</StyledTableCell>
               <StyledTableCell sx={{ minWidth: 180 }}>
-                Previous Employees
+                            Previous Employees
               </StyledTableCell>
               <StyledTableCell sx={{ minWidth: 180 }}>
                 Current Employee
@@ -1735,7 +1114,7 @@ const validateEmployeeName = (name) => {
             ))}
             {filteredAssets.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                   <Typography variant="body1" color="text.secondary">
                     No assets found matching your search criteria.
                   </Typography>
@@ -1753,9 +1132,11 @@ const validateEmployeeName = (name) => {
           </TableBody>
         </Table>
       </TableContainer>
+
       {/* Add Asset Modal */}
       <Dialog
         open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -1840,6 +1221,7 @@ const validateEmployeeName = (name) => {
                   <MenuItem value="Office Equipment">Office Equipment</MenuItem>
                 </Select>
               </FormControl>
+
               <FormControl
                 fullWidth
                 sx={{
@@ -1888,38 +1270,45 @@ const validateEmployeeName = (name) => {
                 </Select>
               </FormControl>
 
-             <TextField
-  label="Current Employee"
-  value={editData.currentEmployee || ""}
-  onChange={(e) => {
-    const value = e.target.value;
-    if (value === '' || isAlphabeticOnly(value)) {
-      setEditData({ ...editData, currentEmployee: value });
-    }
-  }}
-  fullWidth
-  error={editData.currentEmployee && !validateEmployeeName(editData.currentEmployee)}
-  helperText={editData.currentEmployee && !validateEmployeeName(editData.currentEmployee) 
-    ? "Only alphabetic characters are allowed" 
-    : ""}
-  sx={{
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "white",
-      borderRadius: "8px",
-    },
-  }}
-/>
+              <TextField
+                label="Current Employee"
+                name="currentEmployee"
+                value={newAssetData.currentEmployee || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || isAlphabeticOnly(value)) {
+                    setNewAssetData({
+                      ...newAssetData,
+                      currentEmployee: value,
+                    });
+                  }
+                }}
+                fullWidth
+                error={newAssetData.currentEmployee && !validateEmployeeName(newAssetData.currentEmployee)}
+                helperText={newAssetData.currentEmployee && !validateEmployeeName(newAssetData.currentEmployee) 
+                  ? "Only alphabetic characters are allowed" 
+                  : ""}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "white",
+                    borderRadius: "8px",
+                  },
+                }}
+              />
 
-              {/* <TextField
+              <TextField
                 label="Previous Employees"
                 name="previousEmployees"
-                value={
-                  Array.isArray(editData.previousEmployees)
-                    ? editData.previousEmployees.join(", ")
-                    : ""
-                }
-                onChange={handlePreviousEmployeesChangeEdit}
-                helperText="Enter names separated by commas"
+                value={Array.isArray(newAssetData.previousEmployees) 
+                  ? newAssetData.previousEmployees.join(", ") 
+                  : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || /^[A-Za-z\s,]+$/.test(value)) {
+                    handlePreviousEmployeesChange(e);
+                  }
+                }}
+                helperText="Enter names separated by commas (alphabetic characters only)"
                 fullWidth
                 multiline
                 rows={2}
@@ -1929,36 +1318,7 @@ const validateEmployeeName = (name) => {
                     borderRadius: "8px",
                   },
                 }}
-              /> */}
-
-
-
-<TextField
-  label="Previous Employees"
-  name="previousEmployees"
-  value={
-    Array.isArray(editData.previousEmployees)
-      ? editData.previousEmployees.join(", ")
-      : ""
-  }
-  onChange={(e) => {
-    const value = e.target.value;
-    // Allow commas and spaces in addition to alphabetic characters
-    if (value === '' || /^[A-Za-z\s,]+$/.test(value)) {
-      handlePreviousEmployeesChangeEdit(e);
-    }
-  }}
-  helperText="Enter names separated by commas (alphabetic characters only)"
-  fullWidth
-  multiline
-  rows={2}
-  sx={{
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "white",
-      borderRadius: "8px",
-    },
-  }}
-/>
+              />
 
               <TextField
                 type="date"
@@ -1971,7 +1331,6 @@ const validateEmployeeName = (name) => {
                     allottedDate: e.target.value,
                   })
                 }
-                required
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 sx={{
@@ -2049,9 +1408,11 @@ const validateEmployeeName = (name) => {
           </form>
         </DialogContent>
       </Dialog>
+
       {/* Edit Asset Modal */}
       <Dialog
         open={!!editingAssetId}
+        onClose={() => setEditingAssetId(null)}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -2136,6 +1497,7 @@ const validateEmployeeName = (name) => {
                   <MenuItem value="Office Equipment">Office Equipment</MenuItem>
                 </Select>
               </FormControl>
+
               <FormControl
                 fullWidth
                 sx={{
@@ -2162,6 +1524,7 @@ const validateEmployeeName = (name) => {
                   </MenuItem>
                 </Select>
               </FormControl>
+
               <FormControl
                 fullWidth
                 sx={{
@@ -2187,56 +1550,54 @@ const validateEmployeeName = (name) => {
                   ))}
                 </Select>
               </FormControl>
-             <TextField
-  label="Current Employee"
-  name="currentEmployee"
-  value={newAssetData.currentEmployee}
-  onChange={(e) => {
-    const value = e.target.value;
-    if (value === '' || isAlphabeticOnly(value)) {
-      setNewAssetData({
-        ...newAssetData,
-        currentEmployee: value,
-      });
-    }
-  }}
-  fullWidth
-  error={newAssetData.currentEmployee && !validateEmployeeName(newAssetData.currentEmployee)}
-  helperText={newAssetData.currentEmployee && !validateEmployeeName(newAssetData.currentEmployee) 
-    ? "Only alphabetic characters are allowed" 
-    : ""}
-  sx={{
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "white",
-      borderRadius: "8px",
-    },
-  }}
-/>
 
               <TextField
-  label="Previous Employees"
-  name="previousEmployees"
-  value={Array.isArray(newAssetData.previousEmployees) 
-    ? newAssetData.previousEmployees.join(", ") 
-    : ""}
-  onChange={(e) => {
-    const value = e.target.value;
-    // Allow commas and spaces in addition to alphabetic characters
-    if (value === '' || /^[A-Za-z\s,]+$/.test(value)) {
-      handlePreviousEmployeesChange(e);
-    }
-  }}
-  helperText="Enter names separated by commas (alphabetic characters only)"
-  fullWidth
-  multiline
-  rows={2}
-  sx={{
-    "& .MuiOutlinedInput-root": {
-      backgroundColor: "white",
-      borderRadius: "8px",
-    },
-  }}
-/>
+                label="Current Employee"
+                value={editData.currentEmployee || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || isAlphabeticOnly(value)) {
+                    setEditData({ ...editData, currentEmployee: value });
+                  }
+                }}
+                fullWidth
+                error={editData.currentEmployee && !validateEmployeeName(editData.currentEmployee)}
+                helperText={editData.currentEmployee && !validateEmployeeName(editData.currentEmployee) 
+                  ? "Only alphabetic characters are allowed" 
+                  : ""}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "white",
+                    borderRadius: "8px",
+                  },
+                }}
+              />
+
+              <TextField
+                label="Previous Employees"
+                name="previousEmployees"
+                value={
+                  Array.isArray(editData.previousEmployees)
+                    ? editData.previousEmployees.join(", ")
+                    : ""
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || /^[A-Za-z\s,]+$/.test(value)) {
+                    handlePreviousEmployeesChangeEdit(e);
+                  }
+                }}
+                helperText="Enter names separated by commas (alphabetic characters only)"
+                fullWidth
+                multiline
+                rows={2}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "white",
+                    borderRadius: "8px",
+                  },
+                }}
+              />
 
               <TextField
                 type="date"
@@ -2322,4 +1683,5 @@ const validateEmployeeName = (name) => {
 };
 
 export default AssetHistory;
-         
+
+
