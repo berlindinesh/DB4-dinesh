@@ -622,7 +622,7 @@ router.put('/bank-info/:employeeId', async (req, res) => {
 });
 
 
-router.put('/work-info/:id', async (req, res) => {
+router.put('/work-info/:employeeid', async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
