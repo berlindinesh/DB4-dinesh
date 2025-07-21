@@ -105,7 +105,7 @@ const employees = Array.from({ length: 20 }, (_, i) => ({
   name: `Employee ${i + 1}`,
   employeeCode: `#EMP${i + 1}`,
   requestedShift: i % 2 === 0 ? "Morning Shift" : "Evening Shift",
-  currentShift: "Regular Shift",
+  currentShift: "Morning Shift",
   requestedDate: "2024-02-07",
   requestedTill: "2024-02-09",
   status: i % 2 === 0 ? "Approved" : "Rejected",
@@ -291,7 +291,7 @@ const fetchRegisteredEmployees = async () => {
       }`,
       employeeCode: emp.Emp_ID,
       department: emp.joiningDetails?.department || "Not Assigned",
-      // Use the actual shiftType from joiningDetails instead of defaulting to "Regular Shift"
+      // Use the actual shiftType from joiningDetails instead of defaulting to "Morning Shift"
       currentShift: emp.joiningDetails?.shiftType || "Not Assigned",
       // Add any other relevant fields from the employee data
     }));
@@ -533,7 +533,7 @@ const handleBulkApprove = async () => {
         await api.put(`/employees/work-info/${shift.employeeCode}`, {
           shiftType: shift.requestedShift,
           // Preserve existing work type if available
-          workType: shift.workType || "Regular"
+          workType: shift.workType || "Morning Shift"
         });
         
         // Send notification for each approved shift
@@ -665,7 +665,7 @@ const handleApprove = async (id, e) => {
     await api.put(`/employees/work-info/${shiftRequest.employeeCode}`, {
       shiftType: shiftRequest.requestedShift,
       // Preserve existing work type if available
-      workType: shiftRequest.workType || "Regular"
+      workType: shiftRequest.workType || "Morning Shift"
     });
     
     // Reload shift requests
@@ -1853,7 +1853,7 @@ const handleSaveEdit = async () => {
                             </Typography>
                             <Typography variant="body2">
                               <strong>Current Shift:</strong>{" "}
-                              {currentUser.joiningDetails?.shiftType || "Regular Shift"}
+                              {currentUser.joiningDetails?.shiftType || "Morning Shift"}
                             </Typography>
                           </Box>
                         </Paper>

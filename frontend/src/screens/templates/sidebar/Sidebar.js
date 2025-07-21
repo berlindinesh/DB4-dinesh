@@ -122,10 +122,7 @@ function Sidebar() {
         {activeMenu === "employee" && (
           <ul className="sub-menu">
             <li onClick={() => handleNavigation("/Dashboards/profile")}>Profile</li>
-            
-            <li onClick={() => handleNavigation("/Dashboards/shift-requests")}>Shift Requests</li>
-            <li onClick={() => handleNavigation("/Dashboards/work-type-request")}>Work Type Request</li>
-             
+
             {/* Admin, HR, Manager only access */}
             {(role === 'admin' || role === 'hr' || role === 'manager') && (
               <>
@@ -133,6 +130,11 @@ function Sidebar() {
                 
               </>
             )}
+            
+            <li onClick={() => handleNavigation("/Dashboards/shift-requests")}>Shift Requests</li>
+            <li onClick={() => handleNavigation("/Dashboards/work-type-request")}>Work Type Request</li>
+             
+            
 
             <li onClick={() => handleNavigation("/Dashboards/disciplinary-actions")}>Disciplinary Actions</li>
             <li onClick={() => handleNavigation("/Dashboards/policies")}>Policies</li>

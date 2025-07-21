@@ -391,15 +391,344 @@ router.get('/get-employee/:employeeId', async (req, res) => {
     // Get company-specific Employee model
     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
     
-    const employee = await CompanyEmployee.findOne({ Emp_ID: req.params.employeeId });
+    const employee = await CompanyEmployee.findOne({ Emp_ID: req.params.employeeId })
+      .select(`
+        userId
+        Emp_ID
+        registrationComplete
+        personalInfo
+        addressDetails
+        joiningDetails
+        educationDetails
+        trainingStatus
+        trainingDetails
+        familyDetails
+        serviceHistory
+        nominationDetails
+        bankInfo
+        createdAt
+        updatedAt
+      `);
+    
+    if (!employee) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Employee not found' 
+      });
+    }
+
+    // Return complete employee data
     res.json({ 
       success: true, 
-      data: employee 
+      data: {
+        userId: employee.userId,
+        Emp_ID: employee.Emp_ID,
+        registrationComplete: employee.registrationComplete,
+        
+        // Personal Info with all fields
+        personalInfo: {
+          prefix: employee.personalInfo?.prefix || "",
+          firstName: employee.personalInfo?.firstName || "",
+          lastName: employee.personalInfo?.lastName || "",
+          dob: employee.personalInfo?.dob || null,
+          gender: employee.personalInfo?.gender || "",
+          maritalStatus: employee.personalInfo?.maritalStatus || "",
+          bloodGroup: employee.personalInfo?.bloodGroup || "",
+          nationality: employee.personalInfo?.nationality || "",
+          aadharNumber: employee.personalInfo?.aadharNumber || "",
+          panNumber: employee.personalInfo?.panNumber || "",
+          mobileNumber: employee.personalInfo?.mobileNumber || "",
+          email: employee.personalInfo?.email || "",
+          workemail: employee.personalInfo?.workemail || "",
+          employeeImage: employee.personalInfo?.employeeImage || ""
+        },
+        
+        // Address Details with complete structure
+        addressDetails: {
+          presentAddress: {
+            address: employee.addressDetails?.presentAddress?.address || "",
+            city: employee.addressDetails?.presentAddress?.city || "",
+            district: employee.addressDetails?.presentAddress?.district || "",
+            state: employee.addressDetails?.presentAddress?.state || "",
+            pinCode: employee.addressDetails?.presentAddress?.pinCode || "",
+            country: employee.addressDetails?.presentAddress?.country || ""
+          },
+          permanentAddress: {
+            address: employee.addressDetails?.permanentAddress?.address || "",
+            city: employee.addressDetails?.permanentAddress?.city || "",
+            district: employee.addressDetails?.permanentAddress?.district || "",
+            state: employee.addressDetails?.permanentAddress?.state || "",
+            pinCode: employee.addressDetails?.permanentAddress?.pinCode || "",
+            country: employee.addressDetails?.permanentAddress?.country || ""
+          }
+        },
+        
+        // Joining Details with all fields
+        joiningDetails: {
+          dateOfAppointment: employee.joiningDetails?.dateOfAppointment || null,
+          dateOfJoining: employee.joiningDetails?.dateOfJoining || null,
+          department: employee.joiningDetails?.department || "",
+          initialDesignation: employee.joiningDetails?.initialDesignation || "",
+          modeOfRecruitment: employee.joiningDetails?.modeOfRecruitment || "",
+          employeeType: employee.joiningDetails?.employeeType || "",
+          shiftType: employee.joiningDetails?.shiftType || "",
+          workType: employee.joiningDetails?.workType || "",
+          uanNumber: employee.joiningDetails?.uanNumber || "",
+          pfNumber: employee.joiningDetails?.pfNumber || ""
+        },
+        
+        // Education Details with complete structure
+        educationDetails: {
+          basic: employee.educationDetails?.basic || [],
+          professional: employee.educationDetails?.professional || []
+        },
+        
+        // Training Details with complete structure
+        trainingStatus: employee.trainingStatus || "no",
+        trainingDetails: {
+          trainingInIndia: employee.trainingDetails?.trainingInIndia || []
+        },
+        
+        // Family Details (array)
+        familyDetails: employee.familyDetails || [],
+        
+        // Service History (array)
+        serviceHistory: employee.serviceHistory || [],
+        
+        // Nomination Details (array)
+        nominationDetails: employee.nominationDetails || [],
+        
+        // Bank Info with all fields
+        bankInfo: {
+          accountNumber: employee.bankInfo?.accountNumber || "",
+          ifscCode: employee.bankInfo?.ifscCode || "",
+          bankName: employee.bankInfo?.bankName || "",
+          branchName: employee.bankInfo?.branchName || "",
+          accountType: employee.bankInfo?.accountType || ""
+        },
+        
+        // Timestamps
+        createdAt: employee.createdAt,
+        updatedAt: employee.updatedAt
+      }
     });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    console.error('Error fetching employee:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      message: error.message 
+    });
   }
 });
+
+// Add this route for updating personal info
+router.put('/personal-info/:employeeId', async (req, res) => {
+  try {
+    const companyCode = req.companyCode;
+    
+    if (!companyCode) {
+      return res.status(401).json({ 
+        error: 'Authentication required', 
+        message: 'Company code not found in request' 
+      });
+    }
+    
+    const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
+    
+    const { employeeId } = req.params;
+    const { personalInfo, addressDetails, joiningDetails, educationDetails, trainingStatus, trainingDetails, familyDetails, serviceHistory, nominationDetails } = req.body;
+    
+    console.log(`Updating personal info for employee ${employeeId}`);
+    console.log('Received data:', req.body);
+    
+    // Build the update object with proper validation
+    const updateFields = {};
+    
+    // Clean and validate personalInfo
+    if (personalInfo) {
+      const cleanPersonalInfo = { ...personalInfo };
+      
+      // Remove computed and system fields
+      delete cleanPersonalInfo.name;
+      delete cleanPersonalInfo.phone;
+      delete cleanPersonalInfo.department;
+      delete cleanPersonalInfo.designation;
+      delete cleanPersonalInfo.employeeId;
+      delete cleanPersonalInfo.userId;
+      delete cleanPersonalInfo.addressDetails;
+      delete cleanPersonalInfo.joiningDetails;
+      delete cleanPersonalInfo.educationDetails;
+      delete cleanPersonalInfo.trainingDetails;
+      delete cleanPersonalInfo.familyDetails;
+      delete cleanPersonalInfo.serviceHistory;
+      delete cleanPersonalInfo.nominationDetails;
+      delete cleanPersonalInfo.registrationComplete;
+      delete cleanPersonalInfo.trainingStatus;
+      
+      // Remove empty values to avoid unique constraint issues
+      Object.keys(cleanPersonalInfo).forEach(key => {
+        if (cleanPersonalInfo[key] === "" || cleanPersonalInfo[key] === null || cleanPersonalInfo[key] === undefined) {
+          delete cleanPersonalInfo[key];
+        }
+      });
+      
+      if (Object.keys(cleanPersonalInfo).length > 0) {
+        updateFields.personalInfo = cleanPersonalInfo;
+      }
+    }
+    
+    // Validate and clean addressDetails
+    if (addressDetails && typeof addressDetails === 'object') {
+      updateFields.addressDetails = addressDetails;
+    }
+    
+    // Validate and clean joiningDetails
+    if (joiningDetails && typeof joiningDetails === 'object') {
+      updateFields.joiningDetails = joiningDetails;
+    }
+    
+    // Validate and clean educationDetails
+    if (educationDetails && typeof educationDetails === 'object') {
+      const cleanEducationDetails = {
+        basic: [],
+        professional: []
+      };
+      
+      // Validate basic education
+      if (Array.isArray(educationDetails.basic)) {
+        cleanEducationDetails.basic = educationDetails.basic.filter(item => {
+          return item && 
+                 typeof item === 'object' && 
+                 ['10th', '12th'].includes(item.education);
+        });
+      }
+      
+      // Validate professional education
+      if (Array.isArray(educationDetails.professional)) {
+        cleanEducationDetails.professional = educationDetails.professional.filter(item => {
+          return item && 
+                 typeof item === 'object' && 
+                 ['UG', 'PG', 'Doctorate'].includes(item.education);
+        });
+      }
+      
+      updateFields.educationDetails = cleanEducationDetails;
+    }
+    
+    // Validate trainingStatus
+    if (trainingStatus && ['yes', 'no'].includes(trainingStatus)) {
+      updateFields.trainingStatus = trainingStatus;
+    }
+    
+    // Validate and clean trainingDetails
+    if (trainingDetails && typeof trainingDetails === 'object') {
+      const cleanTrainingDetails = {
+        trainingInIndia: []
+      };
+      
+      if (Array.isArray(trainingDetails.trainingInIndia)) {
+        cleanTrainingDetails.trainingInIndia = trainingDetails.trainingInIndia.filter(item => {
+          return item && 
+                 typeof item === 'object' && 
+                 item.type && 
+                 item.topic && 
+                 item.institute;
+        });
+      }
+      
+      updateFields.trainingDetails = cleanTrainingDetails;
+    }
+    
+    // Validate arrays
+    if (Array.isArray(familyDetails)) {
+      updateFields.familyDetails = familyDetails.filter(item => 
+        item && typeof item === 'object' && item.name && item.relation
+      );
+    }
+    
+    if (Array.isArray(serviceHistory)) {
+      updateFields.serviceHistory = serviceHistory.filter(item => 
+        item && typeof item === 'object'
+      );
+    }
+    
+    if (Array.isArray(nominationDetails)) {
+      updateFields.nominationDetails = nominationDetails.filter(item => 
+        item && typeof item === 'object'
+      );
+    }
+    
+    console.log('Cleaned update fields:', updateFields);
+    
+    // Only proceed if there are fields to update
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+    
+    // Update the employee document
+    const result = await CompanyEmployee.findOneAndUpdate(
+      { Emp_ID: employeeId },
+      { $set: updateFields },
+      { 
+        new: true,
+        runValidators: true,
+        context: 'query'
+      }
+    );
+    
+    if (!result) {
+      console.log(`Employee with ID ${employeeId} not found`);
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+    
+    console.log(`Successfully updated personal info for employee ${employeeId}`);
+    
+    res.json({
+      success: true,
+      message: 'Personal information updated successfully',
+      data: {
+        personalInfo: result.personalInfo,
+        addressDetails: result.addressDetails,
+        joiningDetails: result.joiningDetails,
+        educationDetails: result.educationDetails,
+        trainingStatus: result.trainingStatus,
+        trainingDetails: result.trainingDetails,
+        familyDetails: result.familyDetails,
+        serviceHistory: result.serviceHistory,
+        nominationDetails: result.nominationDetails
+      }
+    });
+  } catch (error) {
+    console.error('Error updating personal information:', error);
+    
+    // More detailed error logging
+    if (error.name === 'ValidationError') {
+      console.error('Validation errors:', error.errors);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: Object.keys(error.errors).map(key => ({
+          field: key,
+          message: error.errors[key].message
+        }))
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: `Server error: ${error.message}`
+    });
+  }
+});
+
+
 
 router.post('/nomination-details', async (req, res) => {
   try {
@@ -622,7 +951,7 @@ router.put('/bank-info/:employeeId', async (req, res) => {
 });
 
 
-router.put('/work-info/:employeeid', async (req, res) => {
+router.put('/work-info/:employeeId', async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
@@ -638,25 +967,44 @@ router.put('/work-info/:employeeid', async (req, res) => {
     const CompanyEmployee = await getModelForCompany(companyCode, 'Employee', Employee.schema);
     
     const { employeeId } = req.params;
-    const { shiftType, workType } = req.body;
+    const { 
+      shiftType, 
+      workType, 
+      uanNumber, 
+      pfNumber,
+      department,
+      designation,
+      employeeType,
+      dateOfJoining,
+      dateOfAppointment,
+      modeOfRecruitment
+    } = req.body;
     
-    console.log(`Updating work info for employee ${employeeId} with shiftType: ${shiftType}, workType: ${workType}`);
+    console.log(`Updating work info for employee ${employeeId}`);
+    console.log('Update data:', req.body);
+    
+    // Build update object dynamically to only update provided fields
+    const updateFields = {};
+    
+    if (shiftType !== undefined) updateFields['joiningDetails.shiftType'] = shiftType;
+    if (workType !== undefined) updateFields['joiningDetails.workType'] = workType;
+    if (uanNumber !== undefined) updateFields['joiningDetails.uanNumber'] = uanNumber;
+    if (pfNumber !== undefined) updateFields['joiningDetails.pfNumber'] = pfNumber;
+    if (department !== undefined) updateFields['joiningDetails.department'] = department;
+    if (designation !== undefined) updateFields['joiningDetails.initialDesignation'] = designation;
+    if (employeeType !== undefined) updateFields['joiningDetails.employeeType'] = employeeType;
+    if (dateOfJoining !== undefined) updateFields['joiningDetails.dateOfJoining'] = dateOfJoining;
+    if (dateOfAppointment !== undefined) updateFields['joiningDetails.dateOfAppointment'] = dateOfAppointment;
+    if (modeOfRecruitment !== undefined) updateFields['joiningDetails.modeOfRecruitment'] = modeOfRecruitment;
     
     // Use findOneAndUpdate with specific update operators
     const result = await CompanyEmployee.findOneAndUpdate(
       { Emp_ID: employeeId },
-      { 
-        $set: { 
-          'joiningDetails.shiftType': shiftType,
-          'joiningDetails.workType': workType,
-          'joiningDetails.uanNumber': req.body.uanNumber,
-          'joiningDetails.pfNumber': req.body.pfNumber,
-        }
-      },
+      { $set: updateFields },
       { 
         new: true,
         runValidators: true,
-        context: 'query' // This ensures validation only runs on the updated fields
+        context: 'query'
       }
     );
     
@@ -684,6 +1032,7 @@ router.put('/work-info/:employeeid', async (req, res) => {
   }
 });
 
+
 // Get employee profile by userId
 router.get('/by-user/:userId', async (req, res) => {
   try {
@@ -702,8 +1051,25 @@ router.get('/by-user/:userId', async (req, res) => {
     
     const { userId } = req.params;
     
-    // Find employee record by userId
-    const employee = await CompanyEmployee.findOne({ userId });
+    // Find employee record by userId with all fields
+    const employee = await CompanyEmployee.findOne({ userId })
+      .select(`
+        userId
+        Emp_ID
+        registrationComplete
+        personalInfo
+        addressDetails
+        joiningDetails
+        educationDetails
+        trainingStatus
+        trainingDetails
+        familyDetails
+        serviceHistory
+        nominationDetails
+        bankInfo
+        createdAt
+        updatedAt
+      `);
     
     if (!employee) {
       return res.status(404).json({
@@ -712,9 +1078,100 @@ router.get('/by-user/:userId', async (req, res) => {
       });
     }
     
+    // Return complete employee data
     res.json({
       success: true,
-      data: employee
+      data: {
+        userId: employee.userId,
+        Emp_ID: employee.Emp_ID,
+        registrationComplete: employee.registrationComplete,
+        
+        // Personal Info with all fields
+        personalInfo: {
+          prefix: employee.personalInfo?.prefix || "",
+          firstName: employee.personalInfo?.firstName || "",
+          lastName: employee.personalInfo?.lastName || "",
+          dob: employee.personalInfo?.dob || null,
+          gender: employee.personalInfo?.gender || "",
+          maritalStatus: employee.personalInfo?.maritalStatus || "",
+          bloodGroup: employee.personalInfo?.bloodGroup || "",
+          nationality: employee.personalInfo?.nationality || "",
+          aadharNumber: employee.personalInfo?.aadharNumber || "",
+          panNumber: employee.personalInfo?.panNumber || "",
+          mobileNumber: employee.personalInfo?.mobileNumber || "",
+          email: employee.personalInfo?.email || "",
+          workemail: employee.personalInfo?.workemail || "",
+          employeeImage: employee.personalInfo?.employeeImage || ""
+        },
+        
+        // Address Details with complete structure
+        addressDetails: {
+          presentAddress: {
+            address: employee.addressDetails?.presentAddress?.address || "",
+            city: employee.addressDetails?.presentAddress?.city || "",
+            district: employee.addressDetails?.presentAddress?.district || "",
+            state: employee.addressDetails?.presentAddress?.state || "",
+            pinCode: employee.addressDetails?.presentAddress?.pinCode || "",
+            country: employee.addressDetails?.presentAddress?.country || ""
+          },
+          permanentAddress: {
+            address: employee.addressDetails?.permanentAddress?.address || "",
+            city: employee.addressDetails?.permanentAddress?.city || "",
+            district: employee.addressDetails?.permanentAddress?.district || "",
+            state: employee.addressDetails?.permanentAddress?.state || "",
+            pinCode: employee.addressDetails?.permanentAddress?.pinCode || "",
+            country: employee.addressDetails?.permanentAddress?.country || ""
+          }
+        },
+        
+        // Joining Details with all fields
+        joiningDetails: {
+          dateOfAppointment: employee.joiningDetails?.dateOfAppointment || null,
+          dateOfJoining: employee.joiningDetails?.dateOfJoining || null,
+          department: employee.joiningDetails?.department || "",
+          initialDesignation: employee.joiningDetails?.initialDesignation || "",
+          modeOfRecruitment: employee.joiningDetails?.modeOfRecruitment || "",
+          employeeType: employee.joiningDetails?.employeeType || "",
+          shiftType: employee.joiningDetails?.shiftType || "",
+          workType: employee.joiningDetails?.workType || "",
+          uanNumber: employee.joiningDetails?.uanNumber || "",
+          pfNumber: employee.joiningDetails?.pfNumber || ""
+        },
+        
+        // Education Details with complete structure
+        educationDetails: {
+          basic: employee.educationDetails?.basic || [],
+          professional: employee.educationDetails?.professional || []
+        },
+        
+        // Training Details with complete structure
+        trainingStatus: employee.trainingStatus || "no",
+        trainingDetails: {
+          trainingInIndia: employee.trainingDetails?.trainingInIndia || []
+        },
+        
+        // Family Details (array)
+        familyDetails: employee.familyDetails || [],
+        
+        // Service History (array)
+        serviceHistory: employee.serviceHistory || [],
+        
+        // Nomination Details (array)
+        nominationDetails: employee.nominationDetails || [],
+        
+        // Bank Info with all fields
+        bankInfo: {
+          accountNumber: employee.bankInfo?.accountNumber || "",
+          ifscCode: employee.bankInfo?.ifscCode || "",
+          bankName: employee.bankInfo?.bankName || "",
+          branchName: employee.bankInfo?.branchName || "",
+          accountType: employee.bankInfo?.accountType || ""
+        },
+        
+        // Timestamps
+        createdAt: employee.createdAt,
+        updatedAt: employee.updatedAt
+      }
     });
   } catch (error) {
     console.error('Error fetching employee by userId:', error);

@@ -100,78 +100,198 @@ const ProfilePage = () => {
       setEditMode(false);
       return;
     }
-
+  
     try {
       setLoading(true);
+      
+      console.log("Updating personal info for employee ID:", employeeId);
+      console.log("Current personalInfo state:", personalInfo);
+      
+      // Prepare clean personal info data (only actual personalInfo fields from schema)
+      const cleanPersonalInfo = {};
+      
+      // Only include fields that are defined in the schema and have values
+      const personalInfoFields = [
+        'prefix', 'firstName', 'lastName', 'dob', 'gender', 'maritalStatus', 
+        'bloodGroup', 'nationality', 'aadharNumber', 'panNumber', 
+        'mobileNumber', 'email', 'workemail', 'employeeImage'
+      ];
+      
+      personalInfoFields.forEach(field => {
+        let value = personalInfo[field];
+        
+        // Handle special cases
+        if (field === 'mobileNumber' && !value && personalInfo.phone) {
+          value = personalInfo.phone;
+        }
+        
+        // Only include non-empty values
+        if (value && value !== "" && value !== null && value !== undefined) {
+          cleanPersonalInfo[field] = value;
+        }
+      });
+  
+      // Prepare the update data - only send sections that exist and are valid
+      const updateData = {};
+      
+      // Always include personalInfo if we have valid fields
+      if (Object.keys(cleanPersonalInfo).length > 0) {
+        updateData.personalInfo = cleanPersonalInfo;
+      }
+      
+      // Only include other sections if they exist and are properly structured
+      if (personalInfo.addressDetails && 
+          typeof personalInfo.addressDetails === 'object' &&
+          (personalInfo.addressDetails.presentAddress || personalInfo.addressDetails.permanentAddress)) {
+        updateData.addressDetails = personalInfo.addressDetails;
+      }
+      
+      if (personalInfo.joiningDetails && 
+          typeof personalInfo.joiningDetails === 'object' &&
+          Object.keys(personalInfo.joiningDetails).length > 0) {
+        updateData.joiningDetails = personalInfo.joiningDetails;
+      }
+      
+      // Only include educationDetails if it has valid structure
+      if (personalInfo.educationDetails && 
+          typeof personalInfo.educationDetails === 'object') {
+        const validEducationDetails = {
+          basic: [],
+          professional: []
+        };
+        
+        // Validate basic education entries
+        if (Array.isArray(personalInfo.educationDetails.basic)) {
+          validEducationDetails.basic = personalInfo.educationDetails.basic.filter(item => 
+            item && 
+            item.education && 
+            ['10th', '12th'].includes(item.education)
+          );
+        }
+        
+        // Validate professional education entries
+        if (Array.isArray(personalInfo.educationDetails.professional)) {
+          validEducationDetails.professional = personalInfo.educationDetails.professional.filter(item => 
+            item && 
+            item.education && 
+            ['UG', 'PG', 'Doctorate'].includes(item.education)
+          );
+        }
+        
+        // Only include if there are valid entries
+        if (validEducationDetails.basic.length > 0 || validEducationDetails.professional.length > 0) {
+          updateData.educationDetails = validEducationDetails;
+        }
+      }
+      
+      // Include trainingStatus if valid
+      if (personalInfo.trainingStatus && ['yes', 'no'].includes(personalInfo.trainingStatus)) {
+        updateData.trainingStatus = personalInfo.trainingStatus;
+      }
+      
+      // Only include trainingDetails if valid
+      if (personalInfo.trainingDetails && 
+          typeof personalInfo.trainingDetails === 'object' &&
+          Array.isArray(personalInfo.trainingDetails.trainingInIndia)) {
+        const validTrainingDetails = {
+          trainingInIndia: personalInfo.trainingDetails.trainingInIndia.filter(item =>
+            item && 
+            item.type && 
+            item.topic && 
+            item.institute
+          )
+        };
+        
+        if (validTrainingDetails.trainingInIndia.length > 0) {
+          updateData.trainingDetails = validTrainingDetails;
+        }
+      }
+      
+      // Include arrays only if they exist and are valid
+      if (Array.isArray(personalInfo.familyDetails) && personalInfo.familyDetails.length > 0) {
+        updateData.familyDetails = personalInfo.familyDetails.filter(item => 
+          item && item.name && item.relation
+        );
+      }
+      
+      if (Array.isArray(personalInfo.serviceHistory) && personalInfo.serviceHistory.length > 0) {
+        updateData.serviceHistory = personalInfo.serviceHistory;
+      }
+      
+      if (Array.isArray(personalInfo.nominationDetails) && personalInfo.nominationDetails.length > 0) {
+        updateData.nominationDetails = personalInfo.nominationDetails;
+      }
+  
+      console.log("Sending clean update data:", updateData);
+  
+      // Don't send request if no valid data to update
+      if (Object.keys(updateData).length === 0) {
+        toast.warning("No changes to save");
+        setEditMode(false);
+        return;
+      }
+  
       const response = await api.put(
-        `employees/personal-info/${id}`,
-        { personalInfo },
+        `employees/personal-info/${employeeId}`,
+        updateData,
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
-
+  
       if (response.status === 200) {
         toast.success("Personal information updated successfully");
-        setPersonalInfo(response.data.data.personalInfo);
+        
+        // Refresh the complete profile data to ensure consistency
+        if (id) {
+          await fetchProfileData();
+        } else {
+          const userId = currentUser?.id || localStorage.getItem("userId");
+          if (userId) {
+            await fetchProfileByUserId(userId);
+          }
+        }
+        
         setEditMode(false);
-
+  
         // Broadcast update to other users
-        broadcastProfileUpdate("personalInfo", response.data.data.personalInfo);
+        broadcastProfileUpdate("personalInfo", response.data.data);
       } else {
         toast.error("Failed to update personal information");
       }
     } catch (error) {
       console.error("Error updating personal info:", error);
-      toast.error(
-        "Error updating personal information: " +
-          (error.response?.data?.message || error.message)
-      );
+      
+      if (error.response) {
+        console.error("Server error details:", error.response.data);
+        
+        if (error.response.status === 400 && error.response.data.errors) {
+          // Handle validation errors
+          const errorMessages = error.response.data.errors.map(err => err.message).join(', ');
+          toast.error(`Validation error: ${errorMessages}`);
+        } else if (error.response.status === 404) {
+          toast.error("Employee not found. Please refresh the page and try again.");
+        } else if (error.response.status === 401) {
+          toast.error("You don't have permission to update this information.");
+        } else {
+          toast.error(
+            "Error updating personal information: " +
+              (error.response?.data?.message || "Unknown server error")
+          );
+        }
+      } else if (error.request) {
+        toast.error("Network error. Please check your connection and try again.");
+      } else {
+        toast.error("Error updating personal information: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  // const updateBankInfo = async () => {
-  //   if (!canEditProfile()) {
-  //     showPermissionError();
-  //     return;
-  //   }
-
-  //   try {
-  //     setLoading(true);
-  //     const response = await api.put(
-  //       `employees/bank-info/${id}`,
-  //       { bankInfo },
-  //       {
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     if (response.status === 200) {
-  //       toast.success("Bank information updated successfully");
-  //       setBankInfo(response.data.data.bankInfo);
-
-  //       // Broadcast update to other users
-  //       broadcastProfileUpdate("bankInfo", response.data.data.bankInfo);
-  //     } else {
-  //       toast.error("Failed to update bank information");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error updating bank info:", error);
-  //     toast.error(
-  //       "Error updating bank information: " +
-  //         (error.response?.data?.message || error.message)
-  //     );
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
+  
+  
   // Add this function to handle work info updates with RBAC
 
 const updateBankInfo = async () => {
@@ -212,77 +332,121 @@ const updateBankInfo = async () => {
   }
 };
 
-  const updateWorkInfo = async () => {
-    console.log("Updating work info for employee ID:", id);
+const updateWorkInfo = async () => {
+  console.log("Updating work info for employee ID:", employeeId); // Use employeeId instead of id
 
-    if (!canEditProfile()) {
-      showPermissionError();
-      setEditWorkInfoMode(false);
-      return;
-    }
+  if (!canEditProfile()) {
+    showPermissionError();
+    setEditWorkInfoMode(false);
+    return;
+  }
 
-    try {
-      setLoading(true);
-      if (editWorkInfoMode) {
-        const workInfoData = {
-          shiftType: workInfo.shiftType,
-          workType: workInfo.workType,
-          uanNumber: workInfo.uanNumber,
-          pfNumber: workInfo.pfNumber,
-          department: workInfo.department,
-          designation: workInfo.designation,
-          employeeType: workInfo.employeeType,
-          dateOfJoining: workInfo.dateOfJoining,
-          dateOfAppointment: workInfo.dateOfAppointment,
-          modeOfRecruitment: workInfo.modeOfRecruitment,
-        };
+  try {
+    setLoading(true);
+    if (editWorkInfoMode) {
+      // Complete work info data with ALL joining details fields
+      const workInfoData = {
+        // Basic work info fields (from your existing code)
+        shiftType: workInfo.shiftType,
+        workType: workInfo.workType,
+        uanNumber: workInfo.uanNumber,
+        pfNumber: workInfo.pfNumber,
+        department: workInfo.department,
+        designation: workInfo.designation,
+        employeeType: workInfo.employeeType,
+        dateOfJoining: workInfo.dateOfJoining,
+        dateOfAppointment: workInfo.dateOfAppointment,
+        modeOfRecruitment: workInfo.modeOfRecruitment,
+        
+        // Additional fields that might be missing
+        initialDesignation: workInfo.designation || workInfo.initialDesignation,
+      };
 
-        const response = await api.put(
-          `employees/work-info/${id}`,
-          workInfoData,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          toast.success("Work information updated successfully");
-          setWorkInfo(response.data.data);
-          setEditWorkInfoMode(false);
-
-          // Update the personalInfo state to reflect changes
-          setPersonalInfo((prev) => ({
-            ...prev,
-            joiningDetails: {
-              ...prev.joiningDetails,
-              ...workInfoData,
-            },
-          }));
-
-          // Broadcast update to other users
-          broadcastProfileUpdate("workInfo", response.data.data);
-        } else {
-          toast.error("Failed to update work information");
+      // Remove undefined values to avoid sending null data
+      Object.keys(workInfoData).forEach(key => {
+        if (workInfoData[key] === undefined || workInfoData[key] === null) {
+          delete workInfoData[key];
         }
-      }
-    } catch (error) {
-      console.error("Error updating work info:", error);
+      });
 
-      if (error.response) {
-        console.error("Server error details:", error.response.data);
-        console.error("Status code:", error.response.status);
-      }
+      console.log("Sending work info data:", workInfoData);
 
-      toast.error(
-        "Error updating work information: " +
-          (error.response?.data?.message || error.message)
+      const response = await api.put(
+        `employees/work-info/${employeeId}`, // Fixed: removed extra }
+        workInfoData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
-    } finally {
-      setLoading(false);
+
+      if (response.status === 200) {
+        toast.success("Work information updated successfully");
+        
+        // Update workInfo state with response data
+        setWorkInfo(prevWorkInfo => ({
+          ...prevWorkInfo,
+          ...response.data.data
+        }));
+        
+        setEditWorkInfoMode(false);
+
+        // Update the personalInfo state to reflect changes in joining details
+        setPersonalInfo((prev) => ({
+          ...prev,
+          // Update display fields
+          department: workInfoData.department || prev.department,
+          designation: workInfoData.designation || prev.designation,
+          // Update nested joiningDetails object
+          joiningDetails: {
+            ...prev.joiningDetails,
+            ...workInfoData,
+            initialDesignation: workInfoData.designation || workInfoData.initialDesignation,
+          },
+        }));
+
+        // Broadcast update to other users
+        broadcastProfileUpdate("workInfo", response.data.data);
+        
+        // Optional: Refresh complete profile data to ensure consistency
+        // Uncomment if you want to fetch fresh data after update
+        // setTimeout(() => {
+        //   fetchProfileData();
+        // }, 500);
+        
+      } else {
+        toast.error("Failed to update work information");
+      }
     }
-  };
+  } catch (error) {
+    console.error("Error updating work info:", error);
+
+    if (error.response) {
+      console.error("Server error details:", error.response.data);
+      console.error("Status code:", error.response.status);
+      
+      // More specific error handling
+      if (error.response.status === 404) {
+        toast.error("Employee not found. Please refresh the page and try again.");
+      } else if (error.response.status === 401) {
+        toast.error("You don't have permission to update this information.");
+      } else {
+        toast.error(
+          "Error updating work information: " +
+            (error.response?.data?.message || "Unknown server error")
+        );
+      }
+    } else if (error.request) {
+      toast.error("Network error. Please check your connection and try again.");
+    } else {
+      toast.error("Error updating work information: " + error.message);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Real-time update broadcasting function
   const broadcastProfileUpdate = (updateType, data) => {
@@ -358,197 +522,306 @@ const updateBankInfo = async () => {
 
   const fetchProfileData = useCallback(async () => {
     if (!id) return;
-
+  
     setLoading(true);
     try {
       const response = await api.get(`employees/get-employee/${id}`);
-
+  
       if (response.data.success) {
         const employeeData = response.data.data;
-
+  
         setEmployeeId(employeeData.Emp_ID);
-
-        // Set personal info from the employee data
+  
+        // Set personal info with ALL fields from the schema
         setPersonalInfo({
+          // Basic identifiers
           employeeId: employeeData.Emp_ID,
-          name: `${employeeData.personalInfo?.firstName || ""} ${
-            employeeData.personalInfo?.lastName || ""
-          }`,
+          userId: employeeData.userId,
+          
+          // Personal Info fields from schema
+          prefix: employeeData.personalInfo?.prefix || "",
+          firstName: employeeData.personalInfo?.firstName || "",
+          lastName: employeeData.personalInfo?.lastName || "",
+          dob: employeeData.personalInfo?.dob || "",
+          gender: employeeData.personalInfo?.gender || "",
+          maritalStatus: employeeData.personalInfo?.maritalStatus || "",
+          bloodGroup: employeeData.personalInfo?.bloodGroup || "",
+          nationality: employeeData.personalInfo?.nationality || "",
+          aadharNumber: employeeData.personalInfo?.aadharNumber || "",
+          panNumber: employeeData.personalInfo?.panNumber || "",
+          mobileNumber: employeeData.personalInfo?.mobileNumber || "",
           email: employeeData.personalInfo?.email || "",
           workemail: employeeData.personalInfo?.workemail || "",
+          employeeImage: employeeData.personalInfo?.employeeImage || "",
+          
+          // Computed fields for display
+          name: `${employeeData.personalInfo?.firstName || ""} ${employeeData.personalInfo?.lastName || ""}`,
           phone: employeeData.personalInfo?.mobileNumber || "",
           department: employeeData.joiningDetails?.department || "",
           designation: employeeData.joiningDetails?.initialDesignation || "",
-          bloodGroup: employeeData.personalInfo?.bloodGroup || "",
-          gender: employeeData.personalInfo?.gender || "",
-          maritalStatus: employeeData.personalInfo?.maritalStatus || "",
-          panNumber: employeeData.personalInfo?.panNumber || "",
-          aadharNumber: employeeData.personalInfo?.aadharNumber || "",
-          dob: employeeData.personalInfo?.dob
-            ? new Date(employeeData.personalInfo.dob).toLocaleDateString()
-            : "",
-          nationality: employeeData.personalInfo?.nationality || "",
-          // Include all other fields from personalInfo
-          ...employeeData.personalInfo,
-          // Include addressDetails directly
-          addressDetails: employeeData.addressDetails || {
-            presentAddress: {},
-            permanentAddress: {},
+          
+          // Address Details (complete structure)
+          addressDetails: {
+            presentAddress: {
+              address: employeeData.addressDetails?.presentAddress?.address || "",
+              city: employeeData.addressDetails?.presentAddress?.city || "",
+              district: employeeData.addressDetails?.presentAddress?.district || "",
+              state: employeeData.addressDetails?.presentAddress?.state || "",
+              pinCode: employeeData.addressDetails?.presentAddress?.pinCode || "",
+              country: employeeData.addressDetails?.presentAddress?.country || ""
+            },
+            permanentAddress: {
+              address: employeeData.addressDetails?.permanentAddress?.address || "",
+              city: employeeData.addressDetails?.permanentAddress?.city || "",
+              district: employeeData.addressDetails?.permanentAddress?.district || "",
+              state: employeeData.addressDetails?.permanentAddress?.state || "",
+              pinCode: employeeData.addressDetails?.permanentAddress?.pinCode || "",
+              country: employeeData.addressDetails?.permanentAddress?.country || ""
+            }
           },
-          joiningDetails: employeeData.joiningDetails || {},
-          educationDetails: employeeData.educationDetails || {},
-          trainingDetails: employeeData.trainingDetails || {},
+          
+          // Joining Details (complete structure)
+          joiningDetails: {
+            dateOfAppointment: employeeData.joiningDetails?.dateOfAppointment || "",
+            dateOfJoining: employeeData.joiningDetails?.dateOfJoining || "",
+            department: employeeData.joiningDetails?.department || "",
+            initialDesignation: employeeData.joiningDetails?.initialDesignation || "",
+            modeOfRecruitment: employeeData.joiningDetails?.modeOfRecruitment || "",
+            employeeType: employeeData.joiningDetails?.employeeType || "",
+            shiftType: employeeData.joiningDetails?.shiftType || "",
+            workType: employeeData.joiningDetails?.workType || "",
+            uanNumber: employeeData.joiningDetails?.uanNumber || "",
+            pfNumber: employeeData.joiningDetails?.pfNumber || ""
+          },
+          
+          // Education Details (complete structure)
+          educationDetails: {
+            basic: employeeData.educationDetails?.basic || [],
+            professional: employeeData.educationDetails?.professional || []
+          },
+          
+          // Training Details (complete structure)
+          trainingStatus: employeeData.trainingStatus || "no",
+          trainingDetails: {
+            trainingInIndia: employeeData.trainingDetails?.trainingInIndia || []
+          },
+          
+          // Family Details (array)
           familyDetails: employeeData.familyDetails || [],
+          
+          // Service History (array)
           serviceHistory: employeeData.serviceHistory || [],
+          
+          // Nomination Details (array)
           nominationDetails: employeeData.nominationDetails || [],
+          
+          // Registration status
+          registrationComplete: employeeData.registrationComplete || false
         });
-
-        // Set bank info
-        setBankInfo(employeeData.bankInfo || {});
-
-        // Set work info
+  
+        // Set bank info with ALL fields from schema
+        setBankInfo({
+          accountNumber: employeeData.bankInfo?.accountNumber || "",
+          ifscCode: employeeData.bankInfo?.ifscCode || "",
+          bankName: employeeData.bankInfo?.bankName || "",
+          branchName: employeeData.bankInfo?.branchName || "",
+          accountType: employeeData.bankInfo?.accountType || ""
+        });
+  
+        // Set work info with ALL joining details fields
         setWorkInfo({
+          dateOfAppointment: employeeData.joiningDetails?.dateOfAppointment || "",
+          dateOfJoining: employeeData.joiningDetails?.dateOfJoining || "",
           department: employeeData.joiningDetails?.department || "",
           designation: employeeData.joiningDetails?.initialDesignation || "",
+          initialDesignation: employeeData.joiningDetails?.initialDesignation || "",
+          modeOfRecruitment: employeeData.joiningDetails?.modeOfRecruitment || "",
           employeeType: employeeData.joiningDetails?.employeeType || "",
-          dateOfJoining: employeeData.joiningDetails?.dateOfJoining || "",
-          dateOfAppointment:
-            employeeData.joiningDetails?.dateOfAppointment || "",
-          modeOfRecruitment:
-            employeeData.joiningDetails?.modeOfRecruitment || "",
           shiftType: employeeData.joiningDetails?.shiftType || "",
           workType: employeeData.joiningDetails?.workType || "",
           uanNumber: employeeData.joiningDetails?.uanNumber || "",
-          pfNumber: employeeData.joiningDetails?.pfNumber || "",
+          pfNumber: employeeData.joiningDetails?.pfNumber || ""
         });
-
+  
         // Set profile image
-        // const imageUrl = employeeData.personalInfo?.employeeImage
-        //   ? `${process.env.REACT_APP_API_URL}${employeeData.personalInfo.employeeImage}`
-        //   : null;
-        // setProfileImage(imageUrl);
         const imageUrl = employeeData.personalInfo?.employeeImage
           ? getAssetUrl(employeeData.personalInfo.employeeImage)
           : null;
         setProfileImage(imageUrl);
-
-        console.log("Fetched employee data:", employeeData);
+  
+        console.log("Fetched complete employee data:", employeeData);
       } else {
         console.error("Failed to fetch employee data");
+        toast.error("Failed to fetch employee data");
       }
     } catch (error) {
       console.error("Error fetching profile data:", error);
+      toast.error("Error fetching profile data: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   }, [id]);
-
+  
   const fetchProfileByUserId = async (userId) => {
     setLoading(true);
     try {
       const response = await api.get(`employees/by-user/${userId}`);
-
+  
       if (response.data.success) {
         const employeeData = response.data.data;
-
+  
         setEmployeeId(employeeData.Emp_ID);
-
-        // Set personal info from the employee data
+  
+        // Set personal info with ALL fields from the schema
         setPersonalInfo({
+          // Basic identifiers
           employeeId: employeeData.Emp_ID,
-          name: `${employeeData.personalInfo?.firstName || ""} ${
-            employeeData.personalInfo?.lastName || ""
-          }`,
-          email: employeeData.personalInfo?.email || "",
-          workemail: employeeData.personalInfo?.workemail || "",
-          phone: employeeData.personalInfo?.mobileNumber || "",
-          dob: employeeData.personalInfo?.dob
-            ? new Date(employeeData.personalInfo.dob).toLocaleDateString()
-            : "",
+          userId: employeeData.userId,
+          
+          // Personal Info fields from schema
+          prefix: employeeData.personalInfo?.prefix || "",
+          firstName: employeeData.personalInfo?.firstName || "",
+          lastName: employeeData.personalInfo?.lastName || "",
+          dob: employeeData.personalInfo?.dob || "",
           gender: employeeData.personalInfo?.gender || "",
-          department: employeeData.joiningDetails?.department || "",
-          designation: employeeData.joiningDetails?.initialDesignation || "",
-          bloodGroup: employeeData.personalInfo?.bloodGroup || "",
           maritalStatus: employeeData.personalInfo?.maritalStatus || "",
+          bloodGroup: employeeData.personalInfo?.bloodGroup || "",
           nationality: employeeData.personalInfo?.nationality || "",
           aadharNumber: employeeData.personalInfo?.aadharNumber || "",
           panNumber: employeeData.personalInfo?.panNumber || "",
-          // Include addressDetails directly
-          addressDetails: employeeData.addressDetails || {
-            presentAddress: {},
-            permanentAddress: {},
-          },
-          joiningDetails: employeeData.joiningDetails || {},
-        });
-
-        // Set bank info
-        setBankInfo(employeeData.bankInfo || {});
-
-        // Set work info
-        setWorkInfo({
+          mobileNumber: employeeData.personalInfo?.mobileNumber || "",
+          email: employeeData.personalInfo?.email || "",
+          workemail: employeeData.personalInfo?.workemail || "",
+          employeeImage: employeeData.personalInfo?.employeeImage || "",
+          
+          // Computed fields for display
+          name: `${employeeData.personalInfo?.firstName || ""} ${employeeData.personalInfo?.lastName || ""}`,
+          phone: employeeData.personalInfo?.mobileNumber || "",
           department: employeeData.joiningDetails?.department || "",
           designation: employeeData.joiningDetails?.initialDesignation || "",
-          employeeType: employeeData.joiningDetails?.employeeType || "",
+          
+          // Address Details (complete structure)
+          addressDetails: {
+            presentAddress: {
+              address: employeeData.addressDetails?.presentAddress?.address || "",
+              city: employeeData.addressDetails?.presentAddress?.city || "",
+              district: employeeData.addressDetails?.presentAddress?.district || "",
+              state: employeeData.addressDetails?.presentAddress?.state || "",
+              pinCode: employeeData.addressDetails?.presentAddress?.pinCode || "",
+              country: employeeData.addressDetails?.presentAddress?.country || ""
+            },
+            permanentAddress: {
+              address: employeeData.addressDetails?.permanentAddress?.address || "",
+              city: employeeData.addressDetails?.permanentAddress?.city || "",
+              district: employeeData.addressDetails?.permanentAddress?.district || "",
+              state: employeeData.addressDetails?.permanentAddress?.state || "",
+              pinCode: employeeData.addressDetails?.permanentAddress?.pinCode || "",
+              country: employeeData.addressDetails?.permanentAddress?.country || ""
+            }
+          },
+          
+          // Joining Details (complete structure)
+          joiningDetails: {
+            dateOfAppointment: employeeData.joiningDetails?.dateOfAppointment || "",
+            dateOfJoining: employeeData.joiningDetails?.dateOfJoining || "",
+            department: employeeData.joiningDetails?.department || "",
+            initialDesignation: employeeData.joiningDetails?.initialDesignation || "",
+            modeOfRecruitment: employeeData.joiningDetails?.modeOfRecruitment || "",
+            employeeType: employeeData.joiningDetails?.employeeType || "",
+            shiftType: employeeData.joiningDetails?.shiftType || "",
+            workType: employeeData.joiningDetails?.workType || "",
+            uanNumber: employeeData.joiningDetails?.uanNumber || "",
+            pfNumber: employeeData.joiningDetails?.pfNumber || ""
+          },
+          
+          // Education Details (complete structure)
+          educationDetails: {
+            basic: employeeData.educationDetails?.basic || [],
+            professional: employeeData.educationDetails?.professional || []
+          },
+          
+          // Training Details (complete structure)
+          trainingStatus: employeeData.trainingStatus || "no",
+          trainingDetails: {
+            trainingInIndia: employeeData.trainingDetails?.trainingInIndia || []
+          },
+          
+          // Family Details (array)
+          familyDetails: employeeData.familyDetails || [],
+          
+          // Service History (array)
+          serviceHistory: employeeData.serviceHistory || [],
+          
+          // Nomination Details (array)
+          nominationDetails: employeeData.nominationDetails || [],
+          
+          // Registration status
+          registrationComplete: employeeData.registrationComplete || false
+        });
+  
+        // Set bank info with ALL fields from schema
+        setBankInfo({
+          accountNumber: employeeData.bankInfo?.accountNumber || "",
+          ifscCode: employeeData.bankInfo?.ifscCode || "",
+          bankName: employeeData.bankInfo?.bankName || "",
+          branchName: employeeData.bankInfo?.branchName || "",
+          accountType: employeeData.bankInfo?.accountType || ""
+        });
+  
+        // Set work info with ALL joining details fields
+        setWorkInfo({
+          dateOfAppointment: employeeData.joiningDetails?.dateOfAppointment || "",
           dateOfJoining: employeeData.joiningDetails?.dateOfJoining || "",
-          dateOfAppointment:
-            employeeData.joiningDetails?.dateOfAppointment || "",
-          modeOfRecruitment:
-            employeeData.joiningDetails?.modeOfRecruitment || "",
+          department: employeeData.joiningDetails?.department || "",
+          designation: employeeData.joiningDetails?.initialDesignation || "",
+          initialDesignation: employeeData.joiningDetails?.initialDesignation || "",
+          modeOfRecruitment: employeeData.joiningDetails?.modeOfRecruitment || "",
+          employeeType: employeeData.joiningDetails?.employeeType || "",
           shiftType: employeeData.joiningDetails?.shiftType || "",
           workType: employeeData.joiningDetails?.workType || "",
           uanNumber: employeeData.joiningDetails?.uanNumber || "",
-          pfNumber: employeeData.joiningDetails?.pfNumber || "",
+          pfNumber: employeeData.joiningDetails?.pfNumber || ""
         });
-
+  
         // Set profile image
-        // const imageUrl = employeeData.personalInfo?.employeeImage
-        //   ? `${process.env.REACT_APP_API_URL}${employeeData.personalInfo.employeeImage}`
-        //   : null;
-        // setProfileImage(imageUrl);
         const imageUrl = employeeData.personalInfo?.employeeImage
           ? getAssetUrl(employeeData.personalInfo.employeeImage)
           : null;
-          setProfileImage(imageUrl);
-
-
-        console.log("Fetched employee data by userId:", employeeData);
+        setProfileImage(imageUrl);
+  
+        console.log("Fetched complete employee data by userId:", employeeData);
       } else {
         console.error("Failed to fetch employee data by userId");
+        toast.error("Failed to fetch employee data");
       }
     } catch (error) {
       console.error("Error fetching profile data by userId:", error);
+      toast.error("Error fetching profile data: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
+  
 
-  // const fetchContracts = async () => {
-  //   try {
-  //     const contractsData = await getContractsByEmployeeId(employeeId);
-  //     setContracts(contractsData);
-  //   } catch (error) {
-  //     console.error("Error fetching contracts:", error);
-  //   }
-  // };
-const fetchContracts = async () => {
-  try {
-    if (!employeeId) {
-      console.log('No employeeId available for fetching contracts');
-      return;
-    }
+// const fetchContracts = async () => {
+//   try {
+//     if (!employeeId) {
+//       console.log('No employeeId available for fetching contracts');
+//       return;
+//     }
     
-    console.log('Fetching contracts for employee:', employeeId);
-    const contractsData = await getContractsByEmployeeId(employeeId);
-    setContracts(contractsData || []);
-  } catch (error) {
-    console.error('Error fetching contracts:', error);
-    // Don't show error if it's just that no contracts exist
-    if (error.response?.status !== 404) {
-      console.error('Unexpected error fetching contracts:', error);
-    }
-    setContracts([]);
-  }
-};
+//     console.log('Fetching contracts for employee:', employeeId);
+//     const contractsData = await getContractsByEmployeeId(employeeId);
+//     setContracts(contractsData || []);
+//   } catch (error) {
+//     console.error('Error fetching contracts:', error);
+//     // Don't show error if it's just that no contracts exist
+//     if (error.response?.status !== 404) {
+//       console.error('Unexpected error fetching contracts:', error);
+//     }
+//     setContracts([]);
+//   }
+// };
 
 
   useEffect(() => {
@@ -563,11 +836,11 @@ const fetchContracts = async () => {
     }
   }, [id, fetchProfileData, currentUser]);
 
-  useEffect(() => {
-    if (employeeId) {
-      fetchContracts();
-    }
-  }, [employeeId]);
+  // useEffect(() => {
+  //   if (employeeId) {
+  //     fetchContracts();
+  //   }
+  // }, [employeeId]);
 
   const handleInputChange = (e, section) => {
     const { name, value } = e.target;
@@ -593,93 +866,93 @@ const fetchContracts = async () => {
     }
   };
 
-  const handleContractSubmit = async (e) => {
-    e.preventDefault();
-    if (!canEditProfile()) {
-      showPermissionError();
-      return;
-    }
+  // const handleContractSubmit = async (e) => {
+  //   e.preventDefault();
+  //   if (!canEditProfile()) {
+  //     showPermissionError();
+  //     return;
+  //   }
 
-    try {
-      const contractData = {
-        ...formData,
-        employeeId: employeeId,
-      };
+  //   try {
+  //     const contractData = {
+  //       ...formData,
+  //       employeeId: employeeId,
+  //     };
 
-      if (selectedContract) {
-        await updateContract(selectedContract._id, contractData);
-        toast.success("Contract updated successfully");
-      } else {
-        // Create new contract logic would go here
-        toast.success("Contract created successfully");
-      }
+  //     if (selectedContract) {
+  //       await updateContract(selectedContract._id, contractData);
+  //       toast.success("Contract updated successfully");
+  //     } else {
+  //       // Create new contract logic would go here
+  //       toast.success("Contract created successfully");
+  //     }
 
-      setShowModal(false);
-      fetchContracts();
-      resetForm();
-    } catch (error) {
-      console.error("Error saving contract:", error);
-      toast.error("Error saving contract");
-    }
-  };
+  //     setShowModal(false);
+  //     fetchContracts();
+  //     resetForm();
+  //   } catch (error) {
+  //     console.error("Error saving contract:", error);
+  //     toast.error("Error saving contract");
+  //   }
+  // };
 
-  const handleDeleteContract = async (contractId) => {
-    if (!canEditProfile()) {
-      showPermissionError();
-      return;
-    }
+  // const handleDeleteContract = async (contractId) => {
+  //   if (!canEditProfile()) {
+  //     showPermissionError();
+  //     return;
+  //   }
 
-    if (window.confirm("Are you sure you want to delete this contract?")) {
-      try {
-        await deleteContract(contractId);
-        toast.success("Contract deleted successfully");
-        fetchContracts();
-      } catch (error) {
-        console.error("Error deleting contract:", error);
-        toast.error("Error deleting contract");
-      }
-    }
-  };
+  //   if (window.confirm("Are you sure you want to delete this contract?")) {
+  //     try {
+  //       await deleteContract(contractId);
+  //       toast.success("Contract deleted successfully");
+  //       fetchContracts();
+  //     } catch (error) {
+  //       console.error("Error deleting contract:", error);
+  //       toast.error("Error deleting contract");
+  //     }
+  //   }
+  // };
 
-  const resetForm = () => {
-    setFormData({
-      contractName: "",
-      startDate: "",
-      endDate: "",
-      wageType: "",
-      basicSalary: "",
-      filingStatus: "",
-      status: "",
-    });
-    setSelectedContract(null);
-  };
+  // const resetForm = () => {
+  //   setFormData({
+  //     contractName: "",
+  //     startDate: "",
+  //     endDate: "",
+  //     wageType: "",
+  //     basicSalary: "",
+  //     filingStatus: "",
+  //     status: "",
+  //   });
+  //   setSelectedContract(null);
+  // };
 
-  const openModal = (contract = null) => {
-    if (!canEditProfile()) {
-      showPermissionError();
-      return;
-    }
+  // const openModal = (contract = null) => {
+  //   if (!canEditProfile()) {
+  //     showPermissionError();
+  //     return;
+  //   }
 
-    if (contract) {
-      setFormData({
-        contractName: contract.contractName || "",
-        startDate: contract.startDate
-          ? new Date(contract.startDate).toISOString().split("T")[0]
-          : "",
-        endDate: contract.endDate
-          ? new Date(contract.endDate).toISOString().split("T")[0]
-          : "",
-        wageType: contract.wageType || "",
-        basicSalary: contract.basicSalary || "",
-        filingStatus: contract.filingStatus || "",
-        status: contract.status || "",
-      });
-      setSelectedContract(contract);
-    } else {
-      resetForm();
-    }
-    setShowModal(true);
-  };
+  //   if (contract) {
+  //     setFormData({
+  //       contractName: contract.contractName || "",
+  //       startDate: contract.startDate
+  //         ? new Date(contract.startDate).toISOString().split("T")[0]
+  //         : "",
+  //       endDate: contract.endDate
+  //         ? new Date(contract.endDate).toISOString().split("T")[0]
+  //         : "",
+  //       wageType: contract.wageType || "",
+  //       basicSalary: contract.basicSalary || "",
+  //       filingStatus: contract.filingStatus || "",
+  //       status: contract.status || "",
+  //     });
+  //     setSelectedContract(contract);
+  //   } else {
+  //     resetForm();
+  //   }
+  //   setShowModal(true);
+  // };
 
   if (loading) {
     return (
@@ -915,9 +1188,9 @@ const fetchContracts = async () => {
                         <Nav.Item>
                           <Nav.Link eventKey="bankInfo">Bank Info</Nav.Link>
                         </Nav.Item>
-                        <Nav.Item>
+                        {/* <Nav.Item>
                           <Nav.Link eventKey="contracts">Contracts</Nav.Link>
-                        </Nav.Item>
+                        </Nav.Item> */}
                       </Nav>
 
                       <Tab.Content>
@@ -1003,10 +1276,10 @@ const fetchContracts = async () => {
                                   }
                                 >
                                   <option value="">Select Employee Type</option>
-                                  <option value="Full Time">Full Time</option>
-                                  <option value="Part Time">Part Time</option>
+                                  <option value="Permanent">Permanent</option>
                                   <option value="Contract">Contract</option>
-                                  <option value="Intern">Intern</option>
+                                  <option value="Part Time">Part Time</option>
+                                  
                                 </Form.Select>
                               </Form.Group>
                             </Col>
@@ -1062,10 +1335,9 @@ const fetchContracts = async () => {
                                   }
                                 >
                                   <option value="">Select Mode</option>
-                                  <option value="Direct">Direct</option>
-                                  <option value="Campus">Campus</option>
-                                  <option value="Referral">Referral</option>
-                                  <option value="Agency">Agency</option>
+                                  <option value="Direct">Online</option>
+                                  <option value="Campus">Offline</option>
+                                  
                                 </Form.Select>
                               </Form.Group>
                             </Col>
@@ -1084,7 +1356,7 @@ const fetchContracts = async () => {
                                   <option value="Morning Shift">
                                     Morning Shift
                                   </option>
-                                  <option value="Day Shift">Day Shift</option>
+                                  <option value="Evening Shift">Evening Shift</option>
                                   <option value="Night Shift">
                                     Night Shift
                                   </option>
@@ -1108,8 +1380,11 @@ const fetchContracts = async () => {
                                   <option value="Contract">Contract</option>
                                   <option value="Freelance">Freelance</option>
                                   <option value="Remote">Remote</option>
-                                  <option value="Work From Home">
-                                    Work From Home
+                                  <option value="Hybrid">
+                                    Hybrid
+                                  </option>
+                                  <option value="On-site">
+                                    On-site
                                   </option>
                                 </Form.Select>
                               </Form.Group>
@@ -1585,7 +1860,7 @@ const fetchContracts = async () => {
                           </Row>
                         </Tab.Pane>
 
-                        {/* Contracts Tab */}
+                        {/* Contracts Tab
                         <Tab.Pane eventKey="contracts">
                           <div className="d-flex justify-content-between align-items-center mb-3">
                             <h5>Contracts</h5>
@@ -1678,10 +1953,10 @@ const fetchContracts = async () => {
                               No contracts found for this employee.
                             </Alert>
                           )}
-                        </Tab.Pane>
+                        </Tab.Pane>*/}
                       </Tab.Content>
                     </Tab.Container>
-                  </Tab.Pane>
+                  </Tab.Pane> 
 
                   {/* Other Tab Panes */}
                   <Tab.Pane eventKey="workTypeAndShift">
@@ -1738,7 +2013,7 @@ const fetchContracts = async () => {
         </Col>
       </Row>
 
-      {/* Contract Modal */}
+      {/* Contract Modal
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
@@ -1864,8 +2139,8 @@ const fetchContracts = async () => {
             {selectedContract ? "Update Contract" : "Add Contract"}
           </Button>
         </Modal.Footer>
-      </Modal>
-    </Container>
+      </Modal>*/}
+    </Container> 
   );
 };
 
