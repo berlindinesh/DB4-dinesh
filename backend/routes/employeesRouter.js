@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // Update the personal-info route handler to include userId validation
-router.post('/personal-info/:emplyeeId', uploads.single('employeeImage'), async (req, res) => {
+router.post('/personal-info', uploads.single('employeeImage'), async (req, res) => {
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
