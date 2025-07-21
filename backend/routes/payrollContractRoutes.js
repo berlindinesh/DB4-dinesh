@@ -67,7 +67,7 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/contracts/') // Make sure this directory exists
+    cb(null, 'uploads/contracts/') 
   },
   filename: function (req, file, cb) {
     // Generate unique filename
@@ -95,6 +95,40 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: fileFilter
+});
+
+// Add download route (before authentication middleware)
+router.get('/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(process.cwd(), 'uploads', 'contracts', filename);
+    
+    console.log('Attempting to download file:', filePath); // Debug log
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.log('File not found:', filePath); // Debug log
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Get file stats
+    const stat = fs.statSync(filePath);
+    
+    // Set appropriate headers
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Create read stream and pipe to response
+    const readStream = fs.createReadStream(filePath);
+    readStream.pipe(res);
+    
+    console.log('File download initiated:', filename); // Debug log
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Failed to download file' });
+  }
 });
 
 // Apply authentication middleware to all routes

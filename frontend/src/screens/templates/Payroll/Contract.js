@@ -122,7 +122,7 @@ const Contract = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [dashboardOrientation, setDashboardOrientation] = useState("landscape");
+  const [setDashboardOrientation] = useState("landscape");
   const [dashboardStats, setDashboardStats] = useState(null);
   const [showRenewModal, setShowRenewModal] = useState(false);
   const [renewalData, setRenewalData] = useState({
@@ -188,15 +188,14 @@ const Contract = () => {
     };
   }, [showFilterPopup]);
 
-  const calculateTotalPages = useCallback(() => {
-    setTotalPages(Math.ceil(filteredContracts.length / itemsPerPage));
-  }, [filteredContracts.length, itemsPerPage]);
-
   //Filtered contracts when contracts change
   useEffect(() => {
-    setFilteredContracts(contracts);
-    calculateTotalPages();
-  }, [contracts, itemsPerPage, calculateTotalPages]);
+    if (contracts.length > 0) {
+      setFilteredContracts(contracts);
+      const totalPages = Math.ceil(contracts.length / itemsPerPage);
+      setTotalPages(totalPages);
+    }
+  }, [contracts, itemsPerPage]);
 
   const fetchContracts = useCallback(async () => {
     try {
@@ -207,7 +206,9 @@ const Contract = () => {
       if (response.data.success) {
         setContracts(response.data.data);
         setFilteredContracts(response.data.data);
-        calculateTotalPages();
+        // Calculate total pages directly here
+        const totalPages = Math.ceil(response.data.data.length / itemsPerPage);
+        setTotalPages(totalPages);
       } else {
         toast.error("Failed to fetch contracts");
       }
@@ -217,9 +218,8 @@ const Contract = () => {
     } finally {
       setLoading(false);
     }
-  }, [calculateTotalPages]);
+  }, [itemsPerPage]);
 
-  // Update fetchEmployees function
   const fetchEmployees = useCallback(async () => {
     try {
       setLoadingEmployees(true);
@@ -474,113 +474,6 @@ const Contract = () => {
     }
   };
 
-
-
-//   const handleSaveCreate = async () => {
-//   try {
-//     setLoading(true);
-
-//     // Validate required fields
-//     if (
-//       !formData.contractTitle ||
-//       !formData.employee ||
-//       !formData.startDate ||
-//       !formData.wageType ||
-//       !formData.basicSalary
-//     ) {
-//       toast.error("Please fill all required fields");
-//       setLoading(false);
-//       return;
-//     }
-
-//     // Create FormData for file upload
-//     const formDataToSend = new FormData();
-    
-//     // Append all form fields
-//     formDataToSend.append('contract', formData.contractTitle);
-//     formDataToSend.append('contractStatus', formData.contractStatus);
-//     formDataToSend.append('employee', formData.employee);
-//     formDataToSend.append('startDate', formData.startDate);
-//     formDataToSend.append('endDate', formData.endDate);
-//     formDataToSend.append('wageType', formData.wageType);
-//     formDataToSend.append('payFrequency', formData.payFrequency);
-//     formDataToSend.append('basicSalary', Number(formData.basicSalary));
-//     formDataToSend.append('filingStatus', formData.filingStatus);
-//     formDataToSend.append('department', formData.department);
-//     formDataToSend.append('position', formData.position);
-//     formDataToSend.append('role', formData.role);
-//     formDataToSend.append('shift', formData.shift);
-//     formDataToSend.append('workType', formData.workType);
-//     formDataToSend.append('noticePeriod', Number(formData.noticePeriod));
-//     formDataToSend.append('deductFromBasicPay', formData.deductFromBasicPay);
-//     formDataToSend.append('calculateDailyLeave', formData.calculateDailyLeave);
-//     formDataToSend.append('note', formData.note);
-    
-//     // Append document if exists
-//     if (formData.contractDocument) {
-//       formDataToSend.append('contractDocument', formData.contractDocument);
-//     }
-
-//     let response;
-//     if (editingId) {
-//       response = await api.put(
-//         `/payroll-contracts/${editingId}`,
-//         formDataToSend,
-//         {
-//           headers: {
-//             "Content-Type": "multipart/form-data",
-//           },
-//         }
-//       );
-//     } else {
-//       response = await api.post("/payroll-contracts", formDataToSend, {
-//         headers: {
-//           "Content-Type": "multipart/form-data",
-//         },
-//       });
-//     }
-
-//     if (response.data.success) {
-//       toast.success(
-//         editingId
-//           ? "Contract updated successfully"
-//           : "Contract created successfully"
-//       );
-
-//       // Update the contracts list
-//       if (editingId) {
-//         setContracts(
-//           contracts.map((contract) =>
-//             contract._id === editingId ? response.data.data : contract
-//           )
-//         );
-//         setFilteredContracts(
-//           filteredContracts.map((contract) =>
-//             contract._id === editingId ? response.data.data : contract
-//           )
-//         );
-//       } else {
-//         setContracts([...contracts, response.data.data]);
-//         setFilteredContracts([...filteredContracts, response.data.data]);
-//       }
-
-//       // Reset form and close create/edit page
-//       setShowCreatePage(false);
-//       setEditingId(null);
-//       setSelectedEmployee("");
-//     } else {
-//       toast.error(response.data.error || "Failed to process contract");
-//     }
-//   } catch (error) {
-//     console.error("Contract operation error:", error);
-//     toast.error(error.response?.data?.error || "Failed to process contract");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-
   // HandleSave function (for inline editing)
   const handleSave = async () => {
     try {
@@ -590,7 +483,7 @@ const Contract = () => {
     }
   };
 
-  // Update handleDelete function
+  //  handleDelete function
   const handleDelete = async (id) => {
     try {
       setLoading(true);
@@ -1428,87 +1321,70 @@ const Contract = () => {
                 />
               </Grid>
 
-              {/* <Grid item xs={12}>
-                <Button
-                  component="label"
-                  variant="outlined"
-                  startIcon={<FaFileContract />}
-                  sx={{ mt: 1 }}
-                >
-                  Upload Contract Document
-                  <input
-                    type="file"
-                    name="contractDocument"
-                    onChange={handleInputChange}
-                    hidden
-                  />
-                </Button>
-                {formData.contractDocument && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Selected file: {formData.contractDocument.name}
-                  </Typography>
-                )}
-              </Grid> */}
-
-
-<Grid item xs={12}>
-  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-    <Button
-      component="label"
-      variant="outlined"
-      startIcon={<FaFileContract />}
-      sx={{ 
-        mt: 1,
-        alignSelf: "flex-start",
-        borderColor: "#1976d2",
-        color: "#1976d2",
-        "&:hover": {
-          backgroundColor: "#e3f2fd",
-          borderColor: "#1976d2",
-        },
-      }}
-    >
-      Upload Contract Document
-      <input
-        type="file"
-        name="contractDocument"
-        onChange={handleInputChange}
-        accept=".pdf,.doc,.docx,.txt"
-        hidden
-      />
-    </Button>
-    {formData.contractDocument && (
-      <Box sx={{ 
-        display: "flex", 
-        alignItems: "center", 
-        gap: 1, 
-        p: 2, 
-        backgroundColor: "#f0f8ff", 
-        borderRadius: "8px",
-        border: "1px solid #e3f2fd"
-      }}>
-        <FaFileContract style={{ color: "#1976d2", fontSize: "16px" }} />
-        <Box>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            Selected file: {formData.contractDocument.name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Size: {(formData.contractDocument.size / 1024).toFixed(2)} KB
-          </Typography>
-        </Box>
-        <Button
-          size="small"
-          onClick={() => {
-            setFormData({ ...formData, contractDocument: null });
-          }}
-          sx={{ color: "#f44336", minWidth: "auto", p: 0.5 }}
-        >
-          <FaTrash />
-        </Button>
-      </Box>
-    )}
-  </Box>
-</Grid>
+              <Grid item xs={12}>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<FaFileContract />}
+                    sx={{
+                      mt: 1,
+                      alignSelf: "flex-start",
+                      borderColor: "#1976d2",
+                      color: "#1976d2",
+                      "&:hover": {
+                        backgroundColor: "#e3f2fd",
+                        borderColor: "#1976d2",
+                      },
+                    }}
+                  >
+                    Upload Contract Document
+                    <input
+                      type="file"
+                      name="contractDocument"
+                      onChange={handleInputChange}
+                      accept=".pdf,.doc,.docx,.txt"
+                      hidden
+                    />
+                  </Button>
+                  {formData.contractDocument && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        p: 2,
+                        backgroundColor: "#f0f8ff",
+                        borderRadius: "8px",
+                        border: "1px solid #e3f2fd",
+                      }}
+                    >
+                      <FaFileContract
+                        style={{ color: "#1976d2", fontSize: "16px" }}
+                      />
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          Selected file: {formData.contractDocument.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Size:{" "}
+                          {(formData.contractDocument.size / 1024).toFixed(2)}{" "}
+                          KB
+                        </Typography>
+                      </Box>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setFormData({ ...formData, contractDocument: null });
+                        }}
+                        sx={{ color: "#f44336", minWidth: "auto", p: 0.5 }}
+                      >
+                        <FaTrash />
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
 
               <Grid item xs={12}>
                 <TextField
@@ -1766,84 +1642,30 @@ const Contract = () => {
             justifyContent: { xs: "flex-start", sm: "center" },
             width: { xs: "100%", sm: "auto" },
           }}
-          onClick={async () => {
-            const newFilterData = { ...filterData, contractStatus: "Active" };
-            setFilterData(newFilterData);
-
-            // Apply filter immediately with the new filter data
+          onClick={() => {
             try {
               setLoading(true);
 
-              const filterParams = {};
-              filterParams.contractStatus = "Active";
-
-              // Add other existing filters
-              if (
-                newFilterData.employeeName &&
-                newFilterData.employeeName.trim() !== ""
-              ) {
-                filterParams.employeeName = newFilterData.employeeName.trim();
-              }
-              if (newFilterData.wageType && newFilterData.wageType !== "") {
-                filterParams.wageType = newFilterData.wageType;
-              }
-              if (newFilterData.department && newFilterData.department !== "") {
-                filterParams.department = newFilterData.department;
-              }
-              if (newFilterData.startDate && newFilterData.startDate !== "") {
-                filterParams.startDate = newFilterData.startDate;
-              }
-              if (newFilterData.endDate && newFilterData.endDate !== "") {
-                filterParams.endDate = newFilterData.endDate;
-              }
-              if (newFilterData.minSalary && newFilterData.minSalary !== "") {
-                filterParams.minSalary = newFilterData.minSalary;
-              }
-              if (newFilterData.maxSalary && newFilterData.maxSalary !== "") {
-                filterParams.maxSalary = newFilterData.maxSalary;
-              }
-              if (
-                newFilterData.filingStatus &&
-                newFilterData.filingStatus !== ""
-              ) {
-                filterParams.filingStatus = newFilterData.filingStatus;
-              }
-
-              const queryString = new URLSearchParams(filterParams).toString();
-              const response = await api.get(
-                `/payroll-contracts/filter?${queryString}`
-              );
-
-              if (response.data.success) {
-                setFilteredContracts(response.data.data);
-                toast.success(
-                  `Found ${response.data.data.length} Active contracts`
-                );
-              } else {
-                // Fallback to client-side filtering
-                const filtered = contracts.filter(
-                  (contract) => contract.contractStatus === "Active"
-                );
-                setFilteredContracts(filtered);
-                toast.info(
-                  `Found ${filtered.length} Active contracts (client-side filtering)`
-                );
-              }
-
-              setCurrentPage(1);
-              calculateTotalPages();
-            } catch (error) {
-              console.error("Filter API error:", error);
-              // Fallback to client-side filtering
+              // Filter for Active contracts
               const filtered = contracts.filter(
                 (contract) => contract.contractStatus === "Active"
               );
+
+              console.log("All contracts:", contracts);
+              console.log("Filtered Active contracts:", filtered);
+
               setFilteredContracts(filtered);
-              toast.info(
-                `Found ${filtered.length} Active contracts (client-side filtering)`
-              );
+              setFilterData({ ...filterData, contractStatus: "Active" });
               setCurrentPage(1);
-              calculateTotalPages();
+
+              // Calculate total pages manually
+              const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+              setTotalPages(newTotalPages);
+
+              toast.success(`Found ${filtered.length} Active contracts`);
+            } catch (error) {
+              console.error("Filter error:", error);
+              toast.error("Failed to filter contracts");
             } finally {
               setLoading(false);
             }
@@ -1858,87 +1680,30 @@ const Contract = () => {
             justifyContent: { xs: "flex-start", sm: "center" },
             width: { xs: "100%", sm: "auto" },
           }}
-          onClick={async () => {
-            const newFilterData = {
-              ...filterData,
-              contractStatus: "Terminated",
-            };
-            setFilterData(newFilterData);
-
-            // Apply filter immediately with the new filter data
+          onClick={() => {
             try {
               setLoading(true);
 
-              const filterParams = {};
-              filterParams.contractStatus = "Terminated";
-
-              // Add other existing filters
-              if (
-                newFilterData.employeeName &&
-                newFilterData.employeeName.trim() !== ""
-              ) {
-                filterParams.employeeName = newFilterData.employeeName.trim();
-              }
-              if (newFilterData.wageType && newFilterData.wageType !== "") {
-                filterParams.wageType = newFilterData.wageType;
-              }
-              if (newFilterData.department && newFilterData.department !== "") {
-                filterParams.department = newFilterData.department;
-              }
-              if (newFilterData.startDate && newFilterData.startDate !== "") {
-                filterParams.startDate = newFilterData.startDate;
-              }
-              if (newFilterData.endDate && newFilterData.endDate !== "") {
-                filterParams.endDate = newFilterData.endDate;
-              }
-              if (newFilterData.minSalary && newFilterData.minSalary !== "") {
-                filterParams.minSalary = newFilterData.minSalary;
-              }
-              if (newFilterData.maxSalary && newFilterData.maxSalary !== "") {
-                filterParams.maxSalary = newFilterData.maxSalary;
-              }
-              if (
-                newFilterData.filingStatus &&
-                newFilterData.filingStatus !== ""
-              ) {
-                filterParams.filingStatus = newFilterData.filingStatus;
-              }
-
-              const queryString = new URLSearchParams(filterParams).toString();
-              const response = await api.get(
-                `/payroll-contracts/filter?${queryString}`
-              );
-
-              if (response.data.success) {
-                setFilteredContracts(response.data.data);
-                toast.success(
-                  `Found ${response.data.data.length} Terminated contracts`
-                );
-              } else {
-                // Fallback to client-side filtering
-                const filtered = contracts.filter(
-                  (contract) => contract.contractStatus === "Terminated"
-                );
-                setFilteredContracts(filtered);
-                toast.info(
-                  `Found ${filtered.length} Terminated contracts (client-side filtering)`
-                );
-              }
-
-              setCurrentPage(1);
-              calculateTotalPages();
-            } catch (error) {
-              console.error("Filter API error:", error);
-              // Fallback to client-side filtering
+              // Filter for Terminated contracts
               const filtered = contracts.filter(
                 (contract) => contract.contractStatus === "Terminated"
               );
+
+              console.log("All contracts:", contracts);
+              console.log("Filtered Terminated contracts:", filtered);
+
               setFilteredContracts(filtered);
-              toast.info(
-                `Found ${filtered.length} Terminated contracts (client-side filtering)`
-              );
+              setFilterData({ ...filterData, contractStatus: "Terminated" });
               setCurrentPage(1);
-              calculateTotalPages();
+
+              // Calculate total pages manually
+              const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+              setTotalPages(newTotalPages);
+
+              toast.success(`Found ${filtered.length} Terminated contracts`);
+            } catch (error) {
+              console.error("Filter error:", error);
+              toast.error("Failed to filter contracts");
             } finally {
               setLoading(false);
             }
@@ -1953,84 +1718,30 @@ const Contract = () => {
             justifyContent: { xs: "flex-start", sm: "center" },
             width: { xs: "100%", sm: "auto" },
           }}
-          onClick={async () => {
-            const newFilterData = { ...filterData, contractStatus: "Draft" };
-            setFilterData(newFilterData);
-
-            // Apply filter immediately with the new filter data
+          onClick={() => {
             try {
               setLoading(true);
 
-              const filterParams = {};
-              filterParams.contractStatus = "Draft";
-
-              // Add other existing filters
-              if (
-                newFilterData.employeeName &&
-                newFilterData.employeeName.trim() !== ""
-              ) {
-                filterParams.employeeName = newFilterData.employeeName.trim();
-              }
-              if (newFilterData.wageType && newFilterData.wageType !== "") {
-                filterParams.wageType = newFilterData.wageType;
-              }
-              if (newFilterData.department && newFilterData.department !== "") {
-                filterParams.department = newFilterData.department;
-              }
-              if (newFilterData.startDate && newFilterData.startDate !== "") {
-                filterParams.startDate = newFilterData.startDate;
-              }
-              if (newFilterData.endDate && newFilterData.endDate !== "") {
-                filterParams.endDate = newFilterData.endDate;
-              }
-              if (newFilterData.minSalary && newFilterData.minSalary !== "") {
-                filterParams.minSalary = newFilterData.minSalary;
-              }
-              if (newFilterData.maxSalary && newFilterData.maxSalary !== "") {
-                filterParams.maxSalary = newFilterData.maxSalary;
-              }
-              if (
-                newFilterData.filingStatus &&
-                newFilterData.filingStatus !== ""
-              ) {
-                filterParams.filingStatus = newFilterData.filingStatus;
-              }
-
-              const queryString = new URLSearchParams(filterParams).toString();
-              const response = await api.get(
-                `/payroll-contracts/filter?${queryString}`
-              );
-
-              if (response.data.success) {
-                setFilteredContracts(response.data.data);
-                toast.success(
-                  `Found ${response.data.data.length} Draft contracts`
-                );
-              } else {
-                // Fallback to client-side filtering
-                const filtered = contracts.filter(
-                  (contract) => contract.contractStatus === "Draft"
-                );
-                setFilteredContracts(filtered);
-                toast.info(
-                  `Found ${filtered.length} Draft contracts (client-side filtering)`
-                );
-              }
-
-              setCurrentPage(1);
-              calculateTotalPages();
-            } catch (error) {
-              console.error("Filter API error:", error);
-              // Fallback to client-side filtering
+              // Filter for Draft contracts
               const filtered = contracts.filter(
                 (contract) => contract.contractStatus === "Draft"
               );
+
+              console.log("All contracts:", contracts);
+              console.log("Filtered Draft contracts:", filtered);
+
               setFilteredContracts(filtered);
-              toast.info(
-                `Found ${filtered.length} Draft contracts (client-side filtering)`
-              );
+              setFilterData({ ...filterData, contractStatus: "Draft" });
               setCurrentPage(1);
-              calculateTotalPages();
+
+              // Calculate total pages manually
+              const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+              setTotalPages(newTotalPages);
+
+              toast.success(`Found ${filtered.length} Draft contracts`);
+            } catch (error) {
+              console.error("Filter error:", error);
+              toast.error("Failed to filter contracts");
             } finally {
               setLoading(false);
             }
@@ -2045,84 +1756,30 @@ const Contract = () => {
             justifyContent: { xs: "flex-start", sm: "center" },
             width: { xs: "100%", sm: "auto" },
           }}
-          onClick={async () => {
-            const newFilterData = { ...filterData, contractStatus: "Expired" };
-            setFilterData(newFilterData);
-
-            // Apply filter immediately with the new filter data
+          onClick={() => {
             try {
               setLoading(true);
 
-              const filterParams = {};
-              filterParams.contractStatus = "Expired";
-
-              // Add other existing filters
-              if (
-                newFilterData.employeeName &&
-                newFilterData.employeeName.trim() !== ""
-              ) {
-                filterParams.employeeName = newFilterData.employeeName.trim();
-              }
-              if (newFilterData.wageType && newFilterData.wageType !== "") {
-                filterParams.wageType = newFilterData.wageType;
-              }
-              if (newFilterData.department && newFilterData.department !== "") {
-                filterParams.department = newFilterData.department;
-              }
-              if (newFilterData.startDate && newFilterData.startDate !== "") {
-                filterParams.startDate = newFilterData.startDate;
-              }
-              if (newFilterData.endDate && newFilterData.endDate !== "") {
-                filterParams.endDate = newFilterData.endDate;
-              }
-              if (newFilterData.minSalary && newFilterData.minSalary !== "") {
-                filterParams.minSalary = newFilterData.minSalary;
-              }
-              if (newFilterData.maxSalary && newFilterData.maxSalary !== "") {
-                filterParams.maxSalary = newFilterData.maxSalary;
-              }
-              if (
-                newFilterData.filingStatus &&
-                newFilterData.filingStatus !== ""
-              ) {
-                filterParams.filingStatus = newFilterData.filingStatus;
-              }
-
-              const queryString = new URLSearchParams(filterParams).toString();
-              const response = await api.get(
-                `/payroll-contracts/filter?${queryString}`
-              );
-
-              if (response.data.success) {
-                setFilteredContracts(response.data.data);
-                toast.success(
-                  `Found ${response.data.data.length} Expired contracts`
-                );
-              } else {
-                // Fallback to client-side filtering
-                const filtered = contracts.filter(
-                  (contract) => contract.contractStatus === "Expired"
-                );
-                setFilteredContracts(filtered);
-                toast.info(
-                  `Found ${filtered.length} Expired contracts (client-side filtering)`
-                );
-              }
-
-              setCurrentPage(1);
-              calculateTotalPages();
-            } catch (error) {
-              console.error("Filter API error:", error);
-              // Fallback to client-side filtering
+              // Filter for Expired contracts
               const filtered = contracts.filter(
                 (contract) => contract.contractStatus === "Expired"
               );
+
+              console.log("All contracts:", contracts);
+              console.log("Filtered Expired contracts:", filtered);
+
               setFilteredContracts(filtered);
-              toast.info(
-                `Found ${filtered.length} Expired contracts (client-side filtering)`
-              );
+              setFilterData({ ...filterData, contractStatus: "Expired" });
               setCurrentPage(1);
-              calculateTotalPages();
+
+              // Calculate total pages manually
+              const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+              setTotalPages(newTotalPages);
+
+              toast.success(`Found ${filtered.length} Expired contracts`);
+            } catch (error) {
+              console.error("Filter error:", error);
+              toast.error("Failed to filter contracts");
             } finally {
               setLoading(false);
             }
@@ -2138,12 +1795,27 @@ const Contract = () => {
             width: { xs: "100%", sm: "auto" },
           }}
           onClick={() => {
-            const newFilterData = { ...filterData, contractStatus: "" };
-            setFilterData(newFilterData);
-            setFilteredContracts(contracts);
-            setCurrentPage(1);
-            calculateTotalPages();
-            toast.info("Showing all contracts");
+            try {
+              setLoading(true);
+
+              // Show all contracts
+              console.log("All contracts:", contracts);
+
+              setFilteredContracts(contracts);
+              setFilterData({ ...filterData, contractStatus: "" });
+              setCurrentPage(1);
+
+              // Calculate total pages manually
+              const newTotalPages = Math.ceil(contracts.length / itemsPerPage);
+              setTotalPages(newTotalPages);
+
+              toast.info("Showing all contracts");
+            } catch (error) {
+              console.error("Filter error:", error);
+              toast.error("Failed to reset filter");
+            } finally {
+              setLoading(false);
+            }
           }}
         >
           ● All
@@ -2771,7 +2443,7 @@ const Contract = () => {
       </div>
 
       {/* Preview Contract Modal */}
-      {/* {showPreviewModal && previewContract && (
+      {showPreviewModal && previewContract && (
         <Dialog
           open={true}
           maxWidth="md"
@@ -3043,6 +2715,103 @@ const Contract = () => {
                 </Paper>
               </Grid>
 
+              {/* Contract Document Section */}
+              {previewContract.contractDocument && (
+                <Grid item xs={12}>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      borderRadius: "8px",
+                      backgroundColor: "#f0f8ff",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="bold"
+                      color="textSecondary"
+                      sx={{ mb: 1 }}
+                    >
+                      Contract Document
+                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <FaFileContract
+                        style={{ color: "#1976d2", fontSize: "20px" }}
+                      />
+                      <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {previewContract.contractDocument.originalName ||
+                            previewContract.contractDocument.filename ||
+                            "Contract Document"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {previewContract.contractDocument.size
+                            ? `Size: ${(
+                                previewContract.contractDocument.size / 1024
+                              ).toFixed(2)} KB`
+                            : "Document available"}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<FaFileExport />}
+                        onClick={async () => {
+                          try {
+                            const contractDoc =
+                              previewContract.contractDocument;
+
+                            if (!contractDoc || !contractDoc.filename) {
+                              toast.warning(
+                                "No document available for download"
+                              );
+                              return;
+                            }
+
+                            console.log("Contract document:", contractDoc); // Debug log
+
+                            // Use the correct API URL from your .env
+                            const baseUrl =
+                              process.env.REACT_APP_API_URL ||
+                              "http://localhost:5002";
+                            const downloadUrl = `${baseUrl}/api/payroll-contracts/download/${contractDoc.filename}`;
+
+                            console.log("Download URL:", downloadUrl); // Debug log
+
+                            // Create a temporary link and trigger download
+                            const link = document.createElement("a");
+                            link.href = downloadUrl;
+                            link.download =
+                              contractDoc.originalName || contractDoc.filename;
+                            link.target = "_blank";
+
+                            // Add to DOM, click, and remove
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            toast.success("Download started");
+                          } catch (error) {
+                            console.error("Download error:", error);
+                            toast.error("Failed to download document");
+                          }
+                        }}
+                        sx={{
+                          borderColor: "#1976d2",
+                          color: "#1976d2",
+                          "&:hover": {
+                            backgroundColor: "#e3f2fd",
+                            borderColor: "#1976d2",
+                          },
+                        }}
+                      >
+                        View/Download
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Grid>
+              )}
+
               {previewContract.note && (
                 <Grid item xs={12}>
                   <Paper sx={{ p: 2, borderRadius: "8px" }}>
@@ -3081,382 +2850,7 @@ const Contract = () => {
             </Box>
           </DialogContent>
         </Dialog>
-      )} */}
-
-
-{/* Preview Contract Modal */}
-{showPreviewModal && previewContract && (
-  <Dialog
-    open={true}
-    maxWidth="md"
-    fullWidth
-    PaperProps={{
-      sx: {
-        width: "90%",
-        maxWidth: "900px",
-        borderRadius: "12px",
-        overflow: "hidden",
-      },
-    }}
-  >
-    <DialogTitle
-      sx={{
-        background: "linear-gradient(45deg, #1976d2, #64b5f6)",
-        color: "white",
-        fontSize: "1.5rem",
-        fontWeight: 600,
-        padding: "16px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <Typography
-        variant="h6"
-        component="div"
-        sx={{ display: "flex", alignItems: "center" }}
-      >
-        <FaFileContract style={{ marginRight: "10px" }} />
-        Contract Details
-      </Typography>
-      <IconButton
-        onClick={() => setShowPreviewModal(false)}
-        sx={{ color: "white" }}
-        size="small"
-      >
-        <Close />
-      </IconButton>
-    </DialogTitle>
-
-    <DialogContent sx={{ padding: "24px" }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper
-            sx={{ p: 2, borderRadius: "8px", backgroundColor: "#f8fafc" }}
-          >
-            <Typography
-              variant="subtitle1"
-              fontWeight="bold"
-              color="primary"
-            >
-              Contract Status
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.contractStatus || "Active"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Contract Type
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.contract}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Employee
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.employee}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Start Date
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.startDate}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              End Date
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.endDate || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Wage Type
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.wageType}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Basic Salary
-            </Typography>
-            <Typography variant="body1">
-              ${previewContract.basicSalary}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Filing Status
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.filingStatus || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Department
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.department || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Position
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.position || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Role
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.role || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Shift
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.shift || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Work Type
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.workType || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Notice Period
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.noticePeriod || "N/A"} days
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Paper sx={{ p: 2, borderRadius: "8px" }}>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              color="textSecondary"
-            >
-              Pay Frequency
-            </Typography>
-            <Typography variant="body1">
-              {previewContract.payFrequency || "N/A"}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        {/* Contract Document Section */}
-        {previewContract.contractDocument && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, borderRadius: "8px", backgroundColor: "#f0f8ff" }}>
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                color="textSecondary"
-                sx={{ mb: 1 }}
-              >
-                Contract Document
-              </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <FaFileContract style={{ color: "#1976d2", fontSize: "20px" }} />
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {previewContract.contractDocument.originalName || 
-                     previewContract.contractDocument.filename || 
-                     "Contract Document"}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {previewContract.contractDocument.size ? 
-                      `Size: ${(previewContract.contractDocument.size / 1024).toFixed(2)} KB` : 
-                      "Document available"}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FaFileExport />}
-                  onClick={() => {
-                    // Handle document download
-                    if (previewContract.contractDocument.url) {
-                      window.open(previewContract.contractDocument.url, '_blank');
-                    } else if (previewContract.contractDocument.path) {
-                      // Construct the full URL for the document
-                      const documentUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${previewContract.contractDocument.path}`;
-                      window.open(documentUrl, '_blank');
-                    } else {
-                      toast.warning("Document URL not available");
-                    }
-                  }}
-                  sx={{
-                    borderColor: "#1976d2",
-                    color: "#1976d2",
-                    "&:hover": {
-                      backgroundColor: "#e3f2fd",
-                      borderColor: "#1976d2",
-                    },
-                  }}
-                >
-                  View/Download
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-        )}
-
-        {previewContract.note && (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, borderRadius: "8px" }}>
-              <Typography
-                variant="subtitle2"
-                fontWeight="bold"
-                color="textSecondary"
-              >
-                Notes
-              </Typography>
-              <Typography variant="body1">
-                {previewContract.note}
-              </Typography>
-            </Paper>
-          </Grid>
-        )}
-      </Grid>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-        <Button
-          variant="contained"
-          onClick={() => setShowPreviewModal(false)}
-          sx={{
-            background: "linear-gradient(45deg, #1976d2, #64b5f6)",
-            color: "white",
-            "&:hover": {
-              background: "linear-gradient(45deg, #1565c0, #42a5f5)",
-            },
-            borderRadius: "8px",
-            px: 3,
-            py: 1,
-          }}
-        >
-          Close
-        </Button>
-      </Box>
-    </DialogContent>
-  </Dialog>
-)}
-
-
-
+      )}
 
       {/* Pagination */}
       {filteredContracts.length > 0 && (
@@ -4121,4 +3515,3 @@ const Contract = () => {
 };
 
 export default Contract;
-
