@@ -24,13 +24,13 @@ import {
   InputLabel,
   Chip,
 } from "@mui/material";
-import { 
-  ArrowForward, 
-  EventAvailable, 
-  EventBusy, 
-  CalendarToday, 
-  Event, 
-  Refresh as RefreshIcon
+import {
+  ArrowForward,
+  EventAvailable,
+  EventBusy,
+  CalendarToday,
+  Event,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { alpha } from "@mui/material";
 import { Doughnut, Bar } from "react-chartjs-2";
@@ -81,236 +81,242 @@ const StyledHeader = styled(Box)(({ theme, color }) => ({
 const apiBaseURL =
   process.env.REACT_APP_API_BASE_URL || "http://localhost:5002";
 
-  const MainDashboard = () => {
-    // Move all useState declarations to the top of the component
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [timeRange, setTimeRange] = useState("6m"); // Make sure this is defined before any useEffect
-    const [dashboardData, setDashboardData] = useState({
-      stats: {
-        totalOnboarded: 0,
-        totalOffboarded: 0,
-        averageOnboardingTime: 0,
-        completionRate: 0,
-      },
-      trendData: [],
-      departmentData: [],
-      employeeData: [],
-    });
-    const [userLeaveData, setUserLeaveData] = useState({
-      upcomingLeaves: [],
-      leaveBalance: null,
-      loading: true,
-      error: null
-    });
-    const [recentJoins, setRecentJoins] = useState([]);
-    const [announcements, setAnnouncements] = useState([]);
-    const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
-    const [activeAnnouncementType, setActiveAnnouncementType] = useState("all");
-  
-    // Now you can use timeRange in useEffect
-    useEffect(() => {
-      fetchDashboardData();
-      fetchRecentJoins();
-      fetchAllAnnouncements();
-      fetchUserLeaveData();
-    }, [timeRange]);
+const MainDashboard = () => {
+  // Move all useState declarations to the top of the component
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [timeRange, setTimeRange] = useState("6m"); // Make sure this is defined before any useEffect
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      totalOnboarded: 0,
+      totalOffboarded: 0,
+      averageOnboardingTime: 0,
+      completionRate: 0,
+    },
+    trendData: [],
+    departmentData: [],
+    employeeData: [],
+  });
+  const [userLeaveData, setUserLeaveData] = useState({
+    upcomingLeaves: [],
+    leaveBalance: null,
+    loading: true,
+    error: null,
+  });
+  const [recentJoins, setRecentJoins] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+  const [activeAnnouncementType, setActiveAnnouncementType] = useState("all");
 
-// // Add this helper function to get the auth token
-// const getAuthToken = () => {
-//   return localStorage.getItem('token');
-// };
+  // Now you can use timeRange in useEffect
+  useEffect(() => {
+    fetchDashboardData();
+    fetchRecentJoins();
+    fetchAllAnnouncements();
+    fetchUserLeaveData();
+  }, [timeRange]);
 
-// // Helper function to create headers with auth token
-// const getAuthHeaders = () => {
-//   const token = getAuthToken();
-//   const companyCode = localStorage.getItem('companyCode');
-//   return {
-//     headers: {
-//       'Authorization': `Bearer ${token}`,
-//       'X-Company-Code': companyCode
-//     }
-//   };
-// };
+  // // Add this helper function to get the auth token
+  // const getAuthToken = () => {
+  //   return localStorage.getItem('token');
+  // };
 
-const fetchUserLeaveData = async () => {
-  try {
-    // Get the user ID from localStorage
-    const userId = localStorage.getItem('userId');
-    
-    if (!userId) {
-      console.log("No user ID found in localStorage");
-      return;
+  // // Helper function to create headers with auth token
+  // const getAuthHeaders = () => {
+  //   const token = getAuthToken();
+  //   const companyCode = localStorage.getItem('companyCode');
+  //   return {
+  //     headers: {
+  //       'Authorization': `Bearer ${token}`,
+  //       'X-Company-Code': companyCode
+  //     }
+  //   };
+  // };
+
+  const fetchUserLeaveData = async () => {
+    try {
+      // Get the user ID from localStorage
+      const userId = localStorage.getItem("userId");
+
+      if (!userId) {
+        console.log("No user ID found in localStorage");
+        return;
+      }
+
+      // First get the employee data using the user ID
+      const employeeResponse = await api.get(`/employees/by-user/${userId}`);
+
+      if (!employeeResponse.data.success || !employeeResponse.data.data) {
+        console.log("No employee data found for this user");
+        return;
+      }
+
+      const employeeData = employeeResponse.data.data;
+      const employeeCode = employeeData.Emp_ID;
+
+      if (!employeeCode) {
+        console.log("No employee code found");
+        return;
+      }
+
+      // Now fetch leave requests for this employee
+      const leaveRequestsResponse = await api.get(
+        `/leave-requests/employee/${employeeCode}`
+      );
+
+      // Fetch leave balance
+      const leaveBalanceResponse = await api.get(
+        `/leave-requests/balance/${employeeCode}`
+      );
+
+      // Fetch leave statistics
+      const leaveStatsResponse = await api.get(
+        `/leave-requests/statistics/${employeeCode}`
+      );
+
+      // Get upcoming leaves (pending or approved)
+      const upcomingLeaves = leaveRequestsResponse.data
+        .filter((leave) => {
+          // Filter for pending or approved leaves that are in the future
+          const isRelevantStatus =
+            leave.status === "pending" || leave.status === "approved";
+          const leaveStartDate = new Date(leave.startDate);
+          const today = new Date();
+          return isRelevantStatus && leaveStartDate >= today;
+        })
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+        .slice(0, 3); // Get only the next 3 upcoming leaves
+
+      setUserLeaveData({
+        upcomingLeaves,
+        leaveBalance: leaveBalanceResponse.data,
+        leaveStats: leaveStatsResponse.data,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error("Error fetching user leave data:", error);
+      setUserLeaveData({
+        upcomingLeaves: [],
+        leaveBalance: null,
+        leaveStats: null,
+        loading: false,
+        error: "Failed to load leave data",
+      });
     }
-    
-    // First get the employee data using the user ID
-    const employeeResponse = await api.get(`/employees/by-user/${userId}`);
-    
-    if (!employeeResponse.data.success || !employeeResponse.data.data) {
-      console.log("No employee data found for this user");
-      return;
+  };
+
+  const fetchAllAnnouncements = async () => {
+    setLoadingAnnouncements(true);
+    try {
+      // Use the imported function with api instance
+      // You'll need to update the fetchHolidays function in api/holidays.js
+      // to use the api instance as well
+      const holidaysResponse = await fetchHolidays();
+
+      const holidays = holidaysResponse.data.map((holiday) => ({
+        id: holiday._id,
+        title: holiday.name,
+        date: holiday.startDate,
+        content: `Holiday${
+          holiday.recurring ? " (Recurring)" : ""
+        } from ${new Date(
+          holiday.startDate
+        ).toLocaleDateString()} to ${new Date(
+          holiday.endDate
+        ).toLocaleDateString()}`,
+        type: "holiday",
+        icon: <Event />,
+        color: "#2196F3",
+        bgColor: "#E3F2FD",
+      }));
+
+      // Fetch company holidays
+      const companyHolidaysResponse = await api.get(`/companyHolidays`);
+      const companyHolidays = companyHolidaysResponse.data.map((holiday) => ({
+        id: holiday._id,
+        title: `${holiday.week} ${holiday.day}`,
+        date: new Date().toISOString(), // Current date as these are recurring
+        content: `Weekly holiday on ${holiday.day}`,
+        type: "companyHoliday",
+        icon: <Weekend />,
+        color: "#FF9800",
+        bgColor: "#FFF3E0",
+      }));
+
+      // Fetch restricted leaves
+      const restrictLeavesResponse = await api.get(`/restrictLeaves`);
+      const restrictLeaves = restrictLeavesResponse.data.map((leave) => ({
+        id: leave._id,
+        title: leave.title,
+        date: leave.startDate,
+        content: `${leave.description} (${leave.department}, ${leave.jobPosition})`,
+        endDate: leave.endDate,
+        type: "restrictLeave",
+        icon: <Block />,
+        color: "#F44336",
+        bgColor: "#FFEBEE",
+      }));
+
+      // Combine all announcements and sort by date (most recent first)
+      const allAnnouncements = [
+        ...holidays,
+        ...companyHolidays,
+        ...restrictLeaves,
+      ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setAnnouncements(allAnnouncements);
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+    } finally {
+      setLoadingAnnouncements(false);
     }
-    
-    const employeeData = employeeResponse.data.data;
-    const employeeCode = employeeData.Emp_ID;
-    
-    if (!employeeCode) {
-      console.log("No employee code found");
-      return;
+  };
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Replace axios.get with api.get
+      const response = await api.get(`/employees/report?period=${timeRange}`);
+
+      // Get the original data
+      const dashData = response.data.data;
+
+      // Replace axios.get with api.get
+      const employeesResponse = await api.get(`/employees/registered`);
+
+      // Replace axios.get with api.get
+      const offboardingResponse = await api.get(`/offboarding`);
+      const totalOffboarded = offboardingResponse.data.length || 0;
+
+      // Extract gender information
+      const genderData = employeesResponse.data.map((emp) => ({
+        gender: emp.personalInfo?.gender || "Other",
+      }));
+
+      // Add gender data and updated offboarding count to dashboard data
+      setDashboardData({
+        ...dashData,
+        genderData: genderData,
+        stats: {
+          ...dashData.stats,
+          totalOffboarded: totalOffboarded,
+        },
+      });
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError("Failed to load dashboard data. Please try again later.");
+    } finally {
+      setLoading(false);
     }
-    
-    // Now fetch leave requests for this employee
-    const leaveRequestsResponse = await api.get(`/leave-requests/employee/${employeeCode}`);
-    
-    // Fetch leave balance
-    const leaveBalanceResponse = await api.get(`/leave-requests/balance/${employeeCode}`);
-    
-    // Fetch leave statistics
-    const leaveStatsResponse = await api.get(`/leave-requests/statistics/${employeeCode}`);
-    
-    // Get upcoming leaves (pending or approved)
-    const upcomingLeaves = leaveRequestsResponse.data
-      .filter(leave => {
-        // Filter for pending or approved leaves that are in the future
-        const isRelevantStatus = leave.status === 'pending' || leave.status === 'approved';
-        const leaveStartDate = new Date(leave.startDate);
-        const today = new Date();
-        return isRelevantStatus && leaveStartDate >= today;
-      })
-      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-      .slice(0, 3); // Get only the next 3 upcoming leaves
-    
-    setUserLeaveData({
-      upcomingLeaves,
-      leaveBalance: leaveBalanceResponse.data,
-      leaveStats: leaveStatsResponse.data,
-      loading: false,
-      error: null
-    });
-    
-  } catch (error) {
-    console.error("Error fetching user leave data:", error);
-    setUserLeaveData({
-      upcomingLeaves: [],
-      leaveBalance: null,
-      leaveStats: null,
-      loading: false,
-      error: "Failed to load leave data"
-    });
-  }
-};
-
-const fetchAllAnnouncements = async () => {
-  setLoadingAnnouncements(true);
-  try {
-    // Use the imported function with api instance
-    // You'll need to update the fetchHolidays function in api/holidays.js
-    // to use the api instance as well
-    const holidaysResponse = await fetchHolidays();
-    
-    const holidays = holidaysResponse.data.map((holiday) => ({
-      id: holiday._id,
-      title: holiday.name,
-      date: holiday.startDate,
-      content: `Holiday${
-        holiday.recurring ? " (Recurring)" : ""
-      } from ${new Date(
-        holiday.startDate
-      ).toLocaleDateString()} to ${new Date(
-        holiday.endDate
-      ).toLocaleDateString()}`,
-      type: "holiday",
-      icon: <Event />,
-      color: "#2196F3",
-      bgColor: "#E3F2FD",
-    }));
-
-    // Fetch company holidays
-    const companyHolidaysResponse = await api.get(`/companyHolidays`);
-    const companyHolidays = companyHolidaysResponse.data.map((holiday) => ({
-      id: holiday._id,
-      title: `${holiday.week} ${holiday.day}`,
-      date: new Date().toISOString(), // Current date as these are recurring
-      content: `Weekly holiday on ${holiday.day}`,
-      type: "companyHoliday",
-      icon: <Weekend />,
-      color: "#FF9800",
-      bgColor: "#FFF3E0",
-    }));
-
-    // Fetch restricted leaves
-    const restrictLeavesResponse = await api.get(`/restrictLeaves`);
-    const restrictLeaves = restrictLeavesResponse.data.map((leave) => ({
-      id: leave._id,
-      title: leave.title,
-      date: leave.startDate,
-      content: `${leave.description} (${leave.department}, ${leave.jobPosition})`,
-      endDate: leave.endDate,
-      type: "restrictLeave",
-      icon: <Block />,
-      color: "#F44336",
-      bgColor: "#FFEBEE",
-    }));
-
-    // Combine all announcements and sort by date (most recent first)
-    const allAnnouncements = [
-      ...holidays,
-      ...companyHolidays,
-      ...restrictLeaves,
-    ].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    setAnnouncements(allAnnouncements);
-  } catch (err) {
-    console.error("Error fetching announcements:", err);
-  } finally {
-    setLoadingAnnouncements(false);
-  }
-};
-
-const fetchDashboardData = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    // Replace axios.get with api.get
-    const response = await api.get(`/employees/report?period=${timeRange}`);
-
-    // Get the original data
-    const dashData = response.data.data;
-
-    // Replace axios.get with api.get
-    const employeesResponse = await api.get(`/employees/registered`);
-
-    // Replace axios.get with api.get
-    const offboardingResponse = await api.get(`/offboarding`);
-    const totalOffboarded = offboardingResponse.data.length || 0;
-
-    // Extract gender information
-    const genderData = employeesResponse.data.map((emp) => ({
-      gender: emp.personalInfo?.gender || "Other",
-    }));
-
-    // Add gender data and updated offboarding count to dashboard data
-    setDashboardData({
-      ...dashData,
-      genderData: genderData,
-      stats: {
-        ...dashData.stats,
-        totalOffboarded: totalOffboarded,
-      },
-    });
-  } catch (err) {
-    console.error("Error fetching dashboard data:", err);
-    setError("Failed to load dashboard data. Please try again later.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchRecentJoins = async () => {
     try {
       // Replace axios.get with api.get
       const response = await api.get(`/employees/registered`);
-  
+
       // Sort by joining date (most recent first) and take the top 5
       const sortedEmployees = response.data
         .filter((emp) => emp.joiningDetails && emp.joiningDetails.dateOfJoining)
@@ -320,7 +326,7 @@ const fetchDashboardData = async () => {
           return dateB - dateA;
         })
         .slice(0, 5);
-  
+
       setRecentJoins(sortedEmployees);
     } catch (err) {
       console.error("Error fetching recent joins:", err);
@@ -328,12 +334,11 @@ const fetchDashboardData = async () => {
   };
 
   const handleRefresh = () => {
-  fetchDashboardData();
-  fetchRecentJoins();
-  fetchAllAnnouncements();
-  fetchUserLeaveData();
-};
-
+    fetchDashboardData();
+    fetchRecentJoins();
+    fetchAllAnnouncements();
+    fetchUserLeaveData();
+  };
 
   const handleTimeRangeChange = (event) => {
     setTimeRange(event.target.value);
@@ -365,7 +370,6 @@ const fetchDashboardData = async () => {
         ],
       };
     }
-
 
     return {
       labels: dashboardData.departmentData.map((item) => item.name),
@@ -861,7 +865,6 @@ const fetchDashboardData = async () => {
             </Box>
           </Paper>
         </Grid>
-        
 
         {/* Recent Joins */}
         <Grid item xs={12} md={6}>
@@ -1066,6 +1069,7 @@ const fetchDashboardData = async () => {
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
+                      primaryTypographyProps={{ component: "div" }}
                       primary={
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -1152,421 +1156,560 @@ const fetchDashboardData = async () => {
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
-  <Paper
-    sx={{
-      p: 0,
-      borderRadius: 2,
-      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-      overflow: "hidden",
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      background: "linear-gradient(to bottom, #ffffff, #f9fafc)",
-    }}
-  >
-    {/* Header with gradient background */}
-    <Box
-      sx={{
-        p: 3,
-        background: "linear-gradient(45deg, #3f51b5, #5c6bc0)",
-        color: "white",
-        position: "relative",
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: "bold", zIndex: 1 }}>
-          My Leave Status
-        </Typography>
-        <Button
-          variant="contained"
-          size="small"
-          onClick={() => window.location.href = '/dashboards/my-leave-requests'}
-          endIcon={<ArrowForward />}
-          sx={{
-            backgroundColor: "rgba(255,255,255,0.15)",
-            backdropFilter: "blur(4px)",
-            "&:hover": {
-              backgroundColor: "rgba(255,255,255,0.25)",
-            },
-            textTransform: "none",
-            boxShadow: "none",
-            zIndex: 1,
-          }}
-        >
-          View All
-        </Button>
-      </Box>
-      
-      {/* Decorative circles in the background */}
-      <Box
-        sx={{
-          position: "absolute",
-          width: 150,
-          height: 150,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)",
-          top: -50,
-          right: -50,
-        }}
-      />
-      <Box
-        sx={{
-          position: "absolute",
-          width: 100,
-          height: 100,
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)",
-          bottom: -20,
-          left: 20,
-        }}
-      />
-    </Box>
-
-    {/* Content area */}
-    <Box sx={{ p: 3, flexGrow: 1, display: "flex", flexDirection: "column" }}>
-      {userLeaveData.loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", flexGrow: 1 }}>
-          <CircularProgress size={40} sx={{ color: "#3f51b5" }} />
-        </Box>
-      ) : userLeaveData.error ? (
-        <Box
-          sx={{
-            p: 3,
-            textAlign: "center",
-            backgroundColor: "rgba(244, 67, 54, 0.05)",
-            borderRadius: 2,
-            border: "1px solid rgba(244, 67, 54, 0.1)",
-            flexGrow: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}
-        >
-          <Typography color="error" variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
-            {userLeaveData.error}
-          </Typography>
-          <Button 
-            variant="outlined" 
-            color="error" 
-            size="small" 
-            onClick={fetchUserLeaveData}
-            startIcon={<RefreshIcon />}
-            sx={{ alignSelf: "center", mt: 1 }}
-          >
-            Retry
-          </Button>
-        </Box>
-      ) : (
-        <>
-          {/* Leave Balance Summary with enhanced styling */}
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              mb: 2, 
-              fontWeight: 600, 
-              color: "#3f51b5",
+          <Paper
+            sx={{
+              p: 0,
+              borderRadius: 2,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              overflow: "hidden",
+              height: "100%",
               display: "flex",
-              alignItems: "center",
+              flexDirection: "column",
+              background: "linear-gradient(to bottom, #ffffff, #f9fafc)",
             }}
           >
-            <CalendarToday fontSize="small" sx={{ mr: 1 }} />
-            Leave Balance
-          </Typography>
-          
-          <Box sx={{ mb: 3 }}>
-            {userLeaveData.leaveBalance ? (
-              <Grid container spacing={2}>
-                {Object.entries(userLeaveData.leaveBalance).slice(0, 3).map(([type, balance]) => {
-                  const total = balance.total || 0;
-                  const used = balance.used || 0;
-                  const pending = balance.pending || 0;
-                  const available = total - used - pending;
-                  const usedPercentage = total > 0 ? (used / total) * 100 : 0;
-                  const pendingPercentage = total > 0 ? (pending / total) * 100 : 0;
-                  const availablePercentage = 100 - usedPercentage - pendingPercentage;
-                  
-                  // Get leave type label and color
-                  const getLeaveTypeInfo = (type) => {
-                    const info = {
-                      annual: { label: "Annual Leave", color: "#4caf50" },
-                      sick: { label: "Sick Leave", color: "#f44336" },
-                      personal: { label: "Personal Leave", color: "#9c27b0" },
-                      casual: { label: "Casual Leave", color: "#ff9800" },
-                      earned: { label: "Earned Leave", color: "#2196f3" },
-                      maternity: { label: "Maternity Leave", color: "#e91e63" },
-                      paternity: { label: "Paternity Leave", color: "#3f51b5" }
-                    };
-                    return info[type] || { label: type, color: "#757575" };
-                  };
-                  
-                  const { label, color } = getLeaveTypeInfo(type);
-                  
-                  return (
-                    <Grid item xs={12} sm={4} key={type}>
-                      <Box 
-                        sx={{ 
-                          mb: 1, 
-                          p: 1.5, 
-                          borderRadius: 2, 
-                          backgroundColor: alpha(color, 0.05),
-                          border: `1px solid ${alpha(color, 0.1)}`,
-                          height: "100%",
-                        }}
-                      >
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontSize: "0.8rem", 
-                              fontWeight: 600,
-                              color: color,
-                            }}
-                          >
-                            {label}
-                          </Typography>
-                          <Box 
-                            sx={{ 
-                              display: "flex", 
-                              alignItems: "center", 
-                              backgroundColor: alpha(color, 0.1),
-                              borderRadius: 5,
-                              px: 1,
-                              py: 0.25,
-                            }}
-                          >
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                fontSize: "0.8rem", 
-                                fontWeight: 700,
-                                color: color,
-                              }}
-                            >
-                              {available}/{total}
-                            </Typography>
-                          </Box>
-                        </Box>
-                        
-                        {/* Enhanced progress bar */}
-                        <Box sx={{ position: "relative", height: 8, bgcolor: alpha(color, 0.1), borderRadius: 4, mb: 1 }}>
-                          {/* Used leave */}
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              left: 0,
-                              top: 0,
-                              height: "100%",
-                              width: `${usedPercentage}%`,
-                              bgcolor: alpha(color, 0.7),
-                              borderRadius: "4px 0 0 4px",
-                              transition: "width 1s ease-in-out",
-                            }}
-                          />
-                          {/* Pending leave */}
-                          <Box
-                            sx={{
-                              position: "absolute",
-                              left: `${usedPercentage}%`,
-                              top: 0,
-                              height: "100%",
-                              width: `${pendingPercentage}%`,
-                              bgcolor: alpha(color, 0.4),
-                              transition: "width 1s ease-in-out",
-                            }}
-                          />
-                        </Box>
-                        
-                        {/* Legend */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1 }}>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <Box 
-                              sx={{ 
-                                width: 8, 
-                                height: 8, 
-                                borderRadius: "50%", 
-                                bgcolor: alpha(color, 0.7),
-                                mr: 0.5 
-                              }} 
-                            />
-                            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                              Used
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <Box 
-                              sx={{ 
-                                width: 8, 
-                                height: 8, 
-                                borderRadius: "50%", 
-                                bgcolor: alpha(color, 0.4),
-                                mr: 0.5 
-                              }} 
-                            />
-                            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                              Pending
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            ) : (
-              <Box 
-                sx={{ 
-                  py: 2, 
-                  px: 3, 
-                  borderRadius: 2, 
-                  backgroundColor: "#f5f5f5",
-                  textAlign: "center" 
+            {/* Header with gradient background */}
+            <Box
+              sx={{
+                p: 3,
+                background: "linear-gradient(45deg, #3f51b5, #5c6bc0)",
+                color: "white",
+                position: "relative",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                <Typography variant="body2" color="text.secondary">
-                  No leave balance data available
+                <Typography variant="h6" sx={{ fontWeight: "bold", zIndex: 1 }}>
+                  My Leave Status
                 </Typography>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() =>
+                    (window.location.href = "/dashboards/my-leave-requests")
+                  }
+                  endIcon={<ArrowForward />}
+                  sx={{
+                    backgroundColor: "rgba(255,255,255,0.15)",
+                    backdropFilter: "blur(4px)",
+                    "&:hover": {
+                      backgroundColor: "rgba(255,255,255,0.25)",
+                    },
+                    textTransform: "none",
+                    boxShadow: "none",
+                    zIndex: 1,
+                  }}
+                >
+                  View All
+                </Button>
               </Box>
-            )}
-          </Box>
-          
-          {/* Upcoming Leaves with enhanced styling */}
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              mb: 2, 
-              mt: 1, 
-              fontWeight: 600, 
-              color: "#3f51b5",
-              display: "flex",
-              alignItems: "center", 
-            }}
-          >
-            <Event fontSize="small" sx={{ mr: 1 }} />
-            Upcoming Leaves
-          </Typography>
-          
-          {userLeaveData.upcomingLeaves && userLeaveData.upcomingLeaves.length > 0 ? (
-            <Box sx={{ flexGrow: 1, overflow: "auto" }}>
-              <List sx={{ p: 0 }}>
-                {userLeaveData.upcomingLeaves.map((leave, index) => (
-                  <ListItem
-                    key={leave._id}
-                    sx={{
-                      px: 2,
-                      py: 1.5,
-                      borderRadius: 2,
-                      mb: index < userLeaveData.upcomingLeaves.length - 1 ? 1.5 : 0,
-                      backgroundColor: leave.status === "approved" 
-                        ? "rgba(76, 175, 80, 0.05)" 
-                        : "rgba(255, 152, 0, 0.05)",
-                      border: `1px solid ${
-                        leave.status === "approved" 
-                          ? "rgba(76, 175, 80, 0.1)" 
-                          : "rgba(255, 152, 0, 0.1)"
-                      }`,
-                      transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-                      "&:hover": {
-                        transform: "translateY(-2px)",
-                        boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
-                      },
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar
-                        sx={{
-                          bgcolor: 
-                            leave.status === "approved" 
-                              ? "rgba(76, 175, 80, 0.1)" 
-                              : "rgba(255, 152, 0, 0.1)",
-                          color: 
-                            leave.status === "approved" 
-                              ? "#4caf50" 
-                              : "#ff9800",
-                        }}
-                      >
-                        {leave.status === "approved" ? <EventAvailable /> : <EventBusy />}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)} Leave
-                        </Typography>
-                      }
-                      secondary={
-                        <Box sx={{ mt: 0.5 }}>
-                          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                            <CalendarToday sx={{ fontSize: 14, mr: 0.5, color: "text.secondary" }} />
-                            <Typography variant="caption" display="block" color="text.secondary">
-                              {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {leave.numberOfDays} day{leave.numberOfDays !== 1 ? 's' : ''}
-                            </Typography>
-                            <Chip 
-                              size="small" 
-                              label={leave.status.charAt(0).toUpperCase() + leave.status.slice(1)} 
-                              color={leave.status === "approved" ? "success" : "warning"}
-                              sx={{ 
-                                height: 20, 
-                                fontSize: '0.65rem',
-                                fontWeight: 600,
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
+
+              {/* Decorative circles in the background */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  width: 150,
+                  height: 150,
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)",
+                  top: -50,
+                  right: -50,
+                }}
+              />
+              <Box
+                sx={{
+                  position: "absolute",
+                  width: 100,
+                  height: 100,
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)",
+                  bottom: -20,
+                  left: 20,
+                }}
+              />
             </Box>
-          ) : (
-            <Box 
-              sx={{ 
-                py: 3, 
-                px: 3, 
-                borderRadius: 2, 
-                backgroundColor: "#f5f5f5",
-                textAlign: "center",
+
+            {/* Content area */}
+            <Box
+              sx={{
+                p: 3,
                 flexGrow: 1,
                 display: "flex",
                 flexDirection: "column",
-                justifyContent: "center",
-                alignItems: "center",
               }}
             >
-                            <CalendarToday sx={{ fontSize: 40, color: "#bdbdbd", mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
-                No upcoming leaves scheduled
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                sx={{ mt: 2, textTransform: "none" }}
-                onClick={() => window.location.href = '/dashboards/my-leave-requests'}
-              >
-                Apply for Leave
-              </Button>
+              {userLeaveData.loading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    flexGrow: 1,
+                  }}
+                >
+                  <CircularProgress size={40} sx={{ color: "#3f51b5" }} />
+                </Box>
+              ) : userLeaveData.error ? (
+                <Box
+                  sx={{
+                    p: 3,
+                    textAlign: "center",
+                    backgroundColor: "rgba(244, 67, 54, 0.05)",
+                    borderRadius: 2,
+                    border: "1px solid rgba(244, 67, 54, 0.1)",
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    color="error"
+                    variant="subtitle1"
+                    sx={{ mb: 1, fontWeight: 500 }}
+                  >
+                    {userLeaveData.error}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={fetchUserLeaveData}
+                    startIcon={<RefreshIcon />}
+                    sx={{ alignSelf: "center", mt: 1 }}
+                  >
+                    Retry
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  {/* Leave Balance Summary with enhanced styling */}
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 2,
+                      fontWeight: 600,
+                      color: "#3f51b5",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <CalendarToday fontSize="small" sx={{ mr: 1 }} />
+                    Leave Balance
+                  </Typography>
+
+                  <Box sx={{ mb: 3 }}>
+                    {userLeaveData.leaveBalance ? (
+                      <Grid container spacing={2}>
+                        {Object.entries(userLeaveData.leaveBalance)
+                          .slice(0, 3)
+                          .map(([type, balance]) => {
+                            const total = balance.total || 0;
+                            const used = balance.used || 0;
+                            const pending = balance.pending || 0;
+                            const available = total - used - pending;
+                            const usedPercentage =
+                              total > 0 ? (used / total) * 100 : 0;
+                            const pendingPercentage =
+                              total > 0 ? (pending / total) * 100 : 0;
+                            const availablePercentage =
+                              100 - usedPercentage - pendingPercentage;
+
+                            // Get leave type label and color
+                            const getLeaveTypeInfo = (type) => {
+                              const info = {
+                                annual: {
+                                  label: "Annual Leave",
+                                  color: "#4caf50",
+                                },
+                                sick: { label: "Sick Leave", color: "#f44336" },
+                                personal: {
+                                  label: "Personal Leave",
+                                  color: "#9c27b0",
+                                },
+                                casual: {
+                                  label: "Casual Leave",
+                                  color: "#ff9800",
+                                },
+                                earned: {
+                                  label: "Earned Leave",
+                                  color: "#2196f3",
+                                },
+                                maternity: {
+                                  label: "Maternity Leave",
+                                  color: "#e91e63",
+                                },
+                                paternity: {
+                                  label: "Paternity Leave",
+                                  color: "#3f51b5",
+                                },
+                              };
+                              return (
+                                info[type] || { label: type, color: "#757575" }
+                              );
+                            };
+
+                            const { label, color } = getLeaveTypeInfo(type);
+
+                            return (
+                              <Grid item xs={12} sm={4} key={type}>
+                                <Box
+                                  sx={{
+                                    mb: 1,
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    backgroundColor: alpha(color, 0.05),
+                                    border: `1px solid ${alpha(color, 0.1)}`,
+                                    height: "100%",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      mb: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontSize: "0.8rem",
+                                        fontWeight: 600,
+                                        color: color,
+                                      }}
+                                    >
+                                      {label}
+                                    </Typography>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        backgroundColor: alpha(color, 0.1),
+                                        borderRadius: 5,
+                                        px: 1,
+                                        py: 0.25,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontSize: "0.8rem",
+                                          fontWeight: 700,
+                                          color: color,
+                                        }}
+                                      >
+                                        {available}/{total}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+
+                                  {/* Enhanced progress bar */}
+                                  <Box
+                                    sx={{
+                                      position: "relative",
+                                      height: 8,
+                                      bgcolor: alpha(color, 0.1),
+                                      borderRadius: 4,
+                                      mb: 1,
+                                    }}
+                                  >
+                                    {/* Used leave */}
+                                    <Box
+                                      sx={{
+                                        position: "absolute",
+                                        left: 0,
+                                        top: 0,
+                                        height: "100%",
+                                        width: `${usedPercentage}%`,
+                                        bgcolor: alpha(color, 0.7),
+                                        borderRadius: "4px 0 0 4px",
+                                        transition: "width 1s ease-in-out",
+                                      }}
+                                    />
+                                    {/* Pending leave */}
+                                    <Box
+                                      sx={{
+                                        position: "absolute",
+                                        left: `${usedPercentage}%`,
+                                        top: 0,
+                                        height: "100%",
+                                        width: `${pendingPercentage}%`,
+                                        bgcolor: alpha(color, 0.4),
+                                        transition: "width 1s ease-in-out",
+                                      }}
+                                    />
+                                  </Box>
+
+                                  {/* Legend */}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      mt: 1,
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          width: 8,
+                                          height: 8,
+                                          borderRadius: "50%",
+                                          bgcolor: alpha(color, 0.7),
+                                          mr: 0.5,
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ color: "text.secondary" }}
+                                      >
+                                        Used
+                                      </Typography>
+                                    </Box>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                      }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          width: 8,
+                                          height: 8,
+                                          borderRadius: "50%",
+                                          bgcolor: alpha(color, 0.4),
+                                          mr: 0.5,
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ color: "text.secondary" }}
+                                      >
+                                        Pending
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              </Grid>
+                            );
+                          })}
+                      </Grid>
+                    ) : (
+                      <Box
+                        sx={{
+                          py: 2,
+                          px: 3,
+                          borderRadius: 2,
+                          backgroundColor: "#f5f5f5",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          No leave balance data available
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Upcoming Leaves with enhanced styling */}
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      mb: 2,
+                      mt: 1,
+                      fontWeight: 600,
+                      color: "#3f51b5",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Event fontSize="small" sx={{ mr: 1 }} />
+                    Upcoming Leaves
+                  </Typography>
+
+                  {userLeaveData.upcomingLeaves &&
+                  userLeaveData.upcomingLeaves.length > 0 ? (
+                    <Box sx={{ flexGrow: 1, overflow: "auto" }}>
+                      <List sx={{ p: 0 }}>
+                        {userLeaveData.upcomingLeaves.map((leave, index) => (
+                          <ListItem
+                            key={leave._id}
+                            sx={{
+                              px: 2,
+                              py: 1.5,
+                              borderRadius: 2,
+                              mb:
+                                index < userLeaveData.upcomingLeaves.length - 1
+                                  ? 1.5
+                                  : 0,
+                              backgroundColor:
+                                leave.status === "approved"
+                                  ? "rgba(76, 175, 80, 0.05)"
+                                  : "rgba(255, 152, 0, 0.05)",
+                              border: `1px solid ${
+                                leave.status === "approved"
+                                  ? "rgba(76, 175, 80, 0.1)"
+                                  : "rgba(255, 152, 0, 0.1)"
+                              }`,
+                              transition:
+                                "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+                              "&:hover": {
+                                transform: "translateY(-2px)",
+                                boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+                              },
+                            }}
+                          >
+                            <ListItemAvatar>
+                              <Avatar
+                                sx={{
+                                  bgcolor:
+                                    leave.status === "approved"
+                                      ? "rgba(76, 175, 80, 0.1)"
+                                      : "rgba(255, 152, 0, 0.1)",
+                                  color:
+                                    leave.status === "approved"
+                                      ? "#4caf50"
+                                      : "#ff9800",
+                                }}
+                              >
+                                {leave.status === "approved" ? (
+                                  <EventAvailable />
+                                ) : (
+                                  <EventBusy />
+                                )}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 600 }}
+                                >
+                                  {leave.leaveType.charAt(0).toUpperCase() +
+                                    leave.leaveType.slice(1)}{" "}
+                                  Leave
+                                </Typography>
+                              }
+                              secondaryTypographyProps={{ component: "div" }}
+                              secondary={
+                                <Box sx={{ mt: 0.5 }}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      mb: 0.5,
+                                    }}
+                                  >
+                                    <CalendarToday
+                                      sx={{
+                                        fontSize: 14,
+                                        mr: 0.5,
+                                        color: "text.secondary",
+                                      }}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      display="block"
+                                      color="text.secondary"
+                                    >
+                                      {new Date(
+                                        leave.startDate
+                                      ).toLocaleDateString()}{" "}
+                                      -{" "}
+                                      {new Date(
+                                        leave.endDate
+                                      ).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {leave.numberOfDays} day
+                                      {leave.numberOfDays !== 1 ? "s" : ""}
+                                    </Typography>
+                                    <Chip
+                                      size="small"
+                                      label={
+                                        leave.status.charAt(0).toUpperCase() +
+                                        leave.status.slice(1)
+                                      }
+                                      color={
+                                        leave.status === "approved"
+                                          ? "success"
+                                          : "warning"
+                                      }
+                                      sx={{
+                                        height: 20,
+                                        fontSize: "0.65rem",
+                                        fontWeight: 600,
+                                      }}
+                                    />
+                                  </Box>
+                                </Box>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        py: 3,
+                        px: 3,
+                        borderRadius: 2,
+                        backgroundColor: "#f5f5f5",
+                        textAlign: "center",
+                        flexGrow: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <CalendarToday
+                        sx={{ fontSize: 40, color: "#bdbdbd", mb: 1 }}
+                      />
+                      <Typography variant="body2" color="text.secondary">
+                        No upcoming leaves scheduled
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{ mt: 2, textTransform: "none" }}
+                        onClick={() =>
+                          (window.location.href =
+                            "/dashboards/my-leave-requests")
+                        }
+                      >
+                        Apply for Leave
+                      </Button>
+                    </Box>
+                  )}
+                </>
+              )}
             </Box>
-          )}
-        </>
-      )}
-    </Box>
-  </Paper>
-</Grid>
-
-
-
-
+          </Paper>
+        </Grid>
       </Grid>
     </Box>
   );
