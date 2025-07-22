@@ -2,21 +2,23 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
     ports:
       - "5002:5002"
     networks:
-      - app-net
+      - hrms-net
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     ports:
-      - "80:80"
-    depends_on:
-      - backend
+      - "80:80"  
     networks:
-      - app-net
+      - hrms-net
 
 networks:
-  app-net:
+  hrms-net:
     driver: bridge
