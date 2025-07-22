@@ -208,9 +208,7 @@ import { store } from '../redux/store';
 const api = axios.create({
   baseURL: `${process.env.REACT_APP_API_URL}/api`,
   timeout: 30000, // Increase timeout for payslip operations
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  // Don't set default Content-Type to allow proper file upload headers
 });
 
 api.interceptors.request.use((config) => {
@@ -222,6 +220,11 @@ api.interceptors.request.use((config) => {
   // Fallback to localStorage if not in Redux
   if (!token) token = localStorage.getItem('token');
   if (!companyCode) companyCode = localStorage.getItem('companyCode');
+  
+  // Set Content-Type to JSON for non-file uploads (when data is not FormData)
+  if (!(config.data instanceof FormData) && !config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   
   // Add headers if values exist
   if (token) {

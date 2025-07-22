@@ -403,61 +403,137 @@ const ExitPage = () => {
       });
   };
 
-const handleFileUpload = () => {
-  if (!selectedFile || !documentType || !selectedEmployee) {
-    setSnackbar({
-      open: true,
-      message: "Please select a file, document type, and ensure an employee is selected",
-      severity: "error",
-    });
-    return;
-  }
-
-  setLoading(true);
-
-  // Create form data for file upload
-  const formData = new FormData();
-
-  // Append the file with the field name "document"
-  formData.append("document", selectedFile);
-  
-  // Also append the document metadata explicitly
-  formData.append("name", selectedFile.name);
-  formData.append("type", documentType);
-
-  // Use the correct endpoint with the employee ID in the URL
-  api
-    .post(`/offboarding/${selectedEmployee._id}/document`, formData)
-    .then((response) => {
-      console.log("Upload response:", response.data);
+  const handleFileUpload = () => {
+    if (!selectedFile || !documentType || !selectedEmployee) {
       setSnackbar({
         open: true,
-        message: "Document uploaded successfully",
-        severity: "success",
-      });
-      setUploadOpen(false);
-      setSelectedFile(null);
-      setDocumentType("");
-      fetchOffboardings(); // Refresh the data
-    })
-    .catch((error) => {
-      console.error("Error uploading document:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-      }
-
-      setSnackbar({
-        open: true,
-        message: error.response?.data?.message || "Failed to upload document",
+        message: "Please select a file, document type, and ensure an employee is selected",
         severity: "error",
       });
-    })
-    .finally(() => {
-      setLoading(false);
+      return;
+    }
+  
+    console.log("Starting file upload:", {
+      fileName: selectedFile.name,
+      fileSize: selectedFile.size,
+      fileType: selectedFile.type,
+      documentType: documentType,
+      employeeId: selectedEmployee._id
     });
-};
+  
+    setLoading(true);
+  
+    // Create form data for file upload
+    const formData = new FormData();
+  
+    // Append the file with the field name "document" (this must match multer config)
+    formData.append("document", selectedFile);
+    
+    // Also append the document metadata
+    formData.append("title", documentType);
+    formData.append("employee", selectedEmployee.name || selectedEmployee.employeeName || "Unknown");
+    formData.append("description", `${documentType} document for ${selectedEmployee.name || selectedEmployee.employeeName}`);
+  
+    // Log FormData contents for debugging
+    console.log("FormData contents:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ': ', pair[1]);
+    }
+  
+    // Use the correct endpoint with the employee ID in the URL
+    api
+      .post(`/offboarding/${selectedEmployee._id}/document`, formData, {
+        headers: {
+          // Don't set Content-Type manually, let the browser set it with boundary
+          // 'Content-Type': 'multipart/form-data', // Remove this line
+        },
+      })
+      .then((response) => {
+        console.log("Upload response:", response.data);
+        setSnackbar({
+          open: true,
+          message: "Document uploaded successfully",
+          severity: "success",
+        });
+        setUploadOpen(false);
+        setSelectedFile(null);
+        setDocumentType("");
+        fetchOffboardings(); // Refresh the data
+      })
+      .catch((error) => {
+        console.error("Error uploading document:", error);
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+          console.error("Response status:", error.response.status);
+          console.error("Response headers:", error.response.headers);
+        }
+  
+        setSnackbar({
+          open: true,
+          message: error.response?.data?.message || "Failed to upload document",
+          severity: "error",
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+  
+// const handleFileUpload = () => {
+//   if (!selectedFile || !documentType || !selectedEmployee) {
+//     setSnackbar({
+//       open: true,
+//       message: "Please select a file, document type, and ensure an employee is selected",
+//       severity: "error",
+//     });
+//     return;
+//   }
+
+//   setLoading(true);
+
+//   // Create form data for file upload
+//   const formData = new FormData();
+
+//   // Append the file with the field name "document"
+//   formData.append("document", selectedFile);
+  
+//   // Also append the document metadata explicitly
+//   formData.append("name", selectedFile.name);
+//   formData.append("type", documentType);
+
+//   // Use the correct endpoint with the employee ID in the URL
+//   api
+//     .post(`/offboarding/${selectedEmployee._id}/document`, formData)
+//     .then((response) => {
+//       console.log("Upload response:", response.data);
+//       setSnackbar({
+//         open: true,
+//         message: "Document uploaded successfully",
+//         severity: "success",
+//       });
+//       setUploadOpen(false);
+//       setSelectedFile(null);
+//       setDocumentType("");
+//       fetchOffboardings(); // Refresh the data
+//     })
+//     .catch((error) => {
+//       console.error("Error uploading document:", error);
+//       if (error.response) {
+//         console.error("Response data:", error.response.data);
+//         console.error("Response status:", error.response.status);
+//         console.error("Response headers:", error.response.headers);
+//       }
+
+//       setSnackbar({
+//         open: true,
+//         message: error.response?.data?.message || "Failed to upload document",
+//         severity: "error",
+//       });
+//     })
+//     .finally(() => {
+//       setLoading(false);
+//     });
+// };
 
 
 const handleDownloadDocument = (path) => {
@@ -3371,6 +3447,7 @@ const handleDownloadDocument = (path) => {
               /> */}
               <input
                 type="file"
+                name="document"
                 id="file-upload"
                 style={{ display: "none" }}
                 onChange={handleFileSelect} // Use the new handler with validation

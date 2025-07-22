@@ -613,11 +613,22 @@ export const getOffboardingStats = async (req, res) => {
 // };
 
 export const uploadDocument = async (req, res) => {
+  console.log('=== UPLOAD DOCUMENT FUNCTION CALLED ===');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  console.log('Request params:', req.params);
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
+  console.log('Request file:', req.file);
+  console.log('Request files:', req.files);
+  console.log('Company code:', req.companyCode);
+  
   try {
     // Get company code from authenticated user
     const companyCode = req.companyCode;
 
     if (!companyCode) {
+      console.log('ERROR: No company code found');
       return res.status(401).json({
         error: "Authentication required",
         message: "Company code not found in request",
@@ -625,10 +636,22 @@ export const uploadDocument = async (req, res) => {
     }
 
     const { id } = req.params;
+    console.log(`Processing upload for offboarding ID: ${id}, company: ${companyCode}`);
 
-    console.log(
-      `Uploading document for offboarding ${id} for company: ${companyCode}`
-    );
+    // Check if file was uploaded
+    if (!req.file) {
+      console.log('ERROR: No file found in request');
+      console.log('Available request properties:', Object.keys(req));
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    console.log('File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      filename: req.file.filename,
+      path: req.file.path
+    });
 
     // Get company-specific Offboarding model
     const CompanyOffboarding = await getModelForCompany(
@@ -637,29 +660,33 @@ export const uploadDocument = async (req, res) => {
       offboardingSchema
     );
 
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
     const offboarding = await CompanyOffboarding.findById(id);
 
     if (!offboarding) {
+      console.log(`ERROR: Offboarding record not found for ID: ${id}`);
+      // Clean up uploaded file if offboarding not found
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(404).json({ message: "Offboarding record not found" });
     }
 
-    // Get document type from query parameters or body
-    const documentType =
-      req.query.documentType || req.body.type || req.file.mimetype;
+    console.log('Found offboarding record:', offboarding._id);
 
-    // // Create a new document object with all required fields
-    // In the uploadDocument function
+    // Get document type from request body or use default
+    const documentType = req.body.title || req.body.documentType || 'Document';
+
+    // Create a new document object with all required fields
     const newDocument = {
       name: req.file.originalname,
       type: documentType,
-      // Ensure the path is correctly formatted
-      path: `/uploads/${req.file.filename}`, // Add the uploads directory prefix
+      path: req.file.filename, // Store just the filename, not the full path
+      size: req.file.size,
       uploadedAt: new Date(),
+      uploadedBy: req.headers['user-id'] || 'system'
     };
+
+    console.log('New document object:', newDocument);
 
     // Initialize documents array if it doesn't exist
     if (!offboarding.documents) {
@@ -672,10 +699,27 @@ export const uploadDocument = async (req, res) => {
     // Save the updated offboarding record
     const updatedOffboarding = await offboarding.save();
 
-    res.status(200).json(updatedOffboarding);
+    console.log('Document uploaded successfully');
+
+    res.status(200).json({
+      message: 'Document uploaded successfully',
+      document: newDocument,
+      offboarding: updatedOffboarding
+    });
   } catch (error) {
-    console.error("Error uploading document:", error);
-    res.status(400).json({ message: error.message });
+    console.error("ERROR in uploadDocument:", error);
+    
+    // Clean up uploaded file if there was an error
+    if (req.file && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('Cleaned up uploaded file after error');
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
+    }
+    
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -683,7 +727,8 @@ export const uploadDocument = async (req, res) => {
 export const downloadDocument = async (req, res) => {
   try {
     const { filename } = req.params;
-    const filePath = path.join(__dirname, '..', 'uploads', filename);
+    const filePath = path.join(__dirname, '..', 'uploads', 'offboarding', companyCode, filename);
+
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
