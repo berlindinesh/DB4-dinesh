@@ -122,7 +122,7 @@ const Contract = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [setDashboardOrientation] = useState("landscape");
+  const [dashboardOrientation, setDashboardOrientation] = useState("landscape");
   const [dashboardStats, setDashboardStats] = useState(null);
   const [showRenewModal, setShowRenewModal] = useState(false);
   const [renewalData, setRenewalData] = useState({
@@ -159,6 +159,9 @@ const Contract = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState(null);
+
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [contractsToDelete, setContractsToDelete] = useState([]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -378,125 +381,121 @@ const Contract = () => {
     }
   };
 
- const handleSaveCreate = async () => {
-  try {
-    setLoading(true);
-
-    // Validate required fields
-    if (
-      !formData.contractTitle ||
-      !formData.employee ||
-      !formData.startDate ||
-      !formData.wageType ||
-      !formData.basicSalary
-    ) {
-      toast.error("Please fill all required fields");
-      setLoading(false);
-      return;
-    }
-
-    // Create FormData for file upload
-    const formDataToSend = new FormData();
-    
-    // Append all form fields
-    formDataToSend.append('contract', formData.contractTitle);
-    formDataToSend.append('contractStatus', formData.contractStatus);
-    formDataToSend.append('employee', formData.employee);
-    formDataToSend.append('startDate', formData.startDate);
-    formDataToSend.append('endDate', formData.endDate);
-    formDataToSend.append('wageType', formData.wageType);
-    formDataToSend.append('payFrequency', formData.payFrequency);
-    formDataToSend.append('basicSalary', Number(formData.basicSalary));
-    formDataToSend.append('filingStatus', formData.filingStatus);
-    formDataToSend.append('department', formData.department);
-    formDataToSend.append('position', formData.position);
-    formDataToSend.append('role', formData.role);
-    formDataToSend.append('shift', formData.shift);
-    formDataToSend.append('workType', formData.workType);
-    formDataToSend.append('noticePeriod', Number(formData.noticePeriod));
-    formDataToSend.append('deductFromBasicPay', formData.deductFromBasicPay);
-    formDataToSend.append('calculateDailyLeave', formData.calculateDailyLeave);
-    formDataToSend.append('note', formData.note);
-
-    // Append file if present
-    if (formData.contractDocument) {
-      console.log('Appending file to FormData:', formData.contractDocument);
-      formDataToSend.append('contractDocument', formData.contractDocument);
-    }
-
-    // Log FormData contents for debugging
-    console.log('FormData contents:');
-    for (let [key, value] of formDataToSend.entries()) {
-      console.log(key, value);
-    }
-
-    let response;
-    if (editingId) {
-      response = await api.put(`/payroll-contracts/${editingId}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } else {
-      response = await api.post("/payroll-contracts", formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    }
-
-    if (response.data.success) {
-      toast.success(
-        editingId
-          ? "Contract updated successfully"
-          : "Contract created successfully"
-      );
-
-      // Update the contracts list
-      if (editingId) {
-        setContracts(
-          contracts.map((contract) =>
-            contract._id === editingId ? response.data.data : contract
-          )
-        );
-        setFilteredContracts(
-          filteredContracts.map((contract) =>
-            contract._id === editingId ? response.data.data : contract
-          )
-        );
-      } else {
-        setContracts([...contracts, response.data.data]);
-        setFilteredContracts([...filteredContracts, response.data.data]);
-      }
-
-      // Reset form and close create/edit page
-      setShowCreatePage(false);
-      setEditingId(null);
-      setSelectedEmployee("");
-    } else {
-      toast.error(response.data.error || "Failed to process contract");
-    }
-  } catch (error) {
-    console.error("Contract operation error:", error);
-    toast.error(error.response?.data?.error || "Failed to process contract");
-  } finally {
-    setLoading(false);
-  }
-};
-
- 
- 
-  // HandleSave function (for inline editing)
-  const handleSave = async () => {
+  const handleSaveCreate = async () => {
     try {
       setLoading(true);
+
+      // Validate required fields
+      if (
+        !formData.contractTitle ||
+        !formData.employee ||
+        !formData.startDate ||
+        !formData.wageType ||
+        !formData.basicSalary
+      ) {
+        toast.error("Please fill all required fields");
+        setLoading(false);
+        return;
+      }
+
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+
+      // Append all form fields
+      formDataToSend.append("contract", formData.contractTitle);
+      formDataToSend.append("contractStatus", formData.contractStatus);
+      formDataToSend.append("employee", formData.employee);
+      formDataToSend.append("startDate", formData.startDate);
+      formDataToSend.append("endDate", formData.endDate);
+      formDataToSend.append("wageType", formData.wageType);
+      formDataToSend.append("payFrequency", formData.payFrequency);
+      formDataToSend.append("basicSalary", Number(formData.basicSalary));
+      formDataToSend.append("filingStatus", formData.filingStatus);
+      formDataToSend.append("department", formData.department);
+      formDataToSend.append("position", formData.position);
+      formDataToSend.append("role", formData.role);
+      formDataToSend.append("shift", formData.shift);
+      formDataToSend.append("workType", formData.workType);
+      formDataToSend.append("noticePeriod", Number(formData.noticePeriod));
+      formDataToSend.append("deductFromBasicPay", formData.deductFromBasicPay);
+      formDataToSend.append(
+        "calculateDailyLeave",
+        formData.calculateDailyLeave
+      );
+      formDataToSend.append("note", formData.note);
+
+      // Append file if present
+      if (formData.contractDocument) {
+        console.log("Appending file to FormData:", formData.contractDocument);
+        formDataToSend.append("contractDocument", formData.contractDocument);
+      }
+
+      // Log FormData contents for debugging
+      console.log("FormData contents:");
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(key, value);
+      }
+
+      let response;
+      if (editingId) {
+        response = await api.put(
+          `/payroll-contracts/${editingId}`,
+          formDataToSend,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      } else {
+        response = await api.post("/payroll-contracts", formDataToSend, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
+
+      if (response.data.success) {
+        toast.success(
+          editingId
+            ? "Contract updated successfully"
+            : "Contract created successfully"
+        );
+
+        // Update the contracts list
+        if (editingId) {
+          setContracts(
+            contracts.map((contract) =>
+              contract._id === editingId ? response.data.data : contract
+            )
+          );
+          setFilteredContracts(
+            filteredContracts.map((contract) =>
+              contract._id === editingId ? response.data.data : contract
+            )
+          );
+        } else {
+          setContracts([...contracts, response.data.data]);
+          setFilteredContracts([...filteredContracts, response.data.data]);
+        }
+
+        // Reset form and close create/edit page
+        setShowCreatePage(false);
+        setEditingId(null);
+        setSelectedEmployee("");
+      } else {
+        toast.error(response.data.error || "Failed to process contract");
+      }
     } catch (error) {
-      // Error handling remains the same
+      console.error("Contract operation error:", error);
+      toast.error(error.response?.data?.error || "Failed to process contract");
+    } finally {
+      setLoading(false);
     }
   };
 
-  //  handleDelete function
-  const handleDelete = async (id) => {
+  // HandleSave function (for inline editing)
+  const handleSave = async () => {
     try {
       setLoading(true);
     } catch (error) {
@@ -536,16 +535,6 @@ const Contract = () => {
       toast.error(error.response?.data?.error || "Failed to delete contract");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleBulkUpdate = async () => {
-    try {
-      setLoading(true);
-
-      setLoading(false);
-    } catch (error) {
-      // Error handling remains the same
     }
   };
 
@@ -600,24 +589,23 @@ const Contract = () => {
   };
 
   // Handle form input changes
-const handleInputChange = (e) => {
-  const { name, value, type, checked, files } = e.target;
-  
-  if (type === "file") {
-    const file = files[0];
-    console.log('File selected:', file); // Debug log
-    setFormData({
-      ...formData,
-      [name]: file
-    });
-  } else {
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  }
-};
+  const handleInputChange = (e) => {
+    const { name, value, type, checked, files } = e.target;
 
+    if (type === "file") {
+      const file = files[0];
+      console.log("File selected:", file); // Debug log
+      setFormData({
+        ...formData,
+        [name]: file,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: type === "checkbox" ? checked : value,
+      });
+    }
+  };
 
   // Handle sorting
   const handleSort = (key) => {
@@ -837,31 +825,175 @@ const handleInputChange = (e) => {
     setBulkAction(e.target.value);
   };
 
-  // Apply bulk action
+  const handleBulkUpdate = async () => {
+    try {
+      console.log("=== FRONTEND BULK UPDATE START ===");
+      console.log("Selected contracts:", selectedContracts);
+      console.log("Bulk update data:", bulkUpdateData);
+
+      setLoading(true);
+
+      if (selectedContracts.length === 0) {
+        toast.warning("No contracts selected for update");
+        setLoading(false);
+        return;
+      }
+
+      if (!bulkUpdateData.value) {
+        toast.warning("Please select a status to update");
+        setLoading(false);
+        return;
+      }
+
+      // Prepare the updates object
+      const updates = {
+        contractStatus: bulkUpdateData.value,
+      };
+
+      // Add reason to notes if provided
+      if (bulkUpdateData.reason) {
+        updates.note = bulkUpdateData.reason;
+      }
+
+      console.log("Sending bulk update request with:", {
+        contractIds: selectedContracts,
+        updates: updates,
+      });
+
+      const response = await api.post("/payroll-contracts/bulk-update", {
+        contractIds: selectedContracts,
+        updates: updates,
+      });
+
+      console.log("Bulk update response:", response.data);
+
+      if (response.data.success) {
+        toast.success(
+          response.data.message ||
+            `Updated ${selectedContracts.length} contracts successfully`
+        );
+
+        // Refresh the contracts list
+        await fetchContracts();
+
+        // Clear selections and close modal
+        setSelectedContracts([]);
+        setSelectAll(false);
+        setShowBulkUpdateModal(false);
+        setBulkUpdateData({});
+        setBulkAction("");
+
+        console.log("✅ Bulk update completed successfully");
+      } else {
+        throw new Error(response.data.error || "Bulk update failed");
+      }
+    } catch (error) {
+      console.error("❌ Bulk update error:", error);
+
+      let errorMessage = "Failed to update contracts";
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+      console.log("=== FRONTEND BULK UPDATE END ===");
+    }
+  };
+
+  // Replace the existing handleBulkDelete function with this:
+  const handleBulkDelete = async () => {
+    try {
+      console.log("=== FRONTEND BULK DELETE START ===");
+      console.log("Selected contracts for deletion:", selectedContracts);
+
+      setLoading(true);
+
+      if (selectedContracts.length === 0) {
+        toast.warning("No contracts selected for deletion");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Sending bulk delete request with:", {
+        contractIds: selectedContracts,
+      });
+
+      const response = await api.post("/payroll-contracts/bulk-delete", {
+        contractIds: selectedContracts,
+      });
+
+      console.log("Bulk delete response:", response.data);
+
+      if (response.data.success) {
+        toast.success(
+          response.data.message ||
+            `Deleted ${selectedContracts.length} contracts successfully`
+        );
+
+        // Refresh the contracts list
+        await fetchContracts();
+
+        // Clear selections and close dialog
+        setSelectedContracts([]);
+        setSelectAll(false);
+        setBulkAction("");
+        setBulkDeleteDialogOpen(false);
+        setContractsToDelete([]);
+
+        console.log("✅ Bulk delete completed successfully");
+      } else {
+        throw new Error(response.data.error || "Bulk delete failed");
+      }
+    } catch (error) {
+      console.error("❌ Bulk delete error:", error);
+
+      let errorMessage = "Failed to delete contracts";
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+      console.log("=== FRONTEND BULK DELETE END ===");
+    }
+  };
+
+  // Add this function to show the bulk delete confirmation dialog
+  const handleBulkDeleteClick = () => {
+    if (selectedContracts.length === 0) {
+      toast.warning("No contracts selected for deletion");
+      return;
+    }
+
+    // Get the contract details for the selected contracts
+    const contractsToDeleteDetails = contracts.filter((contract) =>
+      selectedContracts.includes(contract._id)
+    );
+
+    setContractsToDelete(contractsToDeleteDetails);
+    setBulkDeleteDialogOpen(true);
+  };
+
+  // Update the handleApplyBulkAction function:
   const handleApplyBulkAction = () => {
     if (!bulkAction || selectedContracts.length === 0) {
       toast.warning("Please select an action and at least one contract");
       return;
     }
 
+    console.log("Applying bulk action:", bulkAction);
+    console.log("Selected contracts:", selectedContracts);
+
     switch (bulkAction) {
       case "delete":
-        if (
-          window.confirm(
-            `Are you sure you want to delete ${selectedContracts.length} contracts?`
-          )
-        ) {
-          Promise.all(selectedContracts.map((id) => handleDelete(id)))
-            .then(() => {
-              toast.success(`${selectedContracts.length} contracts deleted`);
-              setSelectedContracts([]);
-              setSelectAll(false);
-            })
-            .catch((error) => {
-              console.error("Bulk delete error:", error);
-              toast.error("Failed to delete some contracts");
-            });
-        }
+        handleBulkDeleteClick(); // Changed this line to show confirmation dialog
         break;
       case "export":
         if (selectedContracts.length === 0) {
@@ -2244,6 +2376,242 @@ const handleInputChange = (e) => {
         </Paper>
       )}
 
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onClose={() => setBulkDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            width: { xs: "95%", sm: "600px" },
+            maxWidth: "600px",
+            borderRadius: "20px",
+            overflow: "hidden",
+            margin: { xs: "8px", sm: "32px" },
+          },
+        }}
+        TransitionComponent={Fade}
+        TransitionProps={{
+          timeout: 300,
+        }}
+        sx={{
+          "& .MuiDialog-container": {
+            justifyContent: "center",
+            alignItems: "center",
+            "& .MuiPaper-root": {
+              margin: { xs: "16px", sm: "32px" },
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+            },
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(45deg, #f44336, #ff7961)",
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            fontWeight: 600,
+            padding: { xs: "16px 24px", sm: "24px 32px" },
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <FaTrash />
+          Confirm Bulk Deletion
+        </DialogTitle>
+
+        <DialogContent
+          sx={{
+            padding: { xs: "24px", sm: "32px" },
+            backgroundColor: "#f8fafc",
+            paddingTop: { xs: "24px", sm: "32px" },
+            maxHeight: "60vh",
+            overflow: "auto",
+          }}
+        >
+          <Alert severity="error" sx={{ mb: 3 }}>
+            <Typography variant="body1" fontWeight={600}>
+              Are you sure you want to delete {contractsToDelete.length}{" "}
+              selected contracts?
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              This action cannot be undone and will permanently remove all
+              selected contracts from the system.
+            </Typography>
+          </Alert>
+
+          <Typography
+            variant="h6"
+            fontWeight={600}
+            sx={{ mb: 2, color: "#2c3e50" }}
+          >
+            Contracts to be deleted:
+          </Typography>
+
+          <Box sx={{ maxHeight: "300px", overflow: "auto" }}>
+            <Grid container spacing={2}>
+              {contractsToDelete.map((contract, index) => (
+                <Grid item xs={12} key={contract._id}>
+                  <Paper
+                    sx={{
+                      p: 2,
+                      bgcolor: "#fff",
+                      borderRadius: 2,
+                      border: "1px solid #ffcdd2",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        boxShadow: "0 2px 8px rgba(244, 67, 54, 0.1)",
+                        borderColor: "#f44336",
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={600}
+                        color="#2c3e50"
+                      >
+                        #{index + 1}. {contract.contract}
+                      </Typography>
+                      <Chip
+                        label={contract.contractStatus || "Active"}
+                        color={
+                          contract.contractStatus === "Active"
+                            ? "success"
+                            : contract.contractStatus === "Expired"
+                            ? "error"
+                            : contract.contractStatus === "Draft"
+                            ? "warning"
+                            : "default"
+                        }
+                        size="small"
+                      />
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      <strong>Employee:</strong> {contract.employee}
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Start:</strong> {contract.startDate}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>End:</strong> {contract.endDate || "N/A"}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Wage:</strong> {contract.wageType}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Salary:</strong> ${contract.basicSalary}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              bgcolor: "#ffebee",
+              borderRadius: 2,
+              border: "1px solid #ffcdd2",
+            }}
+          >
+            <Typography variant="body2" color="#c62828" fontWeight={500}>
+              ⚠️ Warning: This will permanently delete{" "}
+              {contractsToDelete.length} contracts and all associated data.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            padding: { xs: "16px 24px", sm: "24px 32px" },
+            backgroundColor: "#f8fafc",
+            borderTop: "1px solid #e0e0e0",
+            gap: 2,
+          }}
+        >
+          <Button
+            onClick={() => {
+              setBulkDeleteDialogOpen(false);
+              setContractsToDelete([]);
+            }}
+            sx={{
+              border: "2px solid #1976d2",
+              color: "#1976d2",
+              "&:hover": {
+                border: "2px solid #64b5f6",
+                backgroundColor: "#e3f2fd",
+                color: "#1976d2",
+              },
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 3,
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={handleBulkDelete}
+            variant="contained"
+            color="error"
+            disabled={loading}
+            startIcon={
+              loading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <FaTrash />
+              )
+            }
+            sx={{
+              background: "linear-gradient(45deg, #f44336, #ff7961)",
+              fontSize: "0.95rem",
+              textTransform: "none",
+              padding: "8px 32px",
+              borderRadius: "10px",
+              boxShadow: "0 4px 12px rgba(244, 67, 54, 0.2)",
+              color: "white",
+              "&:hover": {
+                background: "linear-gradient(45deg, #d32f2f, #f44336)",
+              },
+              "&.Mui-disabled": {
+                background: "rgba(244, 67, 54, 0.3)",
+                color: "white",
+              },
+            }}
+          >
+            {loading
+              ? "Deleting..."
+              : `Delete ${contractsToDelete.length} Contracts`}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Table */}
       <div className="contract-table-container">
         <table className="contract-table">
@@ -2774,7 +3142,7 @@ const handleInputChange = (e) => {
                         </Typography>
                       </Box>
 
-                      {/* <Button
+                      <Button
                         variant="outlined"
                         size="small"
                         startIcon={<FaFileExport />}
@@ -2790,32 +3158,120 @@ const handleInputChange = (e) => {
                               return;
                             }
 
-                            console.log("Contract document:", contractDoc); // Debug log
+                            console.log("=== FRONTEND DOWNLOAD START ===");
+                            console.log("Contract document:", contractDoc);
 
-                            // Use the correct API URL from your .env
-                            const baseUrl =
-                              process.env.REACT_APP_API_URL ||
-                              "http://localhost:5002";
-                            const downloadUrl = `${baseUrl}/api/payroll-contracts/download/${contractDoc.filename}`;
+                            // Show loading toast
+                            toast.info("Preparing download...");
 
-                            console.log("Download URL:", downloadUrl); // Debug log
+                            // Use the payroll contracts download route
+                            const downloadUrl = `payroll-contracts/download/${contractDoc.filename}`;
 
-                            // Create a temporary link and trigger download
-                            const link = document.createElement("a");
-                            link.href = downloadUrl;
-                            link.download =
-                              contractDoc.originalName || contractDoc.filename;
-                            link.target = "_blank";
+                            console.log("Download URL:", downloadUrl);
+                            console.log(
+                              "Filename to download:",
+                              contractDoc.filename
+                            );
 
-                            // Add to DOM, click, and remove
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+                            try {
+                              // First, let's check what files are available (debug)
+                              const debugResponse = await api.get(
+                                "payroll-contracts/debug/files"
+                              );
+                              console.log(
+                                "Available files:",
+                                debugResponse.data
+                              );
 
-                            toast.success("Download started");
+                              // Check if our file is in the list
+                              const availableFiles =
+                                debugResponse.data.files || [];
+                              const fileExists = availableFiles.includes(
+                                contractDoc.filename
+                              );
+                              console.log(
+                                "File exists in directory:",
+                                fileExists
+                              );
+
+                              if (!fileExists) {
+                                console.log("Available files:", availableFiles);
+                                toast.error(
+                                  `File ${contractDoc.filename} not found in uploads directory`
+                                );
+                                return;
+                              }
+
+                              // Now try to download
+                              const response = await api.get(downloadUrl, {
+                                responseType: "blob",
+                                headers: {
+                                  Accept: "application/octet-stream",
+                                },
+                                timeout: 30000,
+                              });
+
+                              console.log(
+                                "Download response received, size:",
+                                response.data.size
+                              );
+
+                              // Create blob URL and trigger download
+                              const blob = new Blob([response.data]);
+                              const url = window.URL.createObjectURL(blob);
+
+                              // Create temporary link and trigger download
+                              const link = document.createElement("a");
+                              link.href = url;
+                              link.download =
+                                contractDoc.originalName ||
+                                contractDoc.filename;
+
+                              // Add to DOM, click, and remove
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+
+                              // Clean up the blob URL
+                              window.URL.revokeObjectURL(url);
+
+                              toast.success("Download completed successfully");
+                              console.log("=== FRONTEND DOWNLOAD END ===");
+                            } catch (downloadError) {
+                              console.error(
+                                "Download request failed:",
+                                downloadError
+                              );
+
+                              if (downloadError.response) {
+                                console.log(
+                                  "Error response:",
+                                  downloadError.response.data
+                                );
+                                console.log(
+                                  "Error status:",
+                                  downloadError.response.status
+                                );
+                              }
+
+                              throw downloadError;
+                            }
                           } catch (error) {
                             console.error("Download error:", error);
-                            toast.error("Failed to download document");
+
+                            if (error.response?.status === 404) {
+                              toast.error("Document file not found on server");
+                            } else if (error.response?.status === 400) {
+                              toast.error("Invalid file request");
+                            } else if (error.code === "ECONNABORTED") {
+                              toast.error(
+                                "Download timeout - file may be too large"
+                              );
+                            } else {
+                              toast.error(
+                                `Failed to download document: ${error.message}`
+                              );
+                            }
                           }
                         }}
                         sx={{
@@ -2828,119 +3284,7 @@ const handleInputChange = (e) => {
                         }}
                       >
                         View/Download
-                      </Button> */}
-<Button
-  variant="outlined"
-  size="small"
-  startIcon={<FaFileExport />}
-  onClick={async () => {
-    try {
-      const contractDoc = previewContract.contractDocument;
-
-      if (!contractDoc || !contractDoc.filename) {
-        toast.warning("No document available for download");
-        return;
-      }
-
-      console.log("=== FRONTEND DOWNLOAD START ===");
-      console.log("Contract document:", contractDoc);
-
-      // Show loading toast
-      toast.info("Preparing download...");
-
-      // Use the payroll contracts download route
-      const downloadUrl = `payroll-contracts/download/${contractDoc.filename}`;
-      
-      console.log("Download URL:", downloadUrl);
-      console.log("Filename to download:", contractDoc.filename);
-
-      try {
-        // First, let's check what files are available (debug)
-        const debugResponse = await api.get('payroll-contracts/debug/files');
-        console.log("Available files:", debugResponse.data);
-        
-        // Check if our file is in the list
-        const availableFiles = debugResponse.data.files || [];
-        const fileExists = availableFiles.includes(contractDoc.filename);
-        console.log("File exists in directory:", fileExists);
-        
-        if (!fileExists) {
-          console.log("Available files:", availableFiles);
-          toast.error(`File ${contractDoc.filename} not found in uploads directory`);
-          return;
-        }
-
-        // Now try to download
-        const response = await api.get(downloadUrl, {
-          responseType: 'blob',
-          headers: {
-            'Accept': 'application/octet-stream'
-          },
-          timeout: 30000
-        });
-
-        console.log("Download response received, size:", response.data.size);
-
-        // Create blob URL and trigger download
-        const blob = new Blob([response.data]);
-        const url = window.URL.createObjectURL(blob);
-        
-        // Create temporary link and trigger download
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = contractDoc.originalName || contractDoc.filename;
-        
-        // Add to DOM, click, and remove
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up the blob URL
-        window.URL.revokeObjectURL(url);
-
-        toast.success("Download completed successfully");
-        console.log("=== FRONTEND DOWNLOAD END ===");
-
-      } catch (downloadError) {
-        console.error("Download request failed:", downloadError);
-        
-        if (downloadError.response) {
-          console.log("Error response:", downloadError.response.data);
-          console.log("Error status:", downloadError.response.status);
-        }
-        
-        throw downloadError;
-      }
-
-    } catch (error) {
-      console.error("Download error:", error);
-      
-      if (error.response?.status === 404) {
-        toast.error("Document file not found on server");
-      } else if (error.response?.status === 400) {
-        toast.error("Invalid file request");
-      } else if (error.code === 'ECONNABORTED') {
-        toast.error("Download timeout - file may be too large");
-      } else {
-        toast.error(`Failed to download document: ${error.message}`);
-      }
-    }
-  }}
-  sx={{
-    borderColor: "#1976d2",
-    color: "#1976d2",
-    "&:hover": {
-      backgroundColor: "#e3f2fd",
-      borderColor: "#1976d2",
-    },
-  }}
->
-  View/Download
-</Button>
-
-
-
-         
+                      </Button>
                     </Box>
                   </Paper>
                 </Grid>
@@ -3488,7 +3832,7 @@ const handleInputChange = (e) => {
         </Dialog>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Individual Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

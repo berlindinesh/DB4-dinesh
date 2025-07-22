@@ -168,15 +168,9 @@ const corsOptions = {
   },
 
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       console.error(`Blocked by CORS: ${origin}`);
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
+
+
+
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
   allowedHeaders: [
@@ -191,20 +185,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// app.use(cors({
-//     origin: "http://localhost:3000", // Allow your frontend
-//     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // Allowed HTTP methods
-//     credentials: true, // Include credentials like cookies
-//     allowedHeaders: [
-//         'Content-Type', 
-//         'Authorization', 
-//         'Access-Control-Allow-Methods', 
-//         'Access-Control-Allow-Origin',
-//         'X-Company-Code' 
-//     ] 
-// }));
 
-// Handle preflight requests for all routes
  
 
 // Error handling middleware
@@ -260,30 +241,6 @@ app.use('/api/shift-request', shiftRequestRoutes);
 app.use('/api/work-type-requests', workTypeRequestRoutes);
 app.use('/api/timesheet', timesheetRoutes);
 app.use('/api/notifications', notificationRoutes);
-
-// Sangeeta integration
-// // Add this route for secure file downloads
-// app.get('/api/contracts/download/:filename', (req, res) => {
-//   try {
-//     const filename = req.params.filename;
-//     const filePath = path.join(process.cwd(), 'uploads', 'contracts', filename);
-    
-//     // Check if file exists
-//     if (!fs.existsSync(filePath)) {
-//       return res.status(404).json({ error: 'File not found' });
-//     }
-    
-//     // Set appropriate headers
-//     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-//     res.setHeader('Content-Type', 'application/octet-stream');
-    
-//     // Send file
-//     res.sendFile(filePath);
-//   } catch (error) {
-//     console.error('Download error:', error);
-//     res.status(500).json({ error: 'Failed to download file' });
-//   }
-// });
 
 
 app.use('/api/payroll-contracts', payrollContractRoutes);

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Pie } from 'react-chartjs-2';
-import { 
-  Chart as ChartJS, 
-  ArcElement, 
+import {
+  Chart as ChartJS,
+  ArcElement,
   CategoryScale,
   LinearScale,
   BarElement,
@@ -13,19 +13,18 @@ import {
 } from 'chart.js';
 import './PayrollDashboard.css';
 import api from '../../../api/axiosInstance';
-import { 
-  CircularProgress, 
-  Box, 
-  Alert, 
-  Snackbar, 
+import {
+  CircularProgress,
+  Box,
+  Alert,
+  Snackbar,
   Fade,
   Typography,
   Card,
   CardContent,
   CardHeader,
   Divider,
-  Avatar,
-  Grid
+  Avatar
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import PersonIcon from '@mui/icons-material/Person';
@@ -36,11 +35,11 @@ import DateRangeIcon from '@mui/icons-material/DateRange';
 
 // Register the necessary components for the chart
 ChartJS.register(
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
   Legend,
   ArcElement
 );
@@ -51,7 +50,7 @@ const CONTRACTS_API_URL = "/payroll-contracts";
 const PayrollDashboard = () => {
   // State variables
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // Default to current month
-  
+
   // Data states
   const [employeeData, setEmployeeData] = useState([]);
   const [allowanceData, setAllowanceData] = useState([]);
@@ -62,7 +61,7 @@ const PayrollDashboard = () => {
   const [error, setError] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [departmentStats, setDepartmentStats] = useState({});
-  
+
   // Alert state
   const [alert, setAlert] = useState({
     open: false,
@@ -73,15 +72,15 @@ const PayrollDashboard = () => {
 
 
 
-// // Helper function to create headers with auth token
-// const getAuthHeaders = () => {
-//   const token = getAuthToken();
-//   return {
-//     headers: {
-//       'Authorization': `Bearer ${token}`
-//     }
-//   };
-// };
+  // // Helper function to create headers with auth token
+  // const getAuthHeaders = () => {
+  //   const token = getAuthToken();
+  //   return {
+  //     headers: {
+  //       'Authorization': `Bearer ${token}`
+  //     }
+  //   };
+  // };
 
 
 
@@ -117,127 +116,127 @@ const PayrollDashboard = () => {
   }, [employeeData, allowanceData, deductionData, payslipData]);
 
   // Update fetchEmployees function
-const fetchEmployees = async () => {
-  try {
-    // const token = getAuthToken();
-    const response = await api.get(`${API_URL}/employees`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-  );
-    const employees = response.data.data || [];
-    setEmployeeData(employees);
-    
-    // Set default selected employee if available
-    if (employees.length > 0) {
-      setSelectedEmployee(employees[0]);
+  const fetchEmployees = async () => {
+    try {
+      // const token = getAuthToken();
+      const response = await api.get(`${API_URL}/employees`
+        //   , {
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`
+        //   }
+        // }
+      );
+      const employees = response.data.data || [];
+      setEmployeeData(employees);
+
+      // Set default selected employee if available
+      if (employees.length > 0) {
+        setSelectedEmployee(employees[0]);
+      }
+
+      return employees;
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      showAlert("Error fetching employees", "error");
+      return [];
     }
-    
-    return employees;
-  } catch (error) {
-    console.error("Error fetching employees:", error);
-    showAlert("Error fetching employees", "error");
-    return [];
-  }
-};
+  };
 
-// Update fetchAllowances function
-const fetchAllowances = async () => {
-  try {
-    // const token = getAuthToken();
-    const response = await api.get(`${API_URL}/allowances`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-    );
-    const allowances = response.data.data || [];
-    setAllowanceData(allowances);
-    return allowances;
-  } catch (error) {
-    console.error("Error fetching allowances:", error);
-    showAlert("Error fetching allowances", "error");
-    return [];
-  }
-};
+  // Update fetchAllowances function
+  const fetchAllowances = async () => {
+    try {
+      // const token = getAuthToken();
+      const response = await api.get(`${API_URL}/allowances`
+        //   , {
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`
+        //   }
+        // }
+      );
+      const allowances = response.data.data || [];
+      setAllowanceData(allowances);
+      return allowances;
+    } catch (error) {
+      console.error("Error fetching allowances:", error);
+      showAlert("Error fetching allowances", "error");
+      return [];
+    }
+  };
 
-// Update fetchDeductions function
-const fetchDeductions = async () => {
-  try {
-    // const token = getAuthToken();
-    const response = await api.get(`${API_URL}/deductions`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-  );
-    const deductions = response.data.data || [];
-    setDeductionData(deductions);
-    return deductions;
-  } catch (error) {
-    console.error("Error fetching deductions:", error);
-    showAlert("Error fetching deductions", "error");
-    return [];
-  }
-};
+  // Update fetchDeductions function
+  const fetchDeductions = async () => {
+    try {
+      // const token = getAuthToken();
+      const response = await api.get(`${API_URL}/deductions`
+        //   , {
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`
+        //   }
+        // }
+      );
+      const deductions = response.data.data || [];
+      setDeductionData(deductions);
+      return deductions;
+    } catch (error) {
+      console.error("Error fetching deductions:", error);
+      showAlert("Error fetching deductions", "error");
+      return [];
+    }
+  };
 
-// Update fetchPayslips function
-const fetchPayslips = async () => {
-  try {
-    // const token = getAuthToken();
-    const response = await api.get(`${API_URL}/payslips`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-  );
-    if (response.data.success) {
-      const payslips = response.data.data || [];
-      setPayslipData(payslips);
-      return payslips;
-    } else {
-      console.warn("No payslips found or endpoint returned error");
+  // Update fetchPayslips function
+  const fetchPayslips = async () => {
+    try {
+      // const token = getAuthToken();
+      const response = await api.get(`${API_URL}/payslips`
+        //   , {
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`
+        //   }
+        // }
+      );
+      if (response.data.success) {
+        const payslips = response.data.data || [];
+        setPayslipData(payslips);
+        return payslips;
+      } else {
+        console.warn("No payslips found or endpoint returned error");
+        setPayslipData([]);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching payslips:", error);
       setPayslipData([]);
       return [];
     }
-  } catch (error) {
-    console.error("Error fetching payslips:", error);
-    setPayslipData([]);
-    return [];
-  }
-};
+  };
 
-// Update fetchContracts function
-const fetchContracts = async () => {
-  try {
-    // const token = getAuthToken();
-    const response = await api.get(CONTRACTS_API_URL
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-  );
-    if (response.data.success) {
-      const contracts = response.data.data || [];
-      setContractsData(contracts);
-      return contracts;
-    } else {
-      console.warn("No contracts found or endpoint returned error");
+  // Update fetchContracts function
+  const fetchContracts = async () => {
+    try {
+      // const token = getAuthToken();
+      const response = await api.get(CONTRACTS_API_URL
+        //   , {
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`
+        //   }
+        // }
+      );
+      if (response.data.success) {
+        const contracts = response.data.data || [];
+        setContractsData(contracts);
+        return contracts;
+      } else {
+        console.warn("No contracts found or endpoint returned error");
+        setContractsData([]);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
       setContractsData([]);
       return [];
     }
-  } catch (error) {
-    console.error("Error fetching contracts:", error);
-    setContractsData([]);
-    return [];
-  }
-};
+  };
 
 
   // Data processing functions
@@ -247,23 +246,23 @@ const fetchContracts = async () => {
     const grossSalaryData = [];
     const deductionsData = [];
     const netSalaryData = [];
-    
+
     // Generate last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       const monthName = date.toLocaleString('default', { month: 'long' });
       months.push(monthName);
-      
+
       // Calculate totals for this month
       let totalGross = 0;
       let totalDeductions = 0;
       let totalNet = 0;
-      
+
       employeeData.forEach(employee => {
         // Calculate basic pay
         const basicPay = parseFloat(employee.basicPay) || 0;
-        
+
         // Calculate allowances for this employee
         const employeeAllowances = allowanceData
           .filter(a => a.empId === employee.empId && a.status === "Active")
@@ -271,7 +270,7 @@ const fetchContracts = async () => {
             const percentage = parseFloat(allowance.percentage) || 0;
             return sum + (basicPay * percentage / 100);
           }, 0);
-        
+
         // Calculate deductions for this employee
         const employeeDeductions = deductionData
           .filter(d => d.empId === employee.empId && d.status === "Active")
@@ -279,19 +278,19 @@ const fetchContracts = async () => {
             const percentage = parseFloat(deduction.percentage) || 0;
             return sum + (basicPay * percentage / 100);
           }, 0);
-        
+
         // Add to totals
         totalGross += basicPay + employeeAllowances;
         totalDeductions += employeeDeductions;
         totalNet += (basicPay + employeeAllowances - employeeDeductions);
       });
-      
+
       // Add to chart data arrays
       grossSalaryData.push(totalGross);
       deductionsData.push(totalDeductions);
       netSalaryData.push(totalNet);
     }
-    
+
     // Update chart data
     setChartData({
       labels: months,
@@ -328,17 +327,17 @@ const fetchContracts = async () => {
       "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
       "#FF9F40", "#8AC249", "#EA5545", "#27AEEF", "#87BC45"
     ];
-    
+
     employeeData.forEach(employee => {
       const dept = employee.department || "Unassigned";
       departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
     });
-    
+
     // Convert to chart format
     const labels = Object.keys(departmentCounts);
     const data = Object.values(departmentCounts);
     const backgroundColors = labels.map((_, index) => departmentColors[index % departmentColors.length]);
-    
+
     setDepartmentStats({
       labels,
       datasets: [
@@ -354,29 +353,83 @@ const fetchContracts = async () => {
     });
   };
 
+
+
+
+  // Add this useEffect for debugging
+  useEffect(() => {
+    console.log('=== DEBUGGING DATA ===');
+    console.log('Employee Data:', employeeData);
+    console.log('Deduction Data:', deductionData);
+    console.log('Selected Employee:', selectedEmployee);
+
+    if (selectedEmployee) {
+      console.log('Contributions for selected employee:', calculateContributions(selectedEmployee));
+    }
+  }, [employeeData, deductionData, selectedEmployee]);
+
+
   // Calculate employee contributions
   const calculateContributions = (employee) => {
     if (!employee) return [];
-    
+
     const basicPay = parseFloat(employee.basicPay) || 0;
-    
+
+    // Debug logging
+    console.log('Employee:', employee);
+    console.log('Basic Pay:', basicPay);
+    console.log('All Deduction Data:', deductionData);
+
     // Get deductions for this employee
-    const employeeDeductions = deductionData
-      .filter(d => d.empId === employee.empId && d.status === "Active");
-    
+    const employeeDeductions = deductionData.filter(d => {
+      console.log('Checking deduction:', d);
+      console.log('Deduction empId:', d.empId, 'Employee empId:', employee.empId);
+      console.log('Deduction status:', d.status);
+
+      // Make sure we're comparing the right field names and values
+      return (d.empId === employee.empId || d.employeeId === employee.empId) &&
+        (d.status === "Active" || d.status === "active");
+    });
+
+    console.log('Filtered Employee Deductions:', employeeDeductions);
+
+    // If no deductions found, try without status filter
+    if (employeeDeductions.length === 0) {
+      const allEmployeeDeductions = deductionData.filter(d =>
+        d.empId === employee.empId || d.employeeId === employee.empId
+      );
+      console.log('All deductions for employee (ignoring status):', allEmployeeDeductions);
+    }
+
     // Map deductions to contributions format
     return employeeDeductions.map(deduction => {
-      const percentage = parseFloat(deduction.percentage) || 0;
-      const amount = (basicPay * percentage / 100).toFixed(2);
-      
-      // For employer contribution, we'll use the same amount for now
-      // In a real system, this would come from the API
+      const percentage = parseFloat(deduction.percentage) || parseFloat(deduction.deductionPercentage) || 0;
+      const fixedAmount = parseFloat(deduction.amount) || parseFloat(deduction.deductionAmount) || 0;
+
+      // Calculate amount - either percentage of basic pay or fixed amount
+      let amount = 0;
+      if (percentage > 0) {
+        amount = (basicPay * percentage / 100);
+      } else if (fixedAmount > 0) {
+        amount = fixedAmount;
+      }
+
+      console.log('Deduction calculation:', {
+        name: deduction.name || deduction.deductionName,
+        percentage,
+        fixedAmount,
+        basicPay,
+        calculatedAmount: amount
+      });
+
+      // For employer contribution, you might want to use a different calculation
+      // For now, using the same amount, but you can modify this based on your business logic
       const employerAmount = amount;
-      
+
       return {
-        type: deduction.name,
-        employeeContribution: `Rs. ${amount}`,
-        employerContribution: `Rs. ${employerAmount}`
+        type: deduction.name || deduction.deductionName || 'Unknown Deduction',
+        employeeContribution: `Rs. ${amount.toFixed(2)}`,
+        employerContribution: `Rs. ${employerAmount.toFixed(2)}`
       };
     });
   };
@@ -466,7 +519,7 @@ const fetchContracts = async () => {
       <Typography variant="h4" className="pd-dashboard-title">
         Payroll Dashboard
       </Typography>
-      
+
       <div className="pd-status-container">
         <Card className="pd-status-card pd-status-employees">
           <CardContent className="pd-status-content">
@@ -479,7 +532,7 @@ const fetchContracts = async () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="pd-status-card pd-status-allowances">
           <CardContent className="pd-status-content">
             <div className="pd-status-icon-container">
@@ -489,11 +542,11 @@ const fetchContracts = async () => {
               <Typography variant="h6" className="pd-status-title">Active Allowances</Typography>
               <Typography variant="h3" className="pd-status-count">
                 {allowanceData.filter(a => a.status === "Active").length}
-                </Typography>
+              </Typography>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="pd-status-card pd-status-deductions">
           <CardContent className="pd-status-content">
             <div className="pd-status-icon-container">
@@ -507,7 +560,7 @@ const fetchContracts = async () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="pd-status-card pd-status-payslips">
           <CardContent className="pd-status-content">
             <div className="pd-status-icon-container">
@@ -529,9 +582,9 @@ const fetchContracts = async () => {
             <Typography variant="subtitle1" className="pd-date-label">
               Select Month and Year:
             </Typography>
-            <input 
-              type="month" 
-              value={selectedDate} 
+            <input
+              type="month"
+              value={selectedDate}
               onChange={handleDateChange}
               className="pd-date-input"
             />
@@ -541,15 +594,15 @@ const fetchContracts = async () => {
 
       <div className="pd-dashboard-grid">
         <Card className="pd-chart-card">
-          <CardHeader 
-            title="Payroll Summary - Last 6 Months" 
+          <CardHeader
+            title="Payroll Summary - Last 6 Months"
             className="pd-card-header"
           />
           <Divider />
           <CardContent className="pd-chart-content">
             <div className="pd-payslip-chart">
-              <Bar 
-                data={chartData} 
+              <Bar
+                data={chartData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -559,7 +612,7 @@ const fetchContracts = async () => {
                     },
                     tooltip: {
                       callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                           return `${context.dataset.label}: Rs. ${context.raw.toFixed(2)}`;
                         }
                       }
@@ -585,14 +638,14 @@ const fetchContracts = async () => {
         </Card>
 
         <Card className="pd-contributions-card">
-          <CardHeader 
-            title="Employer Contributions" 
+          <CardHeader
+            title="Employer Contributions"
             className="pd-card-header"
           />
           <Divider />
           <CardContent className="pd-contributions-content">
-            <select 
-              className="pd-employee-dropdown" 
+            <select
+              className="pd-employee-dropdown"
               onChange={handleEmployeeChange}
               value={selectedEmployee?.empId || ""}
             >
@@ -603,7 +656,7 @@ const fetchContracts = async () => {
                 </option>
               ))}
             </select>
-            
+
             {selectedEmployee ? (
               calculateContributions(selectedEmployee).length > 0 ? (
                 <table className="pd-contributions-table">
@@ -645,8 +698,8 @@ const fetchContracts = async () => {
         </Card>
 
         <Card className="pd-contracts-card">
-          <CardHeader 
-            title="Contracts Ending Soon" 
+          <CardHeader
+            title="Contracts Ending Soon"
             className="pd-card-header"
             subheader={`${contractsData.length} contract(s) expiring soon`}
           />
@@ -664,10 +717,10 @@ const fetchContracts = async () => {
                         {contract.employeeName}
                       </Typography>
                       <Typography variant="body2" className="pd-contract-date">
-                        Ending on {new Date(contract.endDate).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric' 
+                        Ending on {new Date(contract.endDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
                         })}
                       </Typography>
                     </div>
@@ -683,8 +736,8 @@ const fetchContracts = async () => {
         </Card>
 
         <Card className="pd-department-card">
-          <CardHeader 
-            title="Department Distribution" 
+          <CardHeader
+            title="Department Distribution"
             className="pd-card-header"
             avatar={<BusinessIcon />}
           />
@@ -692,7 +745,7 @@ const fetchContracts = async () => {
           <CardContent className="pd-department-content">
             {departmentStats.labels?.length > 0 ? (
               <div className="pd-department-chart">
-                <Pie 
+                <Pie
                   data={departmentStats}
                   options={{
                     responsive: true,
@@ -707,7 +760,7 @@ const fetchContracts = async () => {
                       },
                       tooltip: {
                         callbacks: {
-                          label: function(context) {
+                          label: function (context) {
                             const label = context.label || '';
                             const value = context.raw || 0;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
