@@ -485,9 +485,32 @@ export const getAssetUrl = (path) => {
   // Remove any leading slash to avoid double slashes
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
-  // Construct the full URL
-  const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:5002";
-  return `${baseUrl}/${cleanPath}`;
+  // CRITICAL FIX: Determine the correct base URL for assets
+  let baseUrl;
+  
+  if (process.env.NODE_ENV === "production") {
+    // In production, use the same origin as the frontend
+    baseUrl = window.location.origin;
+  } else {
+    // In development, explicitly use the backend server
+    baseUrl = process.env.REACT_APP_API_BASE_URL || 
+              process.env.REACT_APP_API_URL || 
+              "http://localhost:5002";
+  }
+  
+  const finalUrl = `${baseUrl}/${cleanPath}`;
+  
+  // Debug logging for development
+  if (process.env.NODE_ENV === "development") {
+    console.log('Image URL construction:', {
+      originalPath: path,
+      cleanPath,
+      baseUrl,
+      finalUrl
+    });
+  }
+  
+  return finalUrl;
 };
 
 export default api;

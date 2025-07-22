@@ -154,10 +154,17 @@ io.on('connection', (socket) => {
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Always allow requests without origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
+    // Handle ALB forwarded headers
     const normalizedOrigin = origin.toLowerCase();
     const normalizedAllowed = allowedOrigins.map(o => o.toLowerCase());
+
+    // Allow localhost for development
+    if (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
 
     if (normalizedAllowed.includes(normalizedOrigin)) {
       return callback(null, true);
@@ -195,7 +202,40 @@ app.use((err, req, res, next) => {
 });
 
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+
+// CRITICAL: Serve static files BEFORE any authentication middleware to prevent 401 errors
+app.use('/uploads', (req, res, next) => {
+  // Always allow cross-origin for static files (prevents CORB)
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  // Set proper content types and cache headers for images
+  if (req.path.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) {
+    res.header('Cache-Control', 'public, max-age=86400');
+    if (req.path.match(/\.(jpg|jpeg)$/i)) {
+      res.header('Content-Type', 'image/jpeg');
+    } else if (req.path.match(/\.png$/i)) {
+      res.header('Content-Type', 'image/png');
+    }
+  }
+  
+  next();
+}, express.static('uploads', {
+  etag: false,
+  setHeaders: function (res, path, stat) {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'contracts');
@@ -216,7 +256,6 @@ app.use("/api/companies", companyRoutes); // Company routes handle their own aut
 
 // Protected routes - these routes should handle their own authentication
 app.use("/api/employees", employeesRouter);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api/profiles", profileRouter);
 // app.use("/api/contracts", contractRouter);
 app.use(candidateRoutes);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAssetUrl } from "../../api/axiosInstance";
 import {
   Card,
   CardContent,
@@ -892,7 +893,7 @@ const MainDashboard = () => {
                         alt={`${employee.personalInfo?.firstName || ""} ${
                           employee.personalInfo?.lastName || ""
                         }`}
-                        src={employee.personalInfo?.employeeImage || ""}
+                        src={getAssetUrl(employee.personalInfo?.employeeImage) || ""}
                       >
                         {employee.personalInfo?.firstName
                           ? employee.personalInfo.firstName.charAt(0)
