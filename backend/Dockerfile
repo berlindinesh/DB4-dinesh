@@ -1,17 +1,22 @@
 FROM node:18
 
-# Set working directory
+# Create app directory
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the app
+# Copy source code
 COPY . .
 
-# Expose backend port
+# CRITICAL: Create uploads directory with proper permissions for volume mounting
+RUN mkdir -p /app/uploads && chmod 755 /app/uploads
+
+# Expose port
 EXPOSE 5002
 
-# Start using dev script (e.g., nodemon)
+# Start the application
 CMD ["npm", "run", "dev"]
