@@ -129,143 +129,6 @@ export const getContractById = async (req, res) => {
   }
 };
 
-// export const createContract = async (req, res) => {
-//   try {
-//     console.log('Creating contract - received data:', req.body);
-//     console.log('Uploaded file:', req.file);
-    
-//     // Get company code from authenticated user
-//     const companyCode = req.companyCode;
-    
-//     if (!companyCode) {
-//       return res.status(401).json({ 
-//         error: 'Authentication required', 
-//         message: 'Company code not found in request' 
-//       });
-//     }
-    
-//     console.log(`Creating contract for company: ${companyCode}`);
-    
-//     // Get company-specific Contract model
-//     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
-    
-//     // Prepare contract data
-//     const contractData = { ...req.body };
-    
-//     // Handle file upload if present
-//     if (req.file) {
-//       console.log('Processing uploaded file:', req.file);
-      
-//       contractData.contractDocument = {
-//         filename: req.file.filename,
-//         originalName: req.file.originalname,
-//         path: req.file.path,
-//         size: req.file.size,
-//         mimetype: req.file.mimetype,
-//         uploadDate: new Date()
-//       };
-      
-//       console.log('Contract document data:', contractData.contractDocument);
-//     }
-    
-//     // Convert string numbers to actual numbers
-//     if (contractData.basicSalary) {
-//       contractData.basicSalary = Number(contractData.basicSalary);
-//     }
-//     if (contractData.noticePeriod) {
-//       contractData.noticePeriod = Number(contractData.noticePeriod);
-//     }
-    
-//     console.log('Final contract data:', contractData);
-    
-//     const newContract = new CompanyContract(contractData);
-//     const savedContract = await newContract.save();
-    
-//     console.log(`Contract created successfully with ID: ${savedContract._id}`);
-//     res.status(201).json({ success: true, data: savedContract });
-//   }
-//   catch (error) {
-//     console.error('Error creating contract:', error);
-//     res.status(400).json({ success: false, error: error.message });
-//   }
-// };
-
-// // Update the updateContract function
-// export const updateContract = async (req, res) => {
-//   try {
-//     console.log('Updating contract - received data:', req.body);
-//     console.log('Uploaded file:', req.file);
-    
-//     // Get company code from authenticated user
-//     const companyCode = req.companyCode;
-    
-//     if (!companyCode) {
-//       return res.status(401).json({ 
-//         error: 'Authentication required', 
-//         message: 'Company code not found in request' 
-//       });
-//     }
-    
-//     const { id } = req.params;
-//     if (!id) {
-//       return res.status(400).json({ 
-//         success: false, 
-//         error: 'Contract ID is required' 
-//       });
-//     }
-    
-//     console.log(`Updating contract ${id} for company: ${companyCode}`);
-    
-//     // Get company-specific Contract model
-//     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
-    
-//     const contract = await CompanyContract.findById(id);
-//     if (!contract) {
-//       return res.status(404).json({ success: false, error: 'Contract not found' });
-//     }
-    
-//     // Prepare update data
-//     const updateData = { ...req.body };
-    
-//     // Handle file upload if present
-//     if (req.file) {
-//       console.log('Processing uploaded file for update:', req.file);
-      
-//       updateData.contractDocument = {
-//         filename: req.file.filename,
-//         originalName: req.file.originalname,
-//         path: req.file.path,
-//         size: req.file.size,
-//         mimetype: req.file.mimetype,
-//         uploadDate: new Date()
-//       };
-      
-//       console.log('Updated contract document data:', updateData.contractDocument);
-//     }
-    
-//     // Convert string numbers to actual numbers
-//     if (updateData.basicSalary) {
-//       updateData.basicSalary = Number(updateData.basicSalary);
-//     }
-//     if (updateData.noticePeriod) {
-//       updateData.noticePeriod = Number(updateData.noticePeriod);
-//     }
-    
-//     console.log('Final update data:', updateData);
-    
-//     const updatedContract = await CompanyContract.findByIdAndUpdate(
-//       id,
-//       updateData,
-//       { new: true, runValidators: true }
-//     );
-    
-//     console.log(`Contract ${id} updated successfully`);
-//     res.status(200).json({ success: true, data: updatedContract });
-//   } catch (error) {
-//     console.error(`Error updating contract ${req.params.id}:`, error);
-//     res.status(400).json({ success: false, error: error.message });
-//   }
-// };
 
 export const createContract = async (req, res) => {
   try {
@@ -923,13 +786,19 @@ export const renewContract = async (req, res) => {
   }
 };
 
+
+
 export const bulkUpdateContracts = async (req, res) => {
   try {
+    console.log('=== BULK UPDATE START ===');
+    console.log('Request body:', req.body);
+    
     // Get company code from authenticated user
     const companyCode = req.companyCode;
     
     if (!companyCode) {
       return res.status(401).json({ 
+        success: false,
         error: 'Authentication required', 
         message: 'Company code not found in request' 
       });
@@ -951,6 +820,9 @@ export const bulkUpdateContracts = async (req, res) => {
       });
     }
     
+    console.log(`Bulk updating ${contractIds.length} contracts for company: ${companyCode}`);
+    console.log('Updates to apply:', updates);
+    
     // Get company-specific Contract model
     const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
     
@@ -960,18 +832,81 @@ export const bulkUpdateContracts = async (req, res) => {
       { $set: updates }
     );
     
+    console.log('Update result:', result);
+    console.log('=== BULK UPDATE END ===');
+    
     res.status(200).json({ 
       success: true, 
       data: {
         matchedCount: result.matchedCount,
-        modifiedCount: result.modifiedCount
+        modifiedCount: result.modifiedCount,
+        contractIds: contractIds
       },
       message: `Updated ${result.modifiedCount} of ${result.matchedCount} contracts`
     });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    console.error('❌ Bulk update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Bulk update operation failed'
+    });
   }
 };
 
-
-
+export const bulkDeleteContracts = async (req, res) => {
+  try {
+    console.log('=== BULK DELETE START ===');
+    console.log('Request body:', req.body);
+    
+    // Get company code from authenticated user
+    const companyCode = req.companyCode;
+    
+    if (!companyCode) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Authentication required', 
+        message: 'Company code not found in request' 
+      });
+    }
+    
+    const { contractIds } = req.body;
+    
+    if (!Array.isArray(contractIds) || contractIds.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Contract IDs array is required and must not be empty' 
+      });
+    }
+    
+    console.log(`Bulk deleting ${contractIds.length} contracts for company: ${companyCode}`);
+    console.log('Contract IDs to delete:', contractIds);
+    
+    // Get company-specific Contract model
+    const CompanyContract = await getModelForCompany(companyCode, 'Contract', contractSchema);
+    
+    // Delete multiple contracts
+    const result = await CompanyContract.deleteMany(
+      { _id: { $in: contractIds } }
+    );
+    
+    console.log('Delete result:', result);
+    console.log('=== BULK DELETE END ===');
+    
+    res.status(200).json({ 
+      success: true, 
+      data: {
+        deletedCount: result.deletedCount,
+        contractIds: contractIds
+      },
+      message: `Successfully deleted ${result.deletedCount} contracts`
+    });
+  } catch (error) {
+    console.error('❌ Bulk delete error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: 'Bulk delete operation failed'
+    });
+  }
+};
