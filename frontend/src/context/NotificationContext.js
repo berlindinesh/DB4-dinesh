@@ -448,8 +448,17 @@ const addRotatingWorktypeNotification = useCallback(async (employeeName, status,
 
  
 
-  // const baseURL =  `${process.env.REACT_APP_API_URL}`;
-  const baseURL = process.env.REACT_APP_API_URL;
+  // Determine the correct Socket.IO URL
+  const getSocketUrl = () => {
+    // For production (EC2/ALB), use current domain so nginx can proxy
+    if (process.env.NODE_ENV === 'production') {
+      return window.location.origin;
+    }
+    // For development, use the environment variable or localhost
+    return process.env.REACT_APP_API_URL || 'http://localhost:5002';
+  };
+
+  const baseURL = getSocketUrl();
 const socket = io(baseURL, {
   reconnection: true,
   reconnectionAttempts: 5,

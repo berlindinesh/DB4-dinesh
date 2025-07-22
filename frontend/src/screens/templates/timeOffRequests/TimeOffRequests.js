@@ -180,8 +180,18 @@ const TimeOffRequests = () => {
       userId
     );
 
+    // Determine the correct Socket.IO URL
+    const getSocketUrl = () => {
+      // For production (EC2/ALB), use current domain so nginx can proxy
+      if (process.env.NODE_ENV === 'production') {
+        return window.location.origin;
+      }
+      // For development, use the environment variable or localhost
+      return process.env.REACT_APP_API_URL || 'http://localhost:5002';
+    };
+
     // Connect to WebSocket
-    const socket = io(`${process.env.REACT_APP_API_URL}`, {
+    const socket = io(getSocketUrl(), {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
