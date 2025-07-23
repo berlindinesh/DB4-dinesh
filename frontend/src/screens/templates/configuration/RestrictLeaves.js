@@ -93,7 +93,7 @@ function RestrictLeaves() {
     try {
       setLoading(true);
       // const token = getAuthToken();
-      const { data } = await api.get("/api/restrictLeaves");
+      const { data } = await api.get("/restrictLeaves");
       setRestrictLeaves(data);
     } catch (err) {
       console.error("Error fetching restricted leaves:", err);
@@ -279,11 +279,11 @@ function RestrictLeaves() {
       // const token = getAuthToken();
 
       if (isEditing) {
-        await api.put(`/api/restrictLeaves/${editId}`, formattedFormData);
+        await api.put(`/restrictLeaves/${editId}`, formattedFormData);
         console.log(`Updated restricted leave with ID: ${editId}`);
         showSnackbar("Restricted leave updated successfully");
       } else {
-        await api.post("/api/restrictLeaves", formattedFormData);
+        await api.post("/restrictLeaves", formattedFormData);
         console.log(`Added new restricted leave`);
         showSnackbar("Restricted leave added successfully");
       }
@@ -386,7 +386,7 @@ function RestrictLeaves() {
 
       setLoading(true);
       // const token = getAuthToken();
-      await api.delete(`/api/restrictLeaves/${leaveToDelete._id}`);
+      await api.delete(`/restrictLeaves/${leaveToDelete._id}`);
       console.log(`Deleted restricted leave with ID: ${leaveToDelete._id}`);
       fetchRestrictLeaves();
       showSnackbar("Restricted leave deleted successfully");
