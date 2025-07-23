@@ -70,6 +70,7 @@ import rotatingWorktypeRoutes from './routes/rotatingWorktypeRoutes.js';
 import myLeaveRequestRoutes from './routes/myLeaveRequestRoutes.js';
 import leaveRequestRoutes from './routes/leaveRequestRoutes.js';
 import s3Routes from './routes/s3Routes.js';
+import { printStartupDiagnostics, printSocketDiagnostics, checkMissingEnvVars } from './utils/diagnostics.js';
 // import documentRoute from './routes/documentRoutes-1.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -79,6 +80,9 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
+// Print startup diagnostics
+printStartupDiagnostics();
+checkMissingEnvVars();
 
 // Connect to the main database with error handling and retry
 (async function setupDatabase() {
@@ -118,33 +122,89 @@ process.on('SIGTERM', async () => {
 const server = http.createServer(app);
 
 // Middleware to parse JSON request bodies
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:3000',
+  'http://localhost:5002',
+  'http://127.0.0.1:3000'
+];
 
-// Set up Socket.io
+// Set up Socket.io with enhanced CORS and configuration
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true
-  }
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Allow localhost for development
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+      
+      // Check against allowed origins
+      const normalizedOrigin = origin.toLowerCase();
+      const normalizedAllowed = allowedOrigins.map(o => o.toLowerCase());
+      
+      if (normalizedAllowed.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+      
+      // For debugging - log blocked origins
+      console.log(`Socket.IO CORS blocked: ${origin}`);
+      return callback(null, true); // Allow for now, remove in production
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "x-company-code"]
+  },
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
-// Socket.io connection handling
+// Socket.io connection handling with enhanced error handling
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log('📡 Socket.IO: User connected', socket.id);
   
-  // Handle user joining a room
-  socket.on('join', ({ userId }) => {
+  // Handle user joining a room - support both object and direct userId
+  socket.on('join', (data) => {
+    let userId;
+    
+    // Handle both { userId: 'xxx' } and direct 'xxx' formats
+    if (typeof data === 'object' && data.userId) {
+      userId = data.userId;
+    } else if (typeof data === 'string') {
+      userId = data;
+    }
+    
     if (userId) {
       socket.join(userId);
-      console.log(`User ${userId} joined their room`);
+      console.log(`📡 Socket.IO: User ${userId} joined room ${userId}`);
+      
+      // Send confirmation back to client
+      socket.emit('joined', { userId, message: 'Successfully joined notification room' });
+    } else {
+      console.error('📡 Socket.IO: Invalid join data:', data);
+      socket.emit('error', { message: 'Invalid user data for joining room' });
     }
   });
   
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('📡 Socket.IO: Socket error:', error);
+  });
+  
+  socket.on('disconnect', (reason) => {
+    console.log('📡 Socket.IO: User disconnected:', socket.id, 'Reason:', reason);
+  });
+  
+  // Heartbeat to keep connection alive
+  socket.on('ping', () => {
+    socket.emit('pong');
   });
 });
+
+// Print Socket.IO diagnostics
+printSocketDiagnostics(allowedOrigins);
 
 
 

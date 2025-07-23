@@ -439,71 +439,122 @@ const addRotatingWorktypeNotification = useCallback(async (employeeName, status,
 
   // Set up WebSocket connection for real-time notifications
   useEffect(() => {
-  const userId = localStorage.getItem('userId');
-  // const token = getAuthToken();
-  
-  if (!userId) return;
-
-  console.log('Setting up WebSocket connection for user:', userId);
-
- 
-
-  // Determine the correct Socket.IO URL
-  const getSocketUrl = () => {
-    // For production (EC2/ALB), use current domain so nginx can proxy
-    if (process.env.NODE_ENV === 'production') {
-      return window.location.origin;
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+      console.log('📡 No userId found, skipping Socket.IO setup');
+      return;
     }
-    // For development, use the environment variable or localhost
-    return process.env.REACT_APP_API_URL || 'http://localhost:5002';
-  };
 
-  const baseURL = getSocketUrl();
-const socket = io(baseURL, {
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  auth: {
-  }
-});
+    console.log('📡 Setting up Socket.IO connection for user:', userId);
+
+    // Determine the correct Socket.IO URL
+    const getSocketUrl = () => {
+      // For production (EC2/ALB), use current domain so nginx can proxy
+      if (process.env.NODE_ENV === 'production') {
+        return window.location.origin;
+      }
+      // For development, use the environment variable or localhost
+      return process.env.REACT_APP_API_BASE_URL || 
+             process.env.REACT_APP_API_URL || 
+             'http://localhost:5002';
+    };
+
+    const baseURL = getSocketUrl();
+    console.log('📡 Connecting to Socket.IO at:', baseURL);
+
+    const socket = io(baseURL, {
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true,
+      auth: {
+        userId: userId
+      }
+    });
     
     // Handle connection events for debugging
     socket.on('connect', () => {
-      console.log('Socket connected successfully');
+      console.log('📡 Socket.IO connected successfully, ID:', socket.id);
       
       // Join a room specific to this user
-      // socket.emit('join', { userId });
       socket.emit('join', userId);
-      console.log('Joined room:', userId);
+      console.log('📡 Emitted join event for user:', userId);
+    });
+
+    // Listen for join confirmation
+    socket.on('joined', (data) => {
+      console.log('📡 Successfully joined notification room:', data);
     });
     
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('📡 Socket.IO connection error:', error);
+      console.error('📡 Error details:', {
+        message: error.message,
+        type: error.type,
+        description: error.description
+      });
     });
     
     socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
+      console.log('📡 Socket.IO disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        // Server disconnected, manual reconnection needed
+        console.log('📡 Server disconnected, attempting manual reconnection...');
+        socket.connect();
+      }
+    });
+
+    socket.on('error', (error) => {
+      console.error('📡 Socket.IO error event:', error);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('📡 Socket.IO reconnected after', attemptNumber, 'attempts');
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.error('📡 Socket.IO reconnection error:', error);
     });
     
     // Listen for new notifications
     socket.on('new-notification', (notification) => {
-      console.log('Received new notification via socket:', notification);
+      console.log('📡 Received new notification via socket:', notification);
       
       // Add the notification to our state
       setNotifications(prev => {
         // Check if we already have this notification (by ID)
         const exists = prev.some(n => n._id === notification._id);
         if (exists) {
+          console.log('📡 Notification already exists, skipping');
           return prev;
         }
+        console.log('📡 Adding new notification to state');
         return [notification, ...prev];
       });
+    });
+
+    // Heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+      if (socket.connected) {
+        socket.emit('ping');
+      }
+    }, 30000);
+
+    socket.on('pong', () => {
+      console.log('📡 Received pong from server');
     });
     
     // Clean up on unmount
     return () => {
-      console.log('Cleaning up socket connection');
-      socket.disconnect();
+      console.log('📡 Cleaning up Socket.IO connection');
+      clearInterval(heartbeat);
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 

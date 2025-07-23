@@ -485,7 +485,7 @@ export const getAssetUrl = (path) => {
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   
   // Check if it's an S3 path (contains S3 bucket reference)
-  if (path.includes('amazonaws.com') || path.includes('s3.')) return path;
+  if (path.includes('amazonaws.com') || path.includes('s3.') || path.includes('db4people')) return path;
 
   // Remove any leading slash to avoid double slashes
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;

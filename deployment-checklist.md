@@ -6,23 +6,28 @@
 ```yaml
 # docker-compose.yml
 volumes:
-  - ./uploads:/app/uploads
   - uploads-data:/app/uploads
 ```
 
 ### 2. **Backend Dockerfile** ✅
 - Creates `/app/uploads` directory
 - Sets proper permissions
-- Includes health check
 
 ### 3. **Frontend Nginx Configuration** ✅
 - Proxies `/uploads/` to backend
+- Proxies `/socket.io/` for real-time features
 - Adds CORS headers for images
 - Handles React Router
 
-### 4. **Backend Static File Serving** ✅ (Already Fixed)
+### 4. **Backend Static File Serving** ✅
 - Serves `/uploads` before authentication middleware
 - Proper CORS headers
+
+### 5. **Socket.IO Real-time Notifications** ✅
+- Enhanced CORS configuration
+- Proper nginx proxying
+- Connection error handling
+- Heartbeat mechanism
 
 ## 🔧 Environment Variables to Set
 

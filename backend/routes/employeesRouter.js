@@ -3,6 +3,7 @@ import Employee from '../models/employeeRegisterModel.js';
 import uploads from '../config/multerConfig.js';
 import { authenticate } from '../middleware/companyAuth.js';
 import getModelForCompany from '../models/genericModelFactory.js';
+import { getFileUrl, useS3 } from '../config/s3Config.js';
 
 const router = express.Router();
 
@@ -56,12 +57,26 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
     // Check if employee with this userId already exists
     let employee = await CompanyEmployee.findOne({ userId });
     
+    // Handle image URL based on storage type
+    let imageUrl = null;
+    if (req.file) {
+      if (useS3) {
+        // For S3, use the location provided by multer-s3
+        imageUrl = req.file.location || getFileUrl(req.file.key);
+        console.log('📁 S3 image uploaded:', imageUrl);
+      } else {
+        // For local storage, construct path
+        imageUrl = `/uploads/${req.file.filename}`;
+        console.log('📁 Local image uploaded:', imageUrl);
+      }
+    }
+
     if (employee) {
       // Update existing employee's personal info
       employee.personalInfo = {
         ...employee.personalInfo,
         ...cleanPersonalInfo,
-        employeeImage: req.file ? `/uploads/${req.file.filename}` : employee.personalInfo.employeeImage
+        employeeImage: imageUrl || employee.personalInfo.employeeImage
       };
     } else {
       // Create a new employee instance
@@ -69,7 +84,7 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
         userId, // Include the userId
         personalInfo: {
           ...cleanPersonalInfo,
-          employeeImage: req.file ? `/uploads/${req.file.filename}` : null
+          employeeImage: imageUrl
         }
       });
     }
@@ -80,10 +95,22 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
     }
     
     // Save the employee
-    await employee.save();
+    const savedEmployee = await employee.save();
     
-    console.log('Saved employee with ID:', employee.Emp_ID);
-    res.json({ success: true, employeeId: employee.Emp_ID });
+    // Construct full image URL for response
+    const responseEmployee = savedEmployee.toObject();
+    if (responseEmployee.personalInfo?.employeeImage) {
+      responseEmployee.personalInfo.employeeImageUrl = getFileUrl(responseEmployee.personalInfo.employeeImage);
+    }
+
+    console.log('Saved employee with ID:', savedEmployee.Emp_ID);
+    res.json({ 
+      success: true, 
+      employeeId: savedEmployee.Emp_ID,
+      employee: responseEmployee,
+      storage: useS3 ? 'S3' : 'Local',
+      imageUrl: responseEmployee.personalInfo?.employeeImageUrl
+    });
   } catch (error) {
     console.error('Error saving employee:', error);
     res.status(400).json({ success: false, error: error.message });
