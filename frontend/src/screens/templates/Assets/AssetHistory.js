@@ -142,7 +142,7 @@ const AssetHistory = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
+
 
   const handleAssetNameClick = async (asset) => {
     setSelectedAsset(asset);
@@ -159,7 +159,7 @@ const AssetHistory = () => {
         } else {
           // If not found locally, fetch from API
           const response = await api.get(
-            `${API_URL}/api/asset-batches/by-number/${asset.batch}`,
+            `/asset-batches/by-number/${asset.batch}`
           );
           if (response.data) {
             setSelectedBatchDetails(response.data);
@@ -186,7 +186,7 @@ const AssetHistory = () => {
   const fetchAssets = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`${API_URL}/api/assets`);
+      const response = await api.get('/assets');
       console.log("Fetched assets:", response.data);
 
       // Update the assets state with the fresh data
@@ -202,7 +202,7 @@ const AssetHistory = () => {
 
   const fetchBatches = async () => {
     try {
-      const response = await api.get(`${API_URL}/api/asset-batches`);
+      const response = await api.get('/asset-batches');
       console.log("Fetched batches:", response.data);
       setBatches(response.data);
     } catch (error) {
@@ -248,7 +248,7 @@ const AssetHistory = () => {
     if (window.confirm("Are you sure you want to delete this asset?")) {
       try {
         setLoading(true);
-        await api.delete(`${API_URL}/api/assets/${id}`);
+        await api.delete(`/assets/${id}`);
         fetchAssets();
 
         // Notify other components about the update
@@ -361,7 +361,7 @@ const AssetHistory = () => {
 
       console.log("Sending asset data:", formattedData);
 
-      const response = await api.post(`${API_URL}/api/assets`, formattedData);
+      const response = await api.post('/assets', formattedData);
       console.log("Response from server:", response.data);
 
       // Success handling
@@ -447,7 +447,7 @@ const AssetHistory = () => {
       }
 
       const response = await api.put(
-        `${API_URL}/api/assets/${editingAssetId}`,
+        `/assets/${editingAssetId}`,
         updatedData
       );
       

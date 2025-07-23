@@ -37,9 +37,6 @@ import {
   Close,
 } from "@mui/icons-material";
 
-const apiBaseURL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:5002";
-
 function RestrictLeaves() {
   const [restrictLeaves, setRestrictLeaves] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -78,8 +75,6 @@ function RestrictLeaves() {
     fetchRestrictLeaves();
   }, []);
 
-
-
   // const fetchRestrictLeaves = async () => {
   //   try {
   //     setLoading(true);
@@ -94,27 +89,19 @@ function RestrictLeaves() {
   // };
 
   // Update the fetchRestrictLeaves function
-const fetchRestrictLeaves = async () => {
-  try {
-    setLoading(true);
-    // const token = getAuthToken();
-    const { data } = await api.get(`${apiBaseURL}/api/restrictLeaves`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-  
-    // }
-  
-  );
-    setRestrictLeaves(data);
-  } catch (err) {
-    console.error("Error fetching restricted leaves:", err);
-    showSnackbar("Error fetching restricted leaves", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchRestrictLeaves = async () => {
+    try {
+      setLoading(true);
+      // const token = getAuthToken();
+      const { data } = await api.get("/api/restrictLeaves");
+      setRestrictLeaves(data);
+    } catch (err) {
+      console.error("Error fetching restricted leaves:", err);
+      showSnackbar("Error fetching restricted leaves", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -265,75 +252,61 @@ const fetchRestrictLeaves = async () => {
   //   }
   // };
 
-// Update the handleSubmit function
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  // Check for validation errors
-  if (validationErrors.title || validationErrors.endDate) {
-    showSnackbar(validationErrors.title || validationErrors.endDate, "error");
-    return;
-  }
-
-  // Additional validation for dates
-  if (!validateEndDate(formData.startDate, formData.endDate)) {
-    showSnackbar("End date must be equal to or after start date", "error");
-    return;
-  }
-  setLoading(true);
-
-  // Format dates before submitting
-  const formattedFormData = {
-    ...formData,
-    startDate: new Date(formData.startDate).toISOString(), // Convert to ISO format
-    endDate: new Date(formData.endDate).toISOString(), // Convert to ISO format
-  };
-
-  try {
-    // const token = getAuthToken();
-    
-    if (isEditing) {
-      await api.put(
-        `${apiBaseURL}/api/restrictLeaves/${editId}`,
-        formattedFormData,
-        // {
-        //   headers: {
-        //     'Authorization': `Bearer ${token}`
-        //   }
-        // }
-      );
-      console.log(`Updated restricted leave with ID: ${editId}`);
-      showSnackbar("Restricted leave updated successfully");
-    } else {
-      await api.post(`${apiBaseURL}/api/restrictLeaves`, formattedFormData
-      //   , {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // }
-    );
-      console.log(`Added new restricted leave`);
-      showSnackbar("Restricted leave added successfully");
+  // Update the handleSubmit function
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // Check for validation errors
+    if (validationErrors.title || validationErrors.endDate) {
+      showSnackbar(validationErrors.title || validationErrors.endDate, "error");
+      return;
     }
-    fetchRestrictLeaves();
-    setIsAddModalOpen(false);
-    setFormData({
-      title: "",
-      startDate: "",
-      endDate: "",
-      department: "",
-      jobPosition: "",
-      description: "",
-    });
-    setIsEditing(false);
-    setEditId(null);
-    setValidationErrors({ title: "", endDate: "" });
-  } catch (err) {
-    console.error("Error creating/updating restricted leave:", err);
-    showSnackbar("Error saving restricted leave", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+
+    // Additional validation for dates
+    if (!validateEndDate(formData.startDate, formData.endDate)) {
+      showSnackbar("End date must be equal to or after start date", "error");
+      return;
+    }
+    setLoading(true);
+
+    // Format dates before submitting
+    const formattedFormData = {
+      ...formData,
+      startDate: new Date(formData.startDate).toISOString(), // Convert to ISO format
+      endDate: new Date(formData.endDate).toISOString(), // Convert to ISO format
+    };
+
+    try {
+      // const token = getAuthToken();
+
+      if (isEditing) {
+        await api.put(`/api/restrictLeaves/${editId}`, formattedFormData);
+        console.log(`Updated restricted leave with ID: ${editId}`);
+        showSnackbar("Restricted leave updated successfully");
+      } else {
+        await api.post("/api/restrictLeaves", formattedFormData);
+        console.log(`Added new restricted leave`);
+        showSnackbar("Restricted leave added successfully");
+      }
+      fetchRestrictLeaves();
+      setIsAddModalOpen(false);
+      setFormData({
+        title: "",
+        startDate: "",
+        endDate: "",
+        department: "",
+        jobPosition: "",
+        description: "",
+      });
+      setIsEditing(false);
+      setEditId(null);
+      setValidationErrors({ title: "", endDate: "" });
+    } catch (err) {
+      console.error("Error creating/updating restricted leave:", err);
+      showSnackbar("Error saving restricted leave", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = (leave) => {
     setFormData({
@@ -406,33 +379,25 @@ const handleSubmit = async (e) => {
   //   }
   // };
 
-// Update the handleConfirmDelete function
-const handleConfirmDelete = async () => {
-  try {
-    if (!leaveToDelete) return;
+  // Update the handleConfirmDelete function
+  const handleConfirmDelete = async () => {
+    try {
+      if (!leaveToDelete) return;
 
-    setLoading(true);
-    // const token = getAuthToken();
-    await api.delete(
-      `${apiBaseURL}/api/restrictLeaves/${leaveToDelete._id}`
-      // ,
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // }
-    );
-    console.log(`Deleted restricted leave with ID: ${leaveToDelete._id}`);
-    fetchRestrictLeaves();
-    showSnackbar("Restricted leave deleted successfully");
-  } catch (err) {
-    console.error("Error deleting restricted leave:", err);
-    showSnackbar("Error deleting restricted leave", "error");
-  } finally {
-    setLoading(false);
-    handleCloseDeleteDialog();
-  }
-};
+      setLoading(true);
+      // const token = getAuthToken();
+      await api.delete(`/api/restrictLeaves/${leaveToDelete._id}`);
+      console.log(`Deleted restricted leave with ID: ${leaveToDelete._id}`);
+      fetchRestrictLeaves();
+      showSnackbar("Restricted leave deleted successfully");
+    } catch (err) {
+      console.error("Error deleting restricted leave:", err);
+      showSnackbar("Error deleting restricted leave", "error");
+    } finally {
+      setLoading(false);
+      handleCloseDeleteDialog();
+    }
+  };
 
   const toSentenceCase = (str) => {
     return str

@@ -36,9 +36,6 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete, Search, Close } from "@mui/icons-material";
 
-const apiBaseURL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:5002";
-
 const validationSchema = Yup.object().shape({
   week: Yup.string().required("Week selection is required"),
   day: Yup.string().required("Day selection is required"),
@@ -70,7 +67,6 @@ export default function CompanyHolidays() {
     fetchCompanyHolidays();
   }, []);
 
-
   const toSentenceCase = (str) => {
     return str
       .toLowerCase()
@@ -79,112 +75,43 @@ export default function CompanyHolidays() {
       .join(" ");
   };
 
-  // const fetchCompanyHolidays = async () => {
-  //   try {
-  //     const { data } = await axios.get(`${apiBaseURL}/api/companyHolidays`);
-  //     setCompanyHolidays(data);
-  //   } catch (err) {
-  //     console.error("Error fetching company holidays:", err);
-  //     showSnackbar("Error fetching company holidays", "error");
-  //   }
-  // };
-
-
-// Update the fetchCompanyHolidays function
-const fetchCompanyHolidays = async () => {
-  try {
-    // const token = getAuthToken();
-    const { data } = await api.get(`${apiBaseURL}/api/companyHolidays`
-    //   , {
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // }
-  );
-    setCompanyHolidays(data);
-  } catch (err) {
-    console.error("Error fetching company holidays:", err);
-    showSnackbar("Error fetching company holidays", "error");
-  }
-};
-
-  // const handleSubmit = async (values, { resetForm }) => {
-  //   try {
-  //     setLoading(true);
-  //     const formattedValues = {
-  //       week: toSentenceCase(values.week),
-  //       day: toSentenceCase(values.day),
-  //     };
-
-  //     if (isEditing) {
-  //       await axios.put(
-  //         `${apiBaseURL}/api/companyHolidays/${editId}`,
-  //         formattedValues
-  //       );
-  //       showSnackbar("Holiday updated successfully");
-  //     } else {
-  //       await axios.post(`${apiBaseURL}/api/companyHolidays`, formattedValues);
-  //       showSnackbar("Holiday added successfully");
-  //     }
-  //     fetchCompanyHolidays();
-  //     setIsAddModalOpen(false);
-  //     resetForm();
-  //     setIsEditing(false);
-  //     setEditId(null);
-  //   } catch (err) {
-  //     console.error("Error creating/updating company holiday:", err);
-  //     showSnackbar("Error saving holiday", "error");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-// Update the handleSubmit function
-const handleSubmit = async (values, { resetForm }) => {
-  try {
-    setLoading(true);
-    const formattedValues = {
-      week: toSentenceCase(values.week),
-      day: toSentenceCase(values.day),
-    };
-
-    // const token = getAuthToken();
-    
-    if (isEditing) {
-      await api.put(
-        `${apiBaseURL}/api/companyHolidays/${editId}`,
-        formattedValues
-        // {
-        //   headers: {
-        //     'Authorization': `Bearer ${token}`
-        //   }
-        // }
-      );
-      showSnackbar("Holiday updated successfully");
-    } else {
-      await api.post(`${apiBaseURL}/api/companyHolidays`, formattedValues,
-
-        {
-
-        // headers: {
-        //   'Authorization': `Bearer ${token}`
-        // }
-
-      });
-      showSnackbar("Holiday added successfully");
+  const fetchCompanyHolidays = async () => {
+    try {
+      const { data } = await api.get("/companyHolidays");
+      setCompanyHolidays(data);
+    } catch (err) {
+      console.error("Error fetching company holidays:", err);
+      showSnackbar("Error fetching company holidays", "error");
     }
-    fetchCompanyHolidays();
-    setIsAddModalOpen(false);
-    resetForm();
-    setIsEditing(false);
-    setEditId(null);
-  } catch (err) {
-    console.error("Error creating/updating company holiday:", err);
-    showSnackbar("Error saving holiday", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  const handleSubmit = async (values, { resetForm }) => {
+    try {
+      setLoading(true);
+      const formattedValues = {
+        week: toSentenceCase(values.week),
+        day: toSentenceCase(values.day),
+      };
+
+      if (isEditing) {
+        await api.put(`/companyHolidays/${editId}`, formattedValues);
+        showSnackbar("Holiday updated successfully");
+      } else {
+        await api.post("/companyHolidays", formattedValues);
+        showSnackbar("Holiday added successfully");
+      }
+      fetchCompanyHolidays();
+      setIsAddModalOpen(false);
+      resetForm();
+      setIsEditing(false);
+      setEditId(null);
+    } catch (err) {
+      console.error("Error creating/updating company holiday:", err);
+      showSnackbar("Error saving holiday", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = (holiday) => {
     setEditId(holiday._id);
@@ -204,52 +131,22 @@ const handleSubmit = async (values, { resetForm }) => {
     setHolidayToDelete(null);
   };
 
-  // const handleConfirmDelete = async () => {
-  //   if (!holidayToDelete) return;
+  const handleConfirmDelete = async () => {
+    if (!holidayToDelete) return;
 
-  //   try {
-  //     setLoading(true);
-  //     await axios.delete(
-  //       `${apiBaseURL}/api/companyHolidays/${holidayToDelete._id}`
-  //     );
-  //     fetchCompanyHolidays();
-  //     showSnackbar("Holiday deleted successfully");
-  //   } catch (err) {
-  //     console.error("Error deleting company holiday:", err);
-  //     showSnackbar("Error deleting holiday", "error");
-  //   } finally {
-  //     setLoading(false);
-  //     handleCloseDeleteDialog();
-  //   }
-  // };
-
-// Update the handleConfirmDelete function
-const handleConfirmDelete = async () => {
-  if (!holidayToDelete) return;
-
-  try {
-    setLoading(true);
-    // const token = getAuthToken();
-    await api.delete(
-      `${apiBaseURL}/api/companyHolidays/${holidayToDelete._id}`
-
-      // {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`
-      //   }
-      // }
-
-    );
-    fetchCompanyHolidays();
-    showSnackbar("Holiday deleted successfully");
-  } catch (err) {
-    console.error("Error deleting company holiday:", err);
-    showSnackbar("Error deleting holiday", "error");
-  } finally {
-    setLoading(false);
-    handleCloseDeleteDialog();
-  }
-};
+    try {
+      setLoading(true);
+      await api.delete(`/companyHolidays/${holidayToDelete._id}`);
+      fetchCompanyHolidays();
+      showSnackbar("Holiday deleted successfully");
+    } catch (err) {
+      console.error("Error deleting company holiday:", err);
+      showSnackbar("Error deleting holiday", "error");
+    } finally {
+      setLoading(false);
+      handleCloseDeleteDialog();
+    }
+  };
 
   const showSnackbar = (message, severity = "success") => {
     setSnackbar({

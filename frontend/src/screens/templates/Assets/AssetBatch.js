@@ -8,7 +8,7 @@ import { Dialog, DialogTitle, DialogContent, TableCell, Chip, TableHead, TableRo
 import { motion } from 'framer-motion';
 import { Search, Add, Edit, Delete, Close } from '@mui/icons-material';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
+
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
@@ -75,8 +75,7 @@ function AssetBatch() {
 const fetchAssetBatches = async () => {
   setLoading(true);
   try {
-    const response = await api.get(`${API_URL}/api/asset-batches`
-  );
+    const response = await api.get('/asset-batches');
     setAssetBatches(response.data);
     setLoading(false);
   } catch (err) {
@@ -207,21 +206,13 @@ useEffect(() => {
 const handleCreateBatch = async (e) => {
   e.preventDefault();
   try {
-    // const token = getAuthToken();
-    
     if (isEditing) {
-      await api.put(
-        `${API_URL}/api/asset-batches/${editBatchId}`, 
-        formData
-      );
+      await api.put(`/asset-batches/${editBatchId}`, formData);
       setAssetBatches(assetBatches.map(batch => batch._id === editBatchId ? { ...batch, ...formData } : batch));
       setIsEditing(false);
       setEditBatchId(null);
     } else {
-      const response = await api.post(
-        `${API_URL}/api/asset-batches`, 
-        formData
-      );
+      const response = await api.post('/asset-batches', formData);
       setAssetBatches([...assetBatches, response.data]);
     }
     setFormData({ batchNumber: '', description: '', numberOfAssets: '' });
@@ -257,9 +248,7 @@ const handleCreateBatch = async (e) => {
 
 const handleDelete = async (id) => {
   try {
-    // const token = getAuthToken();
-    await api.delete(`${API_URL}/api/asset-batches/${id}`
-      );
+    await api.delete(`/asset-batches/${id}`);
     setAssetBatches(assetBatches.filter(batch => batch._id !== id));
     
     const timestamp = Date.now().toString();
@@ -331,8 +320,7 @@ const handleCreateAssetsFromBatch = async (batch) => {
         assetNames.push(`${batch.batchNumber}-Asset-${i}`);
       }
       
-      // const token = getAuthToken();
-      await api.post(`${API_URL}/api/assets/from-batch`, {
+      await api.post('/assets/from-batch', {
         batchId: batch._id,
         assetNames,
         category: 'Hardware',

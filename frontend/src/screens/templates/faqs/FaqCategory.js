@@ -44,8 +44,7 @@ import {
   Lock as LockIcon,
 } from "@mui/icons-material";
 
-const apiBaseURL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:5002";
+
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -121,7 +120,7 @@ export default function FaqCategory() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`${apiBaseURL}/api/faqCategories`);
+      const { data } = await api.get('/faqCategories');
       setCategories(data);
     } catch (err) {
       console.error(
@@ -167,13 +166,13 @@ export default function FaqCategory() {
       
       if (editingCategoryId) {
         await api.put(
-          `${apiBaseURL}/api/faqCategories/${editingCategoryId}`,
+          `/faqCategories/${editingCategoryId}`,
           formData
         );
         showSnackbar("Category updated successfully");
         setEditingCategoryId(null);
       } else {
-        await api.post(`${apiBaseURL}/api/faqCategories`, formData);
+        await api.post('/faqCategories', formData);
         showSnackbar("Category created successfully");
       }
       fetchCategories();
@@ -215,7 +214,7 @@ export default function FaqCategory() {
     try {
       setLoading(true);
       await api.delete(
-        `${apiBaseURL}/api/faqCategories/${categoryToDelete._id}`
+        `/faqCategories/${categoryToDelete._id}`
       );
       fetchCategories();
       showSnackbar("Category deleted successfully");

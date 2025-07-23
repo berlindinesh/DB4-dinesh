@@ -109,7 +109,7 @@ const AssetDashboard = () => {
   });
   const [topEmployees, setTopEmployees] = useState([]);
 
-  const API_URL =process.env.REACT_APP_API_URL || 'http://localhost:5002';
+
 
   useEffect(() => {
     fetchAssetData();
@@ -150,10 +150,10 @@ const AssetDashboard = () => {
       // const authHeader = { headers: { 'Authorization': `Bearer ${token}` } };
       
       // Fetch assets data with auth token
-      const assetsResponse = await api.get(`${API_URL}/api/assets`);
+      const assetsResponse = await api.get('/assets');
 
       // Fetch asset batches data with auth token
-      const batchesResponse = await api.get(`${API_URL}/api/asset-batches`);
+      const batchesResponse = await api.get('/asset-batches');
 
       // Set the raw data
       setAssets(assetsResponse.data);
