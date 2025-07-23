@@ -69,6 +69,7 @@ import rotatingShiftRoutes from './routes/rotatingShiftRoutes.js';
 import rotatingWorktypeRoutes from './routes/rotatingWorktypeRoutes.js';
 import myLeaveRequestRoutes from './routes/myLeaveRequestRoutes.js';
 import leaveRequestRoutes from './routes/leaveRequestRoutes.js';
+import s3Routes from './routes/s3Routes.js';
 // import documentRoute from './routes/documentRoutes-1.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -302,6 +303,7 @@ app.use('/api/rotating-shift', rotatingShiftRoutes);
 app.use('/api/rotating-worktype', rotatingWorktypeRoutes);
 app.use('/api/leave-requests', myLeaveRequestRoutes);
 app.use('/api/leave-requests', leaveRequestRoutes);
+app.use('/api/s3', s3Routes);
 // app.use('/api/documents', documentRoute);
 
 // User management routes

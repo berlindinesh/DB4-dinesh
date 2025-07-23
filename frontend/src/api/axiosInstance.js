@@ -480,7 +480,12 @@ export const retryRequest = async (apiCall, maxRetries = 3) => {
 // };
 export const getAssetUrl = (path) => {
   if (!path) return null;
+  
+  // If it's already a full URL (S3 or other), return it
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  
+  // Check if it's an S3 path (contains S3 bucket reference)
+  if (path.includes('amazonaws.com') || path.includes('s3.')) return path;
 
   // Remove any leading slash to avoid double slashes
   const cleanPath = path.startsWith("/") ? path.slice(1) : path;
@@ -489,10 +494,13 @@ export const getAssetUrl = (path) => {
   let baseUrl;
   
   if (process.env.NODE_ENV === "production") {
-    // In production, use the same origin as the frontend
-    baseUrl = window.location.origin;
+    // Production: Check if API_BASE_URL is set (for separate backend domain)
+    // Otherwise use same origin (for ALB/proxy setup)
+    baseUrl = process.env.REACT_APP_API_BASE_URL || 
+              process.env.REACT_APP_API_URL || 
+              window.location.origin;
   } else {
-    // In development, explicitly use the backend server
+    // Development: Always use backend server
     baseUrl = process.env.REACT_APP_API_BASE_URL || 
               process.env.REACT_APP_API_URL || 
               "http://localhost:5002";
@@ -506,7 +514,8 @@ export const getAssetUrl = (path) => {
       originalPath: path,
       cleanPath,
       baseUrl,
-      finalUrl
+      finalUrl,
+      isS3: path.includes('amazonaws.com')
     });
   }
   
