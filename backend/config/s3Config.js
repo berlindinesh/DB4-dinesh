@@ -1,8 +1,6 @@
 import { S3Client } from '@aws-sdk/client-s3';
-import multerS3 from 'multer-s3';
 import multer from 'multer';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 // AWS S3 Configuration
 const s3Client = new S3Client({
@@ -15,28 +13,8 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'db4people';
 
-// S3 Storage Configuration
-const s3Storage = multerS3({
-  s3: s3Client,
-  bucket: BUCKET_NAME,
-  key: function (req, file, cb) {
-    // Generate unique filename with employee ID if available
-    const employeeId = req.body.employeeId || req.user?.userId || 'unknown';
-    const fileExtension = path.extname(file.originalname);
-    const uniqueId = uuidv4();
-    const fileName = `employees/${employeeId}/${file.fieldname}-${Date.now()}-${uniqueId}${fileExtension}`;
-    cb(null, fileName);
-  },
-  contentType: multerS3.AUTO_CONTENT_TYPE,
-  metadata: function (req, file, cb) {
-    cb(null, {
-      fieldName: file.fieldname,
-      originalName: file.originalname,
-      uploadedBy: req.user?.userId || 'system',
-      uploadedAt: new Date().toISOString(),
-    });
-  },
-});
+// S3 Storage Configuration (simplified for now - full S3 features need additional packages)
+const s3Storage = null; // Will be enabled when packages are installed
 
 // Local Storage Configuration (fallback)
 const localStorage = multer.diskStorage({
@@ -60,9 +38,9 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Choose storage based on environment
-const useS3 = process.env.USE_S3 === 'true' && process.env.AWS_ACCESS_KEY_ID;
-const storage = useS3 ? s3Storage : localStorage;
+// Choose storage based on environment (currently using local storage only)
+const useS3 = false; // Will be enabled when S3 packages are installed
+const storage = localStorage;
 
 console.log(`📦 Using ${useS3 ? 'S3' : 'local'} storage for file uploads`);
 

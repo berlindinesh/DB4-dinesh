@@ -5,9 +5,18 @@
 Your S3 bucket `arn:aws:s3:::db4people` is now fully integrated with your HRMS application!
 
 ### 📦 Required Dependencies
-First, install the required packages:
+**IMPORTANT: Your server is currently running with local storage. To enable S3:**
+
+Option 1 - Run the install script:
 ```bash
-npm install @aws-sdk/client-s3 multer-s3 sharp uuid
+chmod +x install-s3-packages.sh
+./install-s3-packages.sh
+```
+
+Option 2 - Manual installation:
+```bash
+cd backend
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner multer-s3 sharp uuid
 ```
 
 ### 🔧 Environment Configuration

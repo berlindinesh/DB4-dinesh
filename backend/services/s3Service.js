@@ -1,5 +1,4 @@
 import { S3Client, DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, BUCKET_NAME, useS3 } from '../config/s3Config.js';
 import fs from 'fs';
 import path from 'path';
@@ -81,28 +80,9 @@ class S3Service {
     }
   }
 
-  // Get signed URL for private files (if needed)
+  // Get signed URL for private files (disabled for now - install @aws-sdk/s3-request-presigner to enable)
   async getSignedUrl(fileKey, expiresIn = 3600) {
-    if (!this.useS3) {
-      throw new Error('S3 is not enabled');
-    }
-
-    const getObjectParams = {
-      Bucket: this.bucketName,
-      Key: fileKey,
-    };
-
-    try {
-      const signedUrl = await getSignedUrl(
-        this.s3Client,
-        new GetObjectCommand(getObjectParams),
-        { expiresIn }
-      );
-      return signedUrl;
-    } catch (error) {
-      console.error('❌ Error generating signed URL:', error);
-      throw error;
-    }
+    throw new Error('Signed URLs not available - install @aws-sdk/s3-request-presigner package');
   }
 
   // Migrate local file to S3
