@@ -182,6 +182,17 @@ const getProfileImageUrl = () => {
     return employeeId;
   };
 
+  // Get user initials for fallback
+  const getUserInitials = () => {
+    if (profileData?.personalInfo) {
+      const { firstName, lastName } = profileData.personalInfo;
+      const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : "";
+      const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : "";
+      return firstInitial + lastInitial;
+    }
+    return employeeId ? employeeId.charAt(0).toUpperCase() : "U";
+  };
+
   // Add this useEffect to handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -775,21 +786,40 @@ const handleTimerClick = async () => {
                               variant="light"
                             />
                           ) : isLoggedIn && getProfileImageUrl() ? (
-                            <img
-                              src={getProfileImageUrl()}
-                              alt="Profile"
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "50%",
-                                objectFit: "cover",
-                                border: "1px solid white",
-                              }}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = `${process.env.PUBLIC_URL}/default-avatar.png`;
-                              }}
-                            />
+                            <>
+                              <img
+                                src={getProfileImageUrl()}
+                                alt="Profile"
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  objectFit: "cover",
+                                  border: "1px solid white",
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#6366f1",
+                                  color: "white",
+                                  display: "none",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px",
+                                  fontWeight: "bold",
+                                  border: "1px solid white",
+                                }}
+                              >
+                                {getUserInitials()}
+                              </div>
+                            </>
                           ) : (
                             <FaUserCircle size={28} color="white" />
                           )}
@@ -921,21 +951,40 @@ const handleTimerClick = async () => {
                               variant="light"
                             />
                           ) : isLoggedIn && getProfileImageUrl() ? (
-                            <img
-                              src={getProfileImageUrl()}
-                              alt="Profile"
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                borderRadius: "50%",
-                                objectFit: "cover",
-                                border: "1px solid white",
-                              }}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = `${process.env.PUBLIC_URL}/default-avatar.png`;
-                              }}
-                            />
+                            <>
+                              <img
+                                src={getProfileImageUrl()}
+                                alt="Profile"
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  objectFit: "cover",
+                                  border: "1px solid white",
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#6366f1",
+                                  color: "white",
+                                  display: "none",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px",
+                                  fontWeight: "bold",
+                                  border: "1px solid white",
+                                }}
+                              >
+                                {getUserInitials()}
+                              </div>
+                            </>
                           ) : (
                             <FaUserCircle size={28} color="white" />
                           )

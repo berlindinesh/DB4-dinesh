@@ -237,6 +237,19 @@ const EmployeeListing = ({ onNavigate }) => {
   const theme = useTheme();
   const [departmentFilter, setDepartmentFilter] = useState("All");
 
+  // Get employee initials for fallback
+  const getEmployeeInitials = (employee) => {
+    if (employee?.name) {
+      const nameParts = employee.name.trim().split(" ");
+      if (nameParts.length >= 2) {
+        return nameParts[0].charAt(0).toUpperCase() + nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+      } else if (nameParts.length === 1) {
+        return nameParts[0].charAt(0).toUpperCase();
+      }
+    }
+    return employee?._id ? employee._id.charAt(0).toUpperCase() : "U";
+  };
+
   // GSAP animations
   useEffect(() => {
     gsap.from(".search-container", {
@@ -528,7 +541,7 @@ useEffect(() => {
                         mr: 2,
                       }}
                     >
-                      {employee.name?.[0] || "U"}
+                      {getEmployeeInitials(employee)}
                     </Box>
 
                     <Box>
@@ -1003,7 +1016,7 @@ useEffect(() => {
                             mr: 2,
                           }}
                         >
-                          {employee.name?.[0] || "U"}
+                          {getEmployeeInitials(employee)}
                         </Box>
 
                         <Box>

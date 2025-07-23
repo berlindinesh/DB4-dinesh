@@ -93,6 +93,16 @@ const ProfilePage = () => {
     );
   };
 
+  // Get user initials for fallback
+  const getUserInitials = () => {
+    if (personalInfo?.firstName || personalInfo?.lastName) {
+      const firstInitial = personalInfo.firstName ? personalInfo.firstName.charAt(0).toUpperCase() : "";
+      const lastInitial = personalInfo.lastName ? personalInfo.lastName.charAt(0).toUpperCase() : "";
+      return firstInitial + lastInitial;
+    }
+    return employeeId ? employeeId.charAt(0).toUpperCase() : "U";
+  };
+
   // Enhanced update functions with real-time sync
   const updatePersonalInfo = async () => {
     if (!canEditProfile()) {
@@ -975,26 +985,51 @@ const updateWorkInfo = async () => {
             <Card.Body className="text-center">
               <div className="profile-image-container mb-3">
                 {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="profile-image rounded-circle"
-                    style={{
-                      width: "120px",
-                      height: "120px",
-                      objectFit: "cover",
-                    }}
-                  />
+                  <>
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="profile-image rounded-circle"
+                      style={{
+                        width: "120px",
+                        height: "120px",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        e.target.nextSibling.style.display = "flex";
+                      }}
+                    />
+                    <div
+                      className="profile-placeholder rounded-circle d-flex align-items-center justify-content-center"
+                      style={{
+                        width: "120px",
+                        height: "120px",
+                        margin: "0 auto",
+                        backgroundColor: "#6366f1",
+                        color: "white",
+                        fontSize: "48px",
+                        fontWeight: "bold",
+                        display: "none",
+                      }}
+                    >
+                      {getUserInitials()}
+                    </div>
+                  </>
                 ) : (
                   <div
-                    className="profile-placeholder rounded-circle d-flex align-items-center justify-content-center bg-light"
+                    className="profile-placeholder rounded-circle d-flex align-items-center justify-content-center"
                     style={{
                       width: "120px",
                       height: "120px",
                       margin: "0 auto",
+                      backgroundColor: "#6366f1",
+                      color: "white",
+                      fontSize: "48px",
+                      fontWeight: "bold",
                     }}
                   >
-                    <i className="fas fa-user fa-3x text-muted"></i>
+                    {getUserInitials()}
                   </div>
                 )}
               </div>
