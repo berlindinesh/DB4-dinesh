@@ -10,47 +10,16 @@ import  User  from '../models/User.js';
 import { sendOtpEmail } from '../utils/mailer.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { companyLogoUpload, getFileUrl } from '../config/s3Config.js';
 
 
 
-// Get the current file's path and directory
+// Get the current file's path and directory (kept for backward compatibility)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    const uploadsDir = path.join(__dirname, '../uploads/company-logos');
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    cb(null, uploadsDir);
-  },
-  filename: function(req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// File filter for logo uploads
-const fileFilter = (req, file, cb) => {
-  // Accept only image files
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed!'), false);
-  }
-};
-
-// Create multer upload instance
-const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB limit
-  }
-}).single('logo');
+// Use centralized S3 upload configuration for company logos
+const upload = companyLogoUpload.single('logo');
 
 export {upload};
 
@@ -272,15 +241,28 @@ export const registerCompany = async (req, res) => {
       
       console.log('=== VALIDATION PASSED ===');
       
-      // Add logo URL to company data
-      const logoUrl = `/uploads/company-logos/${req.file.filename}`;
-      company.logo = logoUrl;
+      // Store the logo path/key in database, getFileUrl will be used when retrieving
+      // For S3: req.file.key contains the S3 key, req.file.location contains full URL
+      // For local: req.file.filename contains the filename
+      let logoPath;
+      if (req.file.key) {
+        // S3 upload - store the S3 key
+        logoPath = req.file.key;
+      } else if (req.file.location) {
+        // S3 upload - store the full URL
+        logoPath = req.file.location;
+      } else {
+        // Local upload - store relative path
+        logoPath = `/uploads/company-logos/${req.file.filename}`;
+      }
+      
+      company.logo = logoPath;
       
       console.log('Processing registration with validated data:', {
         companyCode: company.companyCode,
         companyName: company.name,
         adminEmail: admin.email,
-        logoUrl
+        logoPath
       });
       
       // Check if company code already exists

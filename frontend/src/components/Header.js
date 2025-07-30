@@ -87,8 +87,10 @@ const Header = () => {
     setLogoLoading(true);
     const response = await api.get('/companies/logo');
     if (response.data && response.data.logoUrl) {
-      setCompanyLogo(response.data.logoUrl);
-    }
+    // Use getAssetUrl to handle both S3 and local URLs properly
+      const processedLogoUrl = getAssetUrl(response.data.logoUrl);
+       setCompanyLogo(processedLogoUrl);
+     }
   } catch (error) {
     console.error("Error fetching company logo:", error);
     // Keep the default logo if there's an error

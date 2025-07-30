@@ -22,6 +22,7 @@ import User from '../models/User.js';
 import Company from '../models/Company.js';
 import bcrypt from 'bcrypt';
 import { getUserModel } from '../models/User.js';
+import { getFileUrl } from '../config/s3Config.js';
 
 const router = express.Router();
 
@@ -190,14 +191,8 @@ router.get('/logo', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Company not found' });
     }
     
-    // Determine the full URL for the logo
-    let logoUrl = company.logo;
-    
-    // If the logo is a relative path, convert it to an absolute URL
-    if (logoUrl && !logoUrl.startsWith('http')) {
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:5002';
-      logoUrl = `${baseUrl}${logoUrl}`;
-    }
+    // Use centralized getFileUrl function to handle both S3 and local URLs
+    const logoUrl = getFileUrl(company.logo);
     
     res.status(200).json({ 
       success: true,
@@ -235,14 +230,8 @@ router.get('/details', authenticate, async (req, res) => {
       formattedAddress = addressParts.join(', ');
     }
     
-    // Determine the full URL for the logo
-    let logoUrl = company.logo;
-    
-    // If the logo is a relative path, convert it to an absolute URL
-    if (logoUrl && !logoUrl.startsWith('http')) {
-      const baseUrl = process.env.BACKEND_URL || 'http://localhost:5002';
-      logoUrl = `${baseUrl}${logoUrl}`;
-    }
+    // Use centralized getFileUrl function to handle both S3 and local URLs
+    const logoUrl = getFileUrl(company.logo);
     
     res.status(200).json({ 
       success: true,

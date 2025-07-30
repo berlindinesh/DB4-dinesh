@@ -519,8 +519,8 @@ const RegisterCompanyPage = () => {
           }
           
           if (name === 'companyCode') {
-            if (newValue && newValue.length < 3) {
-              newErrors.companyCode = 'Company code must be at least 3 characters';
+            if (newValue && newValue.length < 2) {
+              newErrors.companyCode = 'Company code must be at least 2 characters';
             } else if (newValue && !/^[A-Z0-9]+$/.test(newValue)) {
               newErrors.companyCode = 'Company code should contain only letters and numbers';
             } else {
@@ -537,6 +537,22 @@ const RegisterCompanyPage = () => {
         setValidationErrors(newErrors);
         if (error) setError('');
       };
+      
+      useEffect(() => {
+        if (companyData.companyCode.length > 2) {
+          const timer = setTimeout(async () => {
+            try {
+              const res = await authService.checkCompanyCode(companyData.companyCode);
+              if (!res.data.available) {
+                setValidationErrors(prev => ({ ...prev, companyCode: 'Code already in use' }));
+              }
+            } catch (e) {
+              // Handle server check error
+            }
+          }, 500);
+          return () => clearTimeout(timer);
+        }
+      }, [companyData.companyCode]);
       
       // Handle admin form change
       const handleAdminChange = (e) => {
@@ -618,27 +634,42 @@ const RegisterCompanyPage = () => {
             zipCode: ''
           }
         };
-        
+      
         let isValid = true;
-        
+      
+        // ✅ Logo required
+        if (!companyData.logo) {
+          errors.logo = 'Company logo is required';
+          isValid = false;
+        }
+      
+        // ✅ Company name (min 2 characters)
         if (!companyData.name.trim()) {
           errors.name = 'Company name is required';
           isValid = false;
+        } else if (companyData.name.trim().length < 2) {
+          errors.name = 'Company name must be at least 2 characters';
+          isValid = false;
         }
-        
+      
+        // ✅ Company code (exactly 2 uppercase letters)
         if (!companyData.companyCode.trim()) {
           errors.companyCode = 'Company code is required';
           isValid = false;
-        } else if (companyData.companyCode.length < 3) {
-          errors.companyCode = 'Company code must be at least 3 characters';
+        } else if (companyData.companyCode.trim().length < 2) {
+          errors.companyCode = 'Company code must be at least 2 characters';
+          isValid = false;
+        } else if (!/^[A-Z0-9]+$/.test(companyData.companyCode.trim())) {
+          errors.companyCode = 'Company code should contain only uppercase letters and numbers';
           isValid = false;
         }
         
+      
         if (!companyData.industry.trim()) {
           errors.industry = 'Industry is required';
           isValid = false;
         }
-        
+      
         if (!companyData.contactEmail.trim()) {
           errors.contactEmail = 'Contact email is required';
           isValid = false;
@@ -649,7 +680,7 @@ const RegisterCompanyPage = () => {
             isValid = false;
           }
         }
-        
+      
         if (!companyData.contactPhone.trim()) {
           errors.contactPhone = 'Contact phone is required';
           isValid = false;
@@ -657,28 +688,27 @@ const RegisterCompanyPage = () => {
           errors.contactPhone = 'Phone number must be exactly 10 digits';
           isValid = false;
         }
-        
-        // Address validation
+      
         if (!companyData.address.street.trim()) {
           errors.address.street = 'Street address is required';
           isValid = false;
         }
-        
+      
         if (!companyData.address.city.trim()) {
           errors.address.city = 'City is required';
           isValid = false;
         }
-        
+      
         if (!companyData.address.state.trim()) {
           errors.address.state = 'State is required';
           isValid = false;
         }
-        
+      
         if (!companyData.address.country.trim()) {
           errors.address.country = 'Country is required';
           isValid = false;
         }
-        
+      
         if (!companyData.address.zipCode.trim()) {
           errors.address.zipCode = 'Zip code is required';
           isValid = false;
@@ -686,10 +716,11 @@ const RegisterCompanyPage = () => {
           errors.address.zipCode = 'Zip code must be exactly 6 digits';
           isValid = false;
         }
-        
+      
         setValidationErrors(errors);
         return isValid;
       };
+      
       
       // Validate admin step
       const validateAdminStep = () => {
@@ -1101,7 +1132,7 @@ const handleSubmit = async (e) => {
                                 fontWeight: 500
                               }}
                             >
-                              Company Logo (Optional)
+                              Company Logo *
                             </Typography>
                             
                             <LogoPreviewContainer>
