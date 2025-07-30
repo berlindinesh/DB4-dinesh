@@ -740,15 +740,25 @@ const RegisterCompanyPage = () => {
         let newValue = value;
         let newErrors = { ...adminValidationErrors };
         
-        // Apply sentence case for name fields
+        // Apply sentence case for name fields and restrict to alphabets only
         if (['firstName', 'lastName', 'middleName'].includes(name)) {
-          newValue = toSentenceCase(value);
+          // Only allow letters and spaces, remove numbers and special characters
+          newValue = value.replace(/[^a-zA-Z\s]/g, '');
+          newValue = toSentenceCase(newValue);
         } else if (name === 'email') {
           newValue = value.toLowerCase();
         }
         
         // Validation for admin fields
-        if (name === 'email') {
+        if (['firstName', 'lastName', 'middleName'].includes(name)) {
+          if (newValue && !/^[a-zA-Z\s]*$/.test(newValue)) {
+            newErrors[name] = 'Only letters and spaces are allowed';
+          } else if (newValue && newValue.trim().length < 2 && name !== 'middleName') {
+            newErrors[name] = `${name === 'firstName' ? 'First' : 'Last'} name must be at least 2 characters`;
+          } else {
+            newErrors[name] = '';
+          }
+        } else if (name === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (newValue && !emailRegex.test(newValue)) {
             newErrors.email = 'Please enter a valid email address';
@@ -918,10 +928,28 @@ const RegisterCompanyPage = () => {
         if (!adminData.firstName.trim()) {
           errors.firstName = 'First name is required';
           isValid = false;
+        } else if (!/^[a-zA-Z\s]*$/.test(adminData.firstName)) {
+          errors.firstName = 'First name should only contain letters';
+          isValid = false;
+        } else if (adminData.firstName.trim().length < 2) {
+          errors.firstName = 'First name must be at least 2 characters';
+          isValid = false;
         }
         
         if (!adminData.lastName.trim()) {
           errors.lastName = 'Last name is required';
+          isValid = false;
+        } else if (!/^[a-zA-Z\s]*$/.test(adminData.lastName)) {
+          errors.lastName = 'Last name should only contain letters';
+          isValid = false;
+        } else if (adminData.lastName.trim().length < 2) {
+          errors.lastName = 'Last name must be at least 2 characters';
+          isValid = false;
+        }
+        
+        // Validate middle name if provided
+        if (adminData.middleName && !/^[a-zA-Z\s]*$/.test(adminData.middleName)) {
+          errors.middleName = 'Middle name should only contain letters';
           isValid = false;
         }
         
@@ -1642,9 +1670,13 @@ const handleSubmit = async (e) => {
                                 value={adminData.firstName}
                                 onChange={handleAdminChange}
                                 error={!!adminValidationErrors.firstName}
-                                helperText={adminValidationErrors.firstName}
+                                helperText={adminValidationErrors.firstName || "Only letters and spaces allowed"}
                                 disabled={loading}
                                 size={isMobile ? "small" : "medium"}
+                                inputProps={{
+                                  pattern: "[a-zA-Z\\s]*",
+                                  title: "Only letters and spaces are allowed"
+                                }}
                               />
                             </Grid>
 
@@ -1657,9 +1689,13 @@ const handleSubmit = async (e) => {
                                 value={adminData.middleName}
                                 onChange={handleAdminChange}
                                 error={!!adminValidationErrors.middleName}
-                                helperText={adminValidationErrors.middleName}
+                                helperText={adminValidationErrors.middleName || "Only letters and spaces allowed"}
                                 disabled={loading}
                                 size={isMobile ? "small" : "medium"}
+                                inputProps={{
+                                  pattern: "[a-zA-Z\\s]*",
+                                  title: "Only letters and spaces are allowed"
+                                }}
                               />
                             </Grid>
                             
@@ -1673,9 +1709,13 @@ const handleSubmit = async (e) => {
                                 value={adminData.lastName}
                                 onChange={handleAdminChange}
                                 error={!!adminValidationErrors.lastName}
-                                helperText={adminValidationErrors.lastName}
+                                helperText={adminValidationErrors.lastName || "Only letters and spaces allowed"}
                                 disabled={loading}
                                 size={isMobile ? "small" : "medium"}
+                                inputProps={{
+                                  pattern: "[a-zA-Z\\s]*",
+                                  title: "Only letters and spaces are allowed"
+                                }}
                               />
                             </Grid>
                             
