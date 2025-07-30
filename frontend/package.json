@@ -39,6 +39,7 @@
     "framer-motion": "^11.15.0",
     "generative": "^1.0.4",
     "gsap": "^3.12.5",
+    "india-pincode-search": "^1.0.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "moment": "^2.30.1",
