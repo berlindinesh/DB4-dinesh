@@ -24,6 +24,13 @@ import { motion } from 'framer-motion';
 import { FaEye, FaEyeSlash, FaUpload, FaImage } from 'react-icons/fa';
 import { Velustro } from "uvcanvas";
 import authService from '../../../screens/api/auth';
+import { 
+  StateAutocomplete, 
+  CityAutocomplete, 
+  DistrictAutocomplete, 
+  PincodeAutocomplete 
+} from '../../../components/GeographicAutocomplete';
+import { validateCompleteAddress } from '../../../utils/indianGeography';
 
 // Create theme with custom breakpoints
 const theme = createTheme({
@@ -355,7 +362,8 @@ const RegisterCompanyPage = () => {
       street: '',
       city: '',
       state: '',
-      country: '',
+      district: '',
+      country: 'India', // Default to India
       zipCode: ''
     }
   });
@@ -372,6 +380,7 @@ const RegisterCompanyPage = () => {
       street: '',
       city: '',
       state: '',
+      district: '',
       country: '',
       zipCode: ''
     }
@@ -453,90 +462,131 @@ const RegisterCompanyPage = () => {
         });
       };
       
-      // Handle company form change
-      const handleCompanyChange = (e) => {
-        const { name, value } = e.target;
-        let newValue = value;
-        let newErrors = { ...validationErrors };
-        
-        // Check if it's a nested address field
-        if (name.includes('.')) {
-          const [parent, child] = name.split('.');
-          
-          // Apply formatting for address fields
-          if (['city', 'state', 'country'].includes(child)) {
-            newValue = toSentenceCase(value);
-          } else if (child === 'zipCode') {
-            // Only allow numbers and limit to 6 digits
-            newValue = value.replace(/\D/g, '').slice(0, 6);
-          }
-          
-          // Validation for address fields
-          if (child === 'zipCode') {
-            if (newValue && newValue.length !== 6) {
-              newErrors.address.zipCode = 'Zip code must be exactly 6 digits';
-            } else {
-              newErrors.address.zipCode = '';
-            }
-          }
-          
-          setCompanyData({
-            ...companyData,
-            address: {
-              ...companyData.address,
-              [child]: newValue
-            }
-          });
+        // Handle company form change
+  const handleCompanyChange = (e) => {
+    const { name, value } = e.target;
+    let newValue = value;
+    let newErrors = { ...validationErrors };
+    
+    // Check if it's a nested address field
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      
+      // Apply formatting for address fields
+      if (child === 'zipCode') {
+        // Only allow numbers and limit to 6 digits
+        newValue = value.replace(/\D/g, '').slice(0, 6);
+      }
+      
+      // Validation for address fields
+      if (child === 'zipCode') {
+        if (newValue && newValue.length !== 6) {
+          newErrors.address.zipCode = 'Zip code must be exactly 6 digits';
         } else {
-          // Handle direct company fields
-          if (name === 'industry') {
-            newValue = toSentenceCase(value);
-          } else if (name === 'companyCode') {
-            newValue = value.toUpperCase();
-          } else if (name === 'contactEmail') {
-            newValue = value.toLowerCase();
-          } else if (name === 'contactPhone') {
-            // Only allow numbers and limit to 10 digits
-            newValue = value.replace(/\D/g, '').slice(0, 10);
-          }
-          
-          // Validation for company fields
-          if (name === 'contactEmail') {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (newValue && !emailRegex.test(newValue)) {
-              newErrors.contactEmail = 'Please enter a valid email address';
-            } else {
-              newErrors.contactEmail = '';
-            }
-          }
-          
-          if (name === 'contactPhone') {
-            if (newValue && newValue.length !== 10) {
-              newErrors.contactPhone = 'Phone number must be exactly 10 digits';
-            } else {
-              newErrors.contactPhone = '';
-            }
-          }
-          
-          if (name === 'companyCode') {
-            if (newValue && newValue.length < 3) {
-              newErrors.companyCode = 'Company code must be at least 3 characters';
-            } else if (newValue && !/^[A-Z0-9]+$/.test(newValue)) {
-              newErrors.companyCode = 'Company code should contain only letters and numbers';
-            } else {
-              newErrors.companyCode = '';
-            }
-          }
-          
-          setCompanyData({
-            ...companyData,
-            [name]: newValue
-          });
+          newErrors.address.zipCode = '';
         }
-        
-        setValidationErrors(newErrors);
-        if (error) setError('');
-      };
+      }
+      
+      setCompanyData({
+        ...companyData,
+        address: {
+          ...companyData.address,
+          [child]: newValue
+        }
+      });
+    } else {
+      // Handle direct company fields
+      if (name === 'industry') {
+        newValue = toSentenceCase(value);
+      } else if (name === 'companyCode') {
+        newValue = value.toUpperCase();
+      } else if (name === 'contactEmail') {
+        newValue = value.toLowerCase();
+      } else if (name === 'contactPhone') {
+        // Only allow numbers and limit to 10 digits
+        newValue = value.replace(/\D/g, '').slice(0, 10);
+      }
+      
+      // Validation for company fields
+      if (name === 'contactEmail') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (newValue && !emailRegex.test(newValue)) {
+          newErrors.contactEmail = 'Please enter a valid email address';
+        } else {
+          newErrors.contactEmail = '';
+        }
+      }
+      
+      if (name === 'contactPhone') {
+        if (newValue && newValue.length !== 10) {
+          newErrors.contactPhone = 'Phone number must be exactly 10 digits';
+        } else {
+          newErrors.contactPhone = '';
+        }
+      }
+      
+      if (name === 'companyCode') {
+        if (newValue && newValue.length < 3) {
+          newErrors.companyCode = 'Company code must be at least 3 characters';
+        } else if (newValue && !/^[A-Z0-9]+$/.test(newValue)) {
+          newErrors.companyCode = 'Company code should contain only letters and numbers';
+        } else {
+          newErrors.companyCode = '';
+        }
+      }
+      
+      setCompanyData({
+        ...companyData,
+        [name]: newValue
+      });
+    }
+    
+    setValidationErrors(newErrors);
+    if (error) setError('');
+  };
+
+  // Handle geographic data changes
+  const handleGeographicChange = (field, value) => {
+    const newAddress = { ...companyData.address };
+    
+    if (field === 'state') {
+      newAddress.state = value;
+      newAddress.city = '';
+      newAddress.district = '';
+      newAddress.zipCode = '';
+    } else if (field === 'city') {
+      newAddress.city = value;
+      newAddress.district = '';
+      newAddress.zipCode = '';
+    } else if (field === 'district') {
+      newAddress.district = value;
+    } else if (field === 'zipCode') {
+      newAddress.zipCode = value;
+    }
+    
+    setCompanyData({
+      ...companyData,
+      address: newAddress
+    });
+    
+    // Validate the complete address
+    const validation = validateCompleteAddress(
+      newAddress.state,
+      newAddress.city,
+      newAddress.district,
+      newAddress.zipCode
+    );
+    
+    setValidationErrors({
+      ...validationErrors,
+      address: {
+        ...validationErrors.address,
+        ...validation.errors
+      }
+    });
+    
+    if (error) setError('');
+  };
       
       // Handle admin form change
       const handleAdminChange = (e) => {
@@ -664,26 +714,16 @@ const RegisterCompanyPage = () => {
           isValid = false;
         }
         
-        if (!companyData.address.city.trim()) {
-          errors.address.city = 'City is required';
-          isValid = false;
-        }
+        // Use the geographic validation utility
+        const addressValidation = validateCompleteAddress(
+          companyData.address.state,
+          companyData.address.city,
+          companyData.address.district,
+          companyData.address.zipCode
+        );
         
-        if (!companyData.address.state.trim()) {
-          errors.address.state = 'State is required';
-          isValid = false;
-        }
-        
-        if (!companyData.address.country.trim()) {
-          errors.address.country = 'Country is required';
-          isValid = false;
-        }
-        
-        if (!companyData.address.zipCode.trim()) {
-          errors.address.zipCode = 'Zip code is required';
-          isValid = false;
-        } else if (companyData.address.zipCode.length !== 6) {
-          errors.address.zipCode = 'Zip code must be exactly 6 digits';
+        if (!addressValidation.isValid) {
+          Object.assign(errors.address, addressValidation.errors);
           isValid = false;
         }
         
@@ -788,6 +828,7 @@ const handleSubmit = async (e) => {
         street: companyData.address.street,
         city: companyData.address.city,
         state: companyData.address.state,
+        district: companyData.address.district,
         country: companyData.address.country,
         zipCode: companyData.address.zipCode
       }
@@ -1310,69 +1351,70 @@ const handleSubmit = async (e) => {
                             </Grid>
                             
                             <Grid item xs={12} md={6}>
-                              <StyledTextField
-                                required
-                                fullWidth
-                                id="city"
-                                label="City"
-                                name="address.city"
-                                value={companyData.address.city}
-                                onChange={handleCompanyChange}
-                                error={!!validationErrors.address.city}
-                                helperText={validationErrors.address.city}
-                                disabled={loading}
-                                size={isMobile ? "small" : "medium"}
-                              />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={6}>
-                              <StyledTextField
-                                required
-                                fullWidth
-                                id="state"
-                                label="State"
-                                name="address.state"
+                              <StateAutocomplete
                                 value={companyData.address.state}
-                                onChange={handleCompanyChange}
-                                error={!!validationErrors.address.state}
+                                onChange={(value) => handleGeographicChange('state', value)}
+                                error={validationErrors.address.state}
                                 helperText={validationErrors.address.state}
                                 disabled={loading}
+                                required
+                                size={isMobile ? "small" : "medium"}
+                              />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                              <CityAutocomplete
+                                value={companyData.address.city}
+                                onChange={(value) => handleGeographicChange('city', value)}
+                                state={companyData.address.state}
+                                error={validationErrors.address.city}
+                                helperText={validationErrors.address.city}
+                                disabled={loading}
+                                required
+                                size={isMobile ? "small" : "medium"}
+                              />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                              <DistrictAutocomplete
+                                value={companyData.address.district}
+                                onChange={(value) => handleGeographicChange('district', value)}
+                                state={companyData.address.state}
+                                city={companyData.address.city}
+                                error={validationErrors.address.district}
+                                helperText={validationErrors.address.district}
+                                disabled={loading}
+                                required
+                                size={isMobile ? "small" : "medium"}
+                              />
+                            </Grid>
+                            
+                            <Grid item xs={12} md={6}>
+                              <PincodeAutocomplete
+                                value={companyData.address.zipCode}
+                                onChange={(value) => handleGeographicChange('zipCode', value)}
+                                state={companyData.address.state}
+                                city={companyData.address.city}
+                                error={validationErrors.address.zipCode}
+                                helperText={validationErrors.address.zipCode}
+                                disabled={loading}
+                                required
                                 size={isMobile ? "small" : "medium"}
                               />
                             </Grid>
                             
                             <Grid item xs={12} md={6}>
                               <StyledTextField
-                                required
                                 fullWidth
                                 id="country"
                                 label="Country"
                                 name="address.country"
                                 value={companyData.address.country}
-                                onChange={handleCompanyChange}
-                                error={!!validationErrors.address.country}
-                                helperText={validationErrors.address.country}
-                                disabled={loading}
+                                disabled={true}
                                 size={isMobile ? "small" : "medium"}
-                              />
-                            </Grid>
-                            
-                            <Grid item xs={12} md={6}>
-                              <StyledTextField
-                                required
-                                fullWidth
-                                id="zipCode"
-                                label="Zip Code"
-                                name="address.zipCode"
-                                value={companyData.address.zipCode}
-                                onChange={handleCompanyChange}
-                                error={!!validationErrors.address.zipCode}
-                                helperText={validationErrors.address.zipCode || "6-digit zip code"}
-                                disabled={loading}
-                                size={isMobile ? "small" : "medium"}
-                                inputProps={{
-                                  maxLength: 6,
-                                  pattern: '[0-9]*'
+                                helperText="Currently supporting India only"
+                                InputProps={{
+                                  readOnly: true,
                                 }}
                               />
                             </Grid>
