@@ -1,14 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import api from "../../../api/axiosInstance";
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import SearchIcon from '@mui/icons-material/Search';
-import { Dialog, DialogTitle, DialogContent, TableCell, Chip, TableHead, TableRow, TableBody, Table, IconButton, InputAdornment, TextField, Box, Typography, Container, Paper, Stack, Button, Divider, useTheme, TableContainer, alpha, styled } from '@mui/material';
-import { motion } from 'framer-motion';
-import { Search, Add, Edit, Delete, Close } from '@mui/icons-material';
-
-
+// import EditIcon from "@mui/icons-material/Edit";
+// import DeleteIcon from "@mui/icons-material/Delete";
+// import AddCircleIcon from "@mui/icons-material/AddCircle";
+// import SearchIcon from "@mui/icons-material/Search";
+import {
+  Alert,
+  Fade,
+  DialogActions,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TableCell,
+  Chip,
+  TableHead,
+  TableRow,
+  TableBody,
+  Table,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Box,
+  Typography,
+  Container,
+  Paper,
+  Stack,
+  Button,
+  Divider,
+  useTheme,
+  TableContainer,
+  alpha,
+  styled,
+} from "@mui/material";
+import { motion } from "framer-motion";
+import { Search, Add, Edit, Delete, Close } from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
@@ -41,309 +66,226 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 function AssetBatch() {
   const theme = useTheme();
   const [assetBatches, setAssetBatches] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    batchNumber: '',
-    description: '',
-    numberOfAssets: ''
+    batchNumber: "",
+    description: "",
+    numberOfAssets: "",
   });
   const [editBatchId, setEditBatchId] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Add delete confirmation dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteBatchId, setDeleteBatchId] = useState(null);
+
   useEffect(() => {
     fetchAssetBatches();
   }, []);
 
-
-
-  // const fetchAssetBatches = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const response = await axios.get(`${API_URL}/api/asset-batches`);
-  //     setAssetBatches(response.data);
-  //     setLoading(false);
-  //   } catch (err) {
-  //     console.error('Error fetching asset batches:', err.message);
-  //     setError('Failed to fetch asset batches. Please check the server.');
-  //     setLoading(false);
-  //   }
-  // };
-
-const fetchAssetBatches = async () => {
-  setLoading(true);
-  try {
-    const response = await api.get('/asset-batches');
-    setAssetBatches(response.data);
-    setLoading(false);
-  } catch (err) {
-    console.error('Error fetching asset batches:', err.message);
-    setError('Failed to fetch asset batches. Please check the server.');
-    setLoading(false);
-  }
-};
-
+  const fetchAssetBatches = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/asset-batches");
+      setAssetBatches(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching asset batches:", err.message);
+      setError("Failed to fetch asset batches. Please check the server.");
+      setLoading(false);
+    }
+  };
 
   const handleSearch = async (e) => {
     const searchValue = e.target.value;
     setSearchQuery(searchValue);
-    
-    if (searchValue.trim() === '') {
+
+    if (searchValue.trim() === "") {
       // If search is empty, fetch all batches
       fetchAssetBatches();
       return;
     }
-    
+
     // Filter the existing batches client-side without making an API call
-    const filteredBatches = assetBatches.filter(batch => 
-      batch.batchNumber.toLowerCase().includes(searchValue.toLowerCase()) ||
-      batch.description.toLowerCase().includes(searchValue.toLowerCase())
+    const filteredBatches = assetBatches.filter(
+      (batch) =>
+        batch.batchNumber.toLowerCase().includes(searchValue.toLowerCase()) ||
+        batch.description.toLowerCase().includes(searchValue.toLowerCase())
     );
-    
+
     // Sort the results to prioritize matches at the beginning of the text
     filteredBatches.sort((a, b) => {
-      const aStartsWithQuery = a.batchNumber.toLowerCase().startsWith(searchValue.toLowerCase());
-      const bStartsWithQuery = b.batchNumber.toLowerCase().startsWith(searchValue.toLowerCase());
-      
+      const aStartsWithQuery = a.batchNumber
+        .toLowerCase()
+        .startsWith(searchValue.toLowerCase());
+      const bStartsWithQuery = b.batchNumber
+        .toLowerCase()
+        .startsWith(searchValue.toLowerCase());
+
       if (aStartsWithQuery && !bStartsWithQuery) return -1;
       if (!aStartsWithQuery && bStartsWithQuery) return 1;
       return 0;
     });
-    
+
     setAssetBatches(filteredBatches);
     setError(null); // Clear any previous errors
   };
 
   const toSentenceCase = (str) => {
-    if (!str) return '';
+    if (!str) return "";
     return str
       .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    const transformedValue = name === 'numberOfAssets' ? value : toSentenceCase(value);
+    const transformedValue =
+      name === "numberOfAssets" ? value : toSentenceCase(value);
     setFormData({ ...formData, [name]: transformedValue });
   };
 
-  // useEffect(() => {
-  //   const handleBatchesUpdated = () => {
-  //     console.log('Batches updated event received, refreshing batches list');
-  //     fetchAssetBatches();
-  //   };
-    
-  //   window.addEventListener('batchesUpdated', handleBatchesUpdated);
-    
-  //   const lastUpdate = localStorage.getItem('batchesUpdated');
-  //   if (lastUpdate) {
-  //     const currentTimestamp = Date.now();
-  //     const lastUpdateTimestamp = parseInt(lastUpdate, 10);
-  //     if (currentTimestamp - lastUpdateTimestamp < 5002) {
-  //       fetchAssetBatches();
-  //     }
-  //   }
-    
-  //   return () => {
-  //     window.removeEventListener('batchesUpdated', handleBatchesUpdated);
-  //   };
-  // }, []);
-
-  // const handleCreateBatch = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     if (isEditing) {
-  //       await axios.put(`${API_URL}/api/asset-batches/${editBatchId}`, formData);
-  //       setAssetBatches(assetBatches.map(batch => batch._id === editBatchId ? { ...batch, ...formData } : batch));
-  //       setIsEditing(false);
-  //       setEditBatchId(null);
-  //     } else {
-  //       const response = await axios.post(`${API_URL}/api/asset-batches`, formData);
-  //       setAssetBatches([...assetBatches, response.data]);
-  //     }
-  //     setFormData({ batchNumber: '', description: '', numberOfAssets: '' });
-  //     setShowForm(false);
-      
-  //     const timestamp = Date.now().toString();
-  //     localStorage.setItem('batchesUpdated', timestamp);
-      
-  //     const event = new CustomEvent('batchesUpdated', { detail: { timestamp } });
-  //     window.dispatchEvent(event);
-  //   } catch (err) {
-  //     console.error('Error creating/updating asset batch:', err.message);
-  //     setError('Failed to save asset batch. Please try again.');
-  //   }
-  // };
-
-useEffect(() => {
-  const handleBatchesUpdated = () => {
-    console.log('Batches updated event received, refreshing batches list');
-    fetchAssetBatches();
-  };
-  
-  window.addEventListener('batchesUpdated', handleBatchesUpdated);
-  
-  const lastUpdate = localStorage.getItem('batchesUpdated');
-  if (lastUpdate) {
-    const currentTimestamp = Date.now();
-    const lastUpdateTimestamp = parseInt(lastUpdate, 10);
-    if (currentTimestamp - lastUpdateTimestamp < 5002) {
+  useEffect(() => {
+    const handleBatchesUpdated = () => {
+      console.log("Batches updated event received, refreshing batches list");
       fetchAssetBatches();
+    };
+
+    window.addEventListener("batchesUpdated", handleBatchesUpdated);
+
+    const lastUpdate = localStorage.getItem("batchesUpdated");
+    if (lastUpdate) {
+      const currentTimestamp = Date.now();
+      const lastUpdateTimestamp = parseInt(lastUpdate, 10);
+      if (currentTimestamp - lastUpdateTimestamp < 5002) {
+        fetchAssetBatches();
+      }
     }
-  }
-  
-  return () => {
-    window.removeEventListener('batchesUpdated', handleBatchesUpdated);
+
+    return () => {
+      window.removeEventListener("batchesUpdated", handleBatchesUpdated);
+    };
+  }, []);
+
+  const handleCreateBatch = async (e) => {
+    e.preventDefault();
+    try {
+      if (isEditing) {
+        await api.put(`/asset-batches/${editBatchId}`, formData);
+        setAssetBatches(
+          assetBatches.map((batch) =>
+            batch._id === editBatchId ? { ...batch, ...formData } : batch
+          )
+        );
+        setIsEditing(false);
+        setEditBatchId(null);
+      } else {
+        const response = await api.post("/asset-batches", formData);
+        setAssetBatches([...assetBatches, response.data]);
+      }
+      setFormData({ batchNumber: "", description: "", numberOfAssets: "" });
+      setShowForm(false);
+
+      const timestamp = Date.now().toString();
+      localStorage.setItem("batchesUpdated", timestamp);
+
+      const event = new CustomEvent("batchesUpdated", {
+        detail: { timestamp },
+      });
+      window.dispatchEvent(event);
+    } catch (err) {
+      console.error("Error creating/updating asset batch:", err.message);
+      setError("Failed to save asset batch. Please try again.");
+    }
   };
-}, []);
 
+  const handleDelete = async (id) => {
+    setDeleteBatchId(id);
+    setDeleteDialogOpen(true);
+  };
 
-
-const handleCreateBatch = async (e) => {
-  e.preventDefault();
-  try {
-    if (isEditing) {
-      await api.put(`/asset-batches/${editBatchId}`, formData);
-      setAssetBatches(assetBatches.map(batch => batch._id === editBatchId ? { ...batch, ...formData } : batch));
-      setIsEditing(false);
-      setEditBatchId(null);
-    } else {
-      const response = await api.post('/asset-batches', formData);
-      setAssetBatches([...assetBatches, response.data]);
+  const handleConfirmDelete = async () => {
+    try {
+      console.log(`Deleting asset batch with ID: ${deleteBatchId}`);
+      const response = await api.delete(`/asset-batches/${deleteBatchId}`);
+      console.log(`Delete response: ${response}`);
+      setAssetBatches(
+        assetBatches.filter((batch) => batch._id !== deleteBatchId)
+      );
+      setDeleteDialogOpen(false); // <-- Add this line to close the dialog
+      setDeleteBatchId(null); // (optional) clear the id
+    } catch (err) {
+      console.error(`Error deleting asset batch: ${err.message}`);
+      if (err.response && err.response.status === 500) {
+        setError("Internal server error. Please try again later.");
+      } else {
+        setError("Failed to delete asset batch. Please try again.");
+      }
     }
-    setFormData({ batchNumber: '', description: '', numberOfAssets: '' });
-    setShowForm(false);
-    
-    const timestamp = Date.now().toString();
-    localStorage.setItem('batchesUpdated', timestamp);
-    
-    const event = new CustomEvent('batchesUpdated', { detail: { timestamp } });
-    window.dispatchEvent(event);
-  } catch (err) {
-    console.error('Error creating/updating asset batch:', err.message);
-    setError('Failed to save asset batch. Please try again.');
-  }
-};
+  };
 
-
-  // const handleDelete = async (id) => {
-  //   try {
-  //     await axios.delete(`${API_URL}/api/asset-batches/${id}`);
-  //     setAssetBatches(assetBatches.filter(batch => batch._id !== id));
-      
-  //     const timestamp = Date.now().toString();
-  //     localStorage.setItem('batchesUpdated', timestamp);
-      
-  //     const event = new CustomEvent('batchesUpdated', { detail: { timestamp } });
-  //     window.dispatchEvent(event);
-  //   } catch (err) {
-  //     console.error('Error deleting asset batch:', err.message);
-  //     setError('Failed to delete asset batch. Please try again.');
-  //   }
-  // };
-
-const handleDelete = async (id) => {
-  try {
-    await api.delete(`/asset-batches/${id}`);
-    setAssetBatches(assetBatches.filter(batch => batch._id !== id));
-    
-    const timestamp = Date.now().toString();
-    localStorage.setItem('batchesUpdated', timestamp);
-    
-    const event = new CustomEvent('batchesUpdated', { detail: { timestamp } });
-    window.dispatchEvent(event);
-  } catch (err) {
-    console.error('Error deleting asset batch:', err.message);
-    setError('Failed to delete asset batch. Please try again.');
-  }
-};
-
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+  };
 
   const handleEdit = (batch) => {
     setFormData({
       batchNumber: batch.batchNumber,
       description: batch.description,
-      numberOfAssets: batch.numberOfAssets
+      numberOfAssets: batch.numberOfAssets,
     });
     setEditBatchId(batch._id);
     setIsEditing(true);
     setShowForm(true);
   };
 
-  // const handleCreateAssetsFromBatch = async (batch) => {
-  //   try {
-  //     if (window.confirm(`Are you sure you want to create ${batch.numberOfAssets} assets from batch ${batch.batchNumber}?`)) {
-  //       setLoading(true);
-        
-  //       // Generate asset names based on batch number
-  //       const assetNames = [];
-  //       for (let i = 1; i <= batch.numberOfAssets; i++) {
-  //         assetNames.push(`${batch.batchNumber}-Asset-${i}`);
-  //       }
-        
-  //       await axios.post(`${API_URL}/api/assets/from-batch`, {
-  //         batchId: batch._id,
-  //         assetNames,
-  //         category: 'Hardware',
-  //         batch: batch.batchNumber // Make sure to include the batch number
-  //       });
-        
-  //       // Notify other components about the update
-  //       const timestamp = Date.now().toString();
-  //       localStorage.setItem('assetsUpdated', timestamp);
-        
-  //       const event = new CustomEvent('assetsUpdated', { detail: { timestamp } });
-  //       window.dispatchEvent(event);
-        
-  //       setLoading(false);
-  //       alert(`${batch.numberOfAssets} assets created successfully from batch ${batch.batchNumber}`);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error creating assets from batch:', error);
-  //     setError('Failed to create assets from batch. Please try again.');
-  //     setLoading(false);
-  //   }
-  // };
+  const handleCreateAssetsFromBatch = async (batch) => {
+    try {
+      if (
+        window.confirm(
+          `Are you sure you want to create ${batch.numberOfAssets} assets from batch ${batch.batchNumber}?`
+        )
+      ) {
+        setLoading(true);
 
-const handleCreateAssetsFromBatch = async (batch) => {
-  try {
-    if (window.confirm(`Are you sure you want to create ${batch.numberOfAssets} assets from batch ${batch.batchNumber}?`)) {
-      setLoading(true);
-      
-      // Generate asset names based on batch number
-      const assetNames = [];
-      for (let i = 1; i <= batch.numberOfAssets; i++) {
-        assetNames.push(`${batch.batchNumber}-Asset-${i}`);
+        // Generate asset names based on batch number
+        const assetNames = [];
+        for (let i = 1; i <= batch.numberOfAssets; i++) {
+          assetNames.push(`${batch.batchNumber}-Asset-${i}`);
+        }
+
+        await api.post("/assets/from-batch", {
+          batchId: batch._id,
+          assetNames,
+          category: "Hardware",
+          batch: batch.batchNumber, // Make sure to include the batch number
+        });
+
+        // Notify other components about the update
+        const timestamp = Date.now().toString();
+        localStorage.setItem("assetsUpdated", timestamp);
+
+        const event = new CustomEvent("assetsUpdated", {
+          detail: { timestamp },
+        });
+        window.dispatchEvent(event);
+
+        setLoading(false);
+        alert(
+          `${batch.numberOfAssets} assets created successfully from batch ${batch.batchNumber}`
+        );
       }
-      
-      await api.post('/assets/from-batch', {
-        batchId: batch._id,
-        assetNames,
-        category: 'Hardware',
-        batch: batch.batchNumber // Make sure to include the batch number
-      });
-      
-      // Notify other components about the update
-      const timestamp = Date.now().toString();
-      localStorage.setItem('assetsUpdated', timestamp);
-      
-      const event = new CustomEvent('assetsUpdated', { detail: { timestamp } });
-      window.dispatchEvent(event);
-      
+    } catch (error) {
+      console.error("Error creating assets from batch:", error);
+      setError("Failed to create assets from batch. Please try again.");
       setLoading(false);
-      alert(`${batch.numberOfAssets} assets created successfully from batch ${batch.batchNumber}`);
     }
-  } catch (error) {
-    console.error('Error creating assets from batch:', error);
-    setError('Failed to create assets from batch. Please try again.');
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <Box
@@ -367,12 +309,12 @@ const handleCreateAssetsFromBatch = async (batch) => {
           Asset Batch Management
         </Typography>
 
-        <Paper 
+        <Paper
           elevation={3}
-          sx={{ 
+          sx={{
             p: { xs: 2, sm: 3 },
             borderRadius: 2,
-            mb: 3
+            mb: 3,
           }}
         >
           <Box
@@ -386,7 +328,7 @@ const handleCreateAssetsFromBatch = async (batch) => {
             }}
           >
             <TextField
-              placeholder="Search asset batch..." 
+              placeholder="Search asset batch..."
               value={searchQuery}
               onChange={handleSearch}
               size="small"
@@ -412,7 +354,11 @@ const handleCreateAssetsFromBatch = async (batch) => {
 
             <Button
               onClick={() => {
-                setFormData({ batchNumber: '', description: '', numberOfAssets: '' });
+                setFormData({
+                  batchNumber: "",
+                  description: "",
+                  numberOfAssets: "",
+                });
                 setShowForm(true);
                 setIsEditing(false);
               }}
@@ -428,7 +374,7 @@ const handleCreateAssetsFromBatch = async (batch) => {
                 },
                 textTransform: "none",
                 borderRadius: "8px",
-                boxShadow: "0 2px 8px rgba(25, 118, 210, 0.25)"
+                boxShadow: "0 2px 8px rgba(25, 118, 210, 0.25)",
               }}
             >
               Create Batch
@@ -513,10 +459,18 @@ const handleCreateAssetsFromBatch = async (batch) => {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <StyledTableCell sx={{ minWidth: 180 }}>Batch Number</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: 250 }}>Description</StyledTableCell>
-              <StyledTableCell sx={{ minWidth: 150 }}>Number of Assets</StyledTableCell>
-              <StyledTableCell align="center" sx={{ minWidth: 120 }}>Actions</StyledTableCell>
+              <StyledTableCell sx={{ minWidth: 180 }}>
+                Batch Number
+              </StyledTableCell>
+              <StyledTableCell sx={{ minWidth: 250 }}>
+                Description
+              </StyledTableCell>
+              <StyledTableCell sx={{ minWidth: 150 }}>
+                Number of Assets
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ minWidth: 120 }}>
+                Actions
+              </StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -541,13 +495,16 @@ const handleCreateAssetsFromBatch = async (batch) => {
                     >
                       {batch.batchNumber?.[0] || "B"}
                     </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: "#111" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, color: "#111" }}
+                    >
                       {batch.batchNumber}
                     </Typography>
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <Typography 
+                  <Typography
                     variant="body2"
                     sx={{
                       maxWidth: 400,
@@ -578,23 +535,26 @@ const handleCreateAssetsFromBatch = async (batch) => {
 
                 <TableCell>
                   <Stack direction="row" spacing={1} justifyContent="center">
-                    <IconButton 
+                    <IconButton
                       onClick={() => handleEdit(batch)}
                       size="small"
-                      sx={{ 
+                      sx={{
                         backgroundColor: alpha(theme.palette.primary.main, 0.1),
                         "&:hover": {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                          backgroundColor: alpha(
+                            theme.palette.primary.main,
+                            0.2
+                          ),
                         },
                         color: "#1976d2",
                       }}
                     >
                       <Edit fontSize="small" />
                     </IconButton>
-                    <IconButton 
+                    <IconButton
                       onClick={() => handleDelete(batch._id)}
                       size="small"
-                      sx={{ 
+                      sx={{
                         backgroundColor: alpha(theme.palette.error.main, 0.1),
                         "&:hover": {
                           backgroundColor: alpha(theme.palette.error.main, 0.2),
@@ -604,10 +564,8 @@ const handleCreateAssetsFromBatch = async (batch) => {
                     >
                       <Delete fontSize="small" />
                     </IconButton>
-                   
                   </Stack>
                 </TableCell>
-                
               </StyledTableRow>
             ))}
             {assetBatches.length === 0 && (
@@ -631,8 +589,8 @@ const handleCreateAssetsFromBatch = async (batch) => {
         </Table>
       </TableContainer>
 
-      <Dialog 
-        open={showForm} 
+      <Dialog
+        open={showForm}
         maxWidth="md"
         fullWidth
         PaperProps={{
@@ -640,8 +598,8 @@ const handleCreateAssetsFromBatch = async (batch) => {
             width: "700px",
             maxWidth: "90vw",
             borderRadius: "20px",
-            overflow: "hidden"
-          }
+            overflow: "hidden",
+          },
         }}
       >
         <DialogTitle
@@ -651,18 +609,18 @@ const handleCreateAssetsFromBatch = async (batch) => {
             fontSize: "1.5rem",
             fontWeight: 600,
             padding: "24px 32px",
-            position: "relative"
+            position: "relative",
           }}
         >
-          {isEditing ? 'Edit Asset Batch' : 'Create Asset Batch'}
+          {isEditing ? "Edit Asset Batch" : "Create Asset Batch"}
           <IconButton
             onClick={() => setShowForm(false)}
             sx={{
-              position: 'absolute',
+              position: "absolute",
               right: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'white'
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "white",
             }}
           >
             <Close />
@@ -670,7 +628,7 @@ const handleCreateAssetsFromBatch = async (batch) => {
         </DialogTitle>
         <DialogContent sx={{ padding: "32px", backgroundColor: "#f8fafc" }}>
           <form onSubmit={handleCreateBatch}>
-            <Stack spacing={3} sx={{mt:2}}>
+            <Stack spacing={3} sx={{ mt: 2 }}>
               <TextField
                 label="Batch Number"
                 name="batchNumber"
@@ -679,10 +637,10 @@ const handleCreateAssetsFromBatch = async (batch) => {
                 required
                 fullWidth
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     backgroundColor: "white",
-                    borderRadius: '8px'
-                  }
+                    borderRadius: "8px",
+                  },
                 }}
               />
               <TextField
@@ -695,10 +653,10 @@ const handleCreateAssetsFromBatch = async (batch) => {
                 multiline
                 rows={3}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     backgroundColor: "white",
-                    borderRadius: '8px'
-                  }
+                    borderRadius: "8px",
+                  },
                 }}
               />
               <TextField
@@ -710,54 +668,151 @@ const handleCreateAssetsFromBatch = async (batch) => {
                 required
                 fullWidth
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     backgroundColor: "white",
-                    borderRadius: '8px'
-                  }
+                    borderRadius: "8px",
+                  },
                 }}
               />
-              <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                justifyContent="flex-end"
+                sx={{ mt: 4 }}
+              >
                 <Button
                   onClick={() => setShowForm(false)}
                   sx={{
-                    border: '2px solid #1976d2',
-                    color: '#1976d2',
-                    '&:hover': {
-                      border: '2px solid #64b5f6',
-                      backgroundColor: '#e3f2fd',
+                    border: "2px solid #1976d2",
+                    color: "#1976d2",
+                    "&:hover": {
+                      border: "2px solid #64b5f6",
+                      backgroundColor: "#e3f2fd",
                     },
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     px: 4,
                     py: 1,
-                    fontWeight: 600
+                    fontWeight: 600,
                   }}
                 >
                   Cancel
                 </Button>
-             
+
                 <Button
                   type="submit"
                   sx={{
-                    background: 'linear-gradient(45deg, #1976d2, #64b5f6)',
-                    color: 'white',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #1565c0, #42a5f5)',
+                    background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+                    color: "white",
+                    "&:hover": {
+                      background: "linear-gradient(45deg, #1565c0, #42a5f5)",
                     },
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     px: 4,
                     py: 1,
-                    fontWeight: 600
+                    fontWeight: 600,
                   }}
                 >
-                  {isEditing ? 'Update' : 'Save'}
+                  {isEditing ? "Update" : "Save"}
                 </Button>
-              </Stack>            </Stack>
+              </Stack>{" "}
+            </Stack>
           </form>
         </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            width: { xs: "95%", sm: "500px" },
+            maxWidth: "500px",
+            borderRadius: "20px",
+            overflow: "hidden",
+            margin: { xs: "8px", sm: "32px" },
+          },
+        }}
+        TransitionComponent={Fade}
+        TransitionProps={{
+          timeout: 300,
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(45deg, #f44336, #ff7961)",
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
+            fontWeight: 600,
+            padding: { xs: "16px 24px", sm: "24px 32px" },
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          Delete Asset Batch?
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            padding: { xs: "24px", sm: "32px" },
+            backgroundColor: "#f8fafc",
+            paddingTop: { xs: "24px", sm: "32px" },
+          }}
+        >
+          {/* <Typography variant="body1" gutterBottom> */}
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Are you sure you want to delete asset batch {deleteBatchId}?
+          </Alert>
+          {/* </Typography> */}
+          <Typography variant="body2" color="error">
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCancelDelete}
+            color="primary"
+            sx={{
+              border: "2px solid #1976d2",
+              color: "#1976d2",
+              "&:hover": {
+                border: "2px solid #64b5f6",
+                backgroundColor: "#e3f2fd",
+                color: "#1976d2",
+              },
+              textTransform: "none",
+              borderRadius: "8px",
+              px: 3,
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            sx={{
+              background: "linear-gradient(45deg, #f44336, #ff7961)",
+              fontSize: "0.95rem",
+              textTransform: "none",
+              padding: "8px 32px",
+              borderRadius: "10px",
+              boxShadow: "0 4px 12px rgba(244, 67, 54, 0.2)",
+              color: "white",
+              "&:hover": {
+                background: "linear-gradient(45deg, #d32f2f, #f44336)",
+              },
+            }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
 }
 
 export default AssetBatch;
-
