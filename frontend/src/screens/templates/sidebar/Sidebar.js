@@ -158,6 +158,7 @@ function Sidebar() {
             {(role === 'hr' || role === 'admin' || role === 'manager') && (
               <>
               <li onClick={() => handleNavigation("/Dashboards/attendance-dashboard")}>Dashboard</li>
+              <li onClick={() => handleNavigation("/Dashboards/biometric-devices")}>Biometric Devices</li>
               <li onClick={() => handleNavigation("/Dashboards/attendance-records")}>Attendance Records</li>
               <li onClick={() => handleNavigation("/Dashboards/time-off-requests-admin")}>Time Off Requests Review</li>
               </>            

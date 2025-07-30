@@ -27,6 +27,7 @@ import OrganizationChart from "./organizationChart/OrganizationChart";
 import RotatingWorktypeAssign from "./rotatingWorktypeAssign/RotatingWorktypeAssign";
 import AttendanceDashboard from '../dashboards/AttendanceDashboard';
 import AttendanceRecords from "./attendanceRecords/AttendanceRecords";
+import BiometricDevices from "./attendanceRecords/BiometricDevices";
 import TimeOffRequests from "./timeOffRequests/TimeOffRequests";
 import TimeOffRequestsAdmin from './timeOffRequests/TimeOffRequestsAdmin';
 import ProfilePage from "./profilePage/ProfilePage";
@@ -115,6 +116,7 @@ function Dashboard() {
           <Route path="/rotating-worktype-assign" element={<RotatingWorktypeAssign />} />
           <Route path="/attendance-dashboard" element={<AttendanceDashboard />} />
           <Route path="/attendance-records" element={<AttendanceRecords />} />
+          <Route path="/biometric-devices" element={<BiometricDevices />} />
           <Route path="/time-off-requests" element={<TimeOffRequests />} />
           <Route path="/time-off-requests-admin" element={<TimeOffRequestsAdmin />} />
           <Route path="/leave-requests" element={<LeaveRequests />} />
