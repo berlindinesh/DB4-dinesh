@@ -479,61 +479,6 @@ const ExitPage = () => {
       });
   };
   
-// const handleFileUpload = () => {
-//   if (!selectedFile || !documentType || !selectedEmployee) {
-//     setSnackbar({
-//       open: true,
-//       message: "Please select a file, document type, and ensure an employee is selected",
-//       severity: "error",
-//     });
-//     return;
-//   }
-
-//   setLoading(true);
-
-//   // Create form data for file upload
-//   const formData = new FormData();
-
-//   // Append the file with the field name "document"
-//   formData.append("document", selectedFile);
-  
-//   // Also append the document metadata explicitly
-//   formData.append("name", selectedFile.name);
-//   formData.append("type", documentType);
-
-//   // Use the correct endpoint with the employee ID in the URL
-//   api
-//     .post(`/offboarding/${selectedEmployee._id}/document`, formData)
-//     .then((response) => {
-//       console.log("Upload response:", response.data);
-//       setSnackbar({
-//         open: true,
-//         message: "Document uploaded successfully",
-//         severity: "success",
-//       });
-//       setUploadOpen(false);
-//       setSelectedFile(null);
-//       setDocumentType("");
-//       fetchOffboardings(); // Refresh the data
-//     })
-//     .catch((error) => {
-//       console.error("Error uploading document:", error);
-//       if (error.response) {
-//         console.error("Response data:", error.response.data);
-//         console.error("Response status:", error.response.status);
-//         console.error("Response headers:", error.response.headers);
-//       }
-
-//       setSnackbar({
-//         open: true,
-//         message: error.response?.data?.message || "Failed to upload document",
-//         severity: "error",
-//       });
-//     })
-//     .finally(() => {
-//       setLoading(false);
-//     });
-// };
 
 
 const handleDownloadDocument = (path) => {
@@ -1972,7 +1917,7 @@ const handleDownloadDocument = (path) => {
               position: "relative",
             }}
           >
-            {editMode ? "Edit Offboarding" : "New Offboarding"}
+            {editMode ? "Edit Offboarding" : "New Offboarding..."}
             <IconButton
               onClick={() => {
                 setCreateOpen(false);

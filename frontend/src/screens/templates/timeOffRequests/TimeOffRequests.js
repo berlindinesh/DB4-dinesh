@@ -92,6 +92,8 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
+
+
 const TimeOffRequests = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -292,61 +294,7 @@ const TimeOffRequests = () => {
 
 
 
-//   // Add this function to get the auth token
-// const getAuthToken = () => {
-//   return localStorage.getItem('token');
-// };
 
-// // Update the fetchRequests function
-// const fetchRequests = async () => {
-//   try {
-//     if (!userId) {
-//       setRequests([]);
-//       return;
-//     }
-
-//     setLoading(true);
-//     // const token = getAuthToken();
-//     const response = await api.get(
-//       `/time-off-requests/by-user/${userId}?searchTerm=${searchTerm}&status=${filterStatus}`,
-//       // {
-//       //   headers: {
-//       //     'Authorization': `Bearer ${token}`
-//       //   }
-//       // }
-//     );
-//     setRequests(response.data);
-//   } catch (error) {
-//     console.error("Error fetching requests:", error);
-//     showSnackbar("Error fetching requests", "error");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-// // Update the fetchRequests function
-// const fetchRequests = async () => {
-//   try {
-//     if (!userId) {
-//       setRequests([]);
-//       return;
-//     }
-
-//     setLoading(true);
-//     // Use the retryRequest utility function from axiosInstance.js
-//     const response = await retryRequest(() => 
-//       api.get(`/time-off-requests/by-user/${userId}?searchTerm=${searchTerm}&status=${filterStatus}`)
-//     );
-//     setRequests(response.data);
-//   } catch (error) {
-//     console.error("Error fetching requests:", error);
-//     showSnackbar("Error fetching requests", "error");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-// Update the fetchRequests function
 const fetchRequests = async () => {
   try {
     if (!userId) {
@@ -369,26 +317,7 @@ const fetchRequests = async () => {
 };
 
 
-// // Update the handlePreview function
-// const handlePreview = async (id) => {
-//   try {
-//     // const token = getAuthToken();
-//     const response = await api.get(
-//       `/time-off-requests/${id}`,
-//       // {
-//       //   headers: {
-//       //     'Authorization': `Bearer ${token}`
-//       //   }
-//       // }
-//     );
-//     setSelectedRequest(response.data);
-//     setPreviewOpen(true);
-//   } catch (error) {
-//     showSnackbar("Error fetching request details", "error");
-//   }
-// };
 
-// Update the handlePreview function
 const handlePreview = async (id) => {
   try {
     const response = await retryRequest(() => 
@@ -402,34 +331,9 @@ const handlePreview = async (id) => {
 };
 
 
-// // Update the handleEdit function
-// const handleEdit = async (id) => {
-//   try {
-//     // const token = getAuthToken();
-//     const response = await api.get(
-//       `/time-off-requests/${id}`,
-//       // {
-//       //   headers: {
-//       //     'Authorization': `Bearer ${token}`
-//       //   }
-//       // }
-//     );
-//     const requestData = response.data;
 
-//     setFormData({
-//       ...requestData,
-//       date: new Date(requestData.date),
-//     });
 
-//     setEditMode(true);
-//     setSelectedRequest(requestData);
-//     setCreateOpen(true);
-//   } catch (error) {
-//     showSnackbar("Error fetching request details", "error");
-//   }
-// };
 
-// Update the handleEdit function
 const handleEdit = async (id) => {
   try {
     const response = await retryRequest(() => 
@@ -450,27 +354,7 @@ const handleEdit = async (id) => {
   }
 };
 
-// // Update the handleDelete function
-// const handleDelete = async () => {
-//   try {
-//     // const token = getAuthToken();
-//     await api.delete(
-//       `/time-off-requests/${selectedRequest._id}`,
-//       // {
-//       //   headers: {
-//       //     'Authorization': `Bearer ${token}`
-//       //   }
-//       // }
-//     );
-//     showSnackbar("Request deleted successfully");
-//     fetchRequests();
-//     setDeleteOpen(false);
-//   } catch (error) {
-//     showSnackbar("Error deleting request", "error");
-//   }
-// };
 
-// Update the handleDelete function
 const handleDelete = async () => {
   try {
     await retryRequest(() => 
@@ -484,65 +368,6 @@ const handleDelete = async () => {
   }
 };
 
-// // Update the handleSave function
-// const handleSave = async () => {
-//   try {
-//     const requiredFields = [
-//       "name",
-//       "empId",
-//       "date",
-//       "day",
-//       "checkIn",
-//       "checkOut",
-//       "shift",
-//       "workType",
-//       "minHour",
-//       "atWork",
-//     ];
-//     const missingFields = requiredFields.filter((field) => !formData[field]);
-
-//     if (missingFields.length > 0) {
-//       throw new Error(`Required fields missing: ${missingFields.join(", ")}`);
-//     }
-
-//     // Add userId to the form data
-//     const formattedData = {
-//       ...formData,
-//       userId: userId, // Add the current user's ID
-//       minHour: Number(formData.minHour),
-//       atWork: Number(formData.atWork),
-//       overtime: Number(formData.overtime) || 0,
-//       date: new Date(formData.date).toISOString(),
-//     };
-
-//     // const token = getAuthToken();
-//     const url = editMode
-//       ? `/time-off-requests/${selectedRequest._id}`
-//       : "/time-off-requests";
-
-//     const response = await api({
-//       method: editMode ? "PUT" : "POST",
-//       url,
-//       data: formattedData,
-//       // headers: {
-//       //   'Authorization': `Bearer ${token}`
-//       // }
-//     });
-
-//     showSnackbar(
-//       editMode
-//         ? "Request updated successfully"
-//         : "Request created successfully"
-//     );
-//     fetchRequests();
-//     setCreateOpen(false);
-//     setFormData(initialFormState);
-//   } catch (error) {
-//     showSnackbar(error.message, "error");
-//   }
-// };
-
-// Update the handleSave function
 const handleSave = async () => {
   try {
     const requiredFields = [
@@ -618,7 +443,7 @@ const handleSave = async () => {
             fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
           }}
         >
-          My Time Off Requests
+          My Time Off Requests 
         </Typography>
       </Box>
 
@@ -1077,22 +902,42 @@ const handleSave = async () => {
         onClose={() => setCreateOpen(false)}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+            sx: {
+              width: isMobile ? "95%" : "700px",
+              maxWidth: "90vw",
+              borderRadius: "20px",
+              overflow: "hidden",
+              margin: "16px",
+            },
+          }}
       >
         <DialogTitle
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+              background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+              color: "white",
+              fontSize: isMobile ? "1.25rem" : "1.5rem",
+              fontWeight: 600,
+              padding: isMobile ? "16px 24px" : "24px 32px",
+              position: "relative",
+            }}
         >
-          <Typography variant="h6">
+          <Typography variant="h6" >
             {editMode ? "Edit Time Off Request" : "Create New Time Off Request"}
           </Typography>
-          <IconButton onClick={() => setCreateOpen(false)}>
+          <IconButton onClick={() => setCreateOpen(false)}
+            sx={{
+                position: "absolute",
+                right: 16,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "white",
+              }}
+            >
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ padding: isMobile ? "24px" : "32px" }}>
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <TextField
@@ -1256,8 +1101,34 @@ const handleSave = async () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="contained" color="primary" onClick={handleSave}>
+          <Button onClick={() => setCreateOpen(false)}
+             sx={{
+                        border: "2px solid #1976d2",
+                        color: "#1976d2",
+                        "&:hover": {
+                          border: "2px solid #64b5f6",
+                          backgroundColor: "#e3f2fd",
+                        },
+                        borderRadius: "8px",
+                        px: 4,
+                        py: 1,
+                        fontWeight: 600,
+                      }}
+            >Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleSave}
+          sx={{
+                        background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+                        color: "white",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(45deg, #1565c0, #42a5f5)",
+                        },
+                        borderRadius: "8px",
+                        px: 4,
+                        py: 1,
+                        fontWeight: 600,
+                      }}
+          >
             {editMode ? "Update Request" : "Submit Request"}
           </Button>
         </DialogActions>
@@ -1269,16 +1140,37 @@ const handleSave = async () => {
         onClose={() => setPreviewOpen(false)}
         maxWidth="md"
         fullWidth
+
+         PaperProps={{
+            sx: {
+              width: isMobile ? "95%" : "700px",
+              maxWidth: "90vw",
+              borderRadius: "20px",
+              overflow: "hidden",
+              margin: "16px",
+            },
+          }}
       >
         <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+             sx={{
+              background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+              color: "white",
+              fontSize: isMobile ? "1.25rem" : "1.5rem",
+              fontWeight: 600,
+              padding: isMobile ? "16px 24px" : "24px 32px",
+              position: "relative",
+            }}
         >
           <Typography variant="h6">Time Off Request Details</Typography>
-          <IconButton onClick={() => setPreviewOpen(false)}>
+          <IconButton onClick={() => setPreviewOpen(false)}
+            sx={{
+                position: "absolute",
+                right: 16,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "white",
+              }}
+            >
             <Close />
           </IconButton>
         </DialogTitle>
@@ -1457,7 +1349,21 @@ const handleSave = async () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+          <Button onClick={() => setPreviewOpen(false)}
+             sx={{
+                        border: "2px solid #1976d2",
+                        color: "#1976d2",
+                        "&:hover": {
+                          border: "2px solid #64b5f6",
+                          backgroundColor: "#e3f2fd",
+                        },
+                        borderRadius: "8px",
+                        px: 4,
+                        py: 1,
+                        fontWeight: 600,
+                      }}
+            
+            >Close</Button>
           {selectedRequest && selectedRequest.status === "Pending" && (
             <Button
               variant="contained"
@@ -1466,6 +1372,19 @@ const handleSave = async () => {
                 setPreviewOpen(false);
                 handleEdit(selectedRequest._id);
               }}
+
+               sx={{
+                        background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+                        color: "white",
+                        "&:hover": {
+                          background:
+                            "linear-gradient(45deg, #1565c0, #42a5f5)",
+                        },
+                        borderRadius: "8px",
+                        px: 4,
+                        py: 1,
+                        fontWeight: 600,
+                      }}
             >
               Edit Request
             </Button>
