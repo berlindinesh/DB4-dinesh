@@ -664,6 +664,7 @@ const RegisterCompanyPage = () => {
             street: '',
             city: '',
             state: '',
+            district: '',
             country: '',
             zipCode: ''
           }
