@@ -71,8 +71,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { io } from 'socket.io-client';
-import { useNotifications } from '../../../context/NotificationContext';
+import { io } from "socket.io-client";
+import { useNotifications } from "../../../context/NotificationContext";
 
 const LEAVE_TYPES = [
   { value: "annual", label: "Annual Leave" },
@@ -138,300 +138,141 @@ const MyLeaveRequests = () => {
     }
   }, [employee]);
 
-// // Add this useEffect to listen for notifications related to leave requests
-// useEffect(() => {
-//   if (!employee) return;
-  
-//   console.log("Checking for leave notifications for employee:", employee.code);
-  
-//   // Filter notifications for this employee and for leave requests
-//   const employeeLeaveNotifications = notifications.filter(notification => 
-//     notification.userId === employee.code && 
-//     notification.type === 'leave' &&
-//     !notification.read
-//   );
-  
-//   console.log("Employee leave notifications:", employeeLeaveNotifications);
-  
-//   if (employeeLeaveNotifications.length > 0) {
-//     // Show the most recent notification
-//     const latestNotification = employeeLeaveNotifications[0];
-//     showSnackbar(latestNotification.message, "info");
-    
-//     // Mark notifications as read
-//     employeeLeaveNotifications.forEach(notification => {
-//       if (notification._id) {
-//         markAsRead(notification._id);
-//       }
-//     });
-    
-//     // Refresh leave data
-//     fetchLeaveRequests();
-//     fetchLeaveBalance();
-//     fetchLeaveStatistics();
-//   }
-// }, [employee, notifications, markAsRead]);
+  useEffect(() => {
+    // Get the current user ID from localStorage
+    const userId = localStorage.getItem("userId");
 
-// Update the notification handling useEffect
-useEffect(() => {
-  // Get the current user ID from localStorage
-  const userId = localStorage.getItem("userId");
-  
-  if (!userId || !notifications || notifications.length === 0) {
-    return;
-  }
-  
-  console.log("Checking for leave notifications for user ID:", userId);
-  console.log("All notifications:", notifications);
-  
-  // Filter notifications for this user and for leave requests
-  const userLeaveNotifications = notifications.filter(notification => {
-    const isForCurrentUser = notification.userId === userId;
-    const isLeaveNotification = notification.type === 'leave';
-    const isUnread = !notification.read;
-    
-    console.log(`Notification ${notification._id}: For current user: ${isForCurrentUser}, Is leave: ${isLeaveNotification}, Is unread: ${isUnread}`);
-    
-    return isForCurrentUser && isLeaveNotification && isUnread;
-  });
-  
-  console.log("Filtered leave notifications for current user:", userLeaveNotifications);
-  
-  if (userLeaveNotifications.length > 0) {
-    // Show the most recent notification
-    const latestNotification = userLeaveNotifications[0];
-    showSnackbar(latestNotification.message, "info");
-    
-    // Mark notifications as read
-    userLeaveNotifications.forEach(notification => {
-      if (notification._id) {
-        console.log(`Marking notification ${notification._id} as read`);
-        markAsRead(notification._id);
-      }
+    if (!userId || !notifications || notifications.length === 0) {
+      return;
+    }
+
+    console.log("Checking for leave notifications for user ID:", userId);
+    console.log("All notifications:", notifications);
+
+    // Filter notifications for this user and for leave requests
+    const userLeaveNotifications = notifications.filter((notification) => {
+      const isForCurrentUser = notification.userId === userId;
+      const isLeaveNotification = notification.type === "leave";
+      const isUnread = !notification.read;
+
+      console.log(
+        `Notification ${notification._id}: For current user: ${isForCurrentUser}, Is leave: ${isLeaveNotification}, Is unread: ${isUnread}`
+      );
+
+      return isForCurrentUser && isLeaveNotification && isUnread;
     });
-    
-    // Refresh leave data
-    fetchLeaveRequests();
-    fetchLeaveBalance();
-    fetchLeaveStatistics();
-  }
-}, [notifications, markAsRead]);
 
-// useEffect(() => {
-//   const userId = localStorage.getItem("userId");
-//   if (!userId) return;
+    console.log(
+      "Filtered leave notifications for current user:",
+      userLeaveNotifications
+    );
 
-//   // Get the base URL from your API configuration
-//   const baseURL = ${process.env.REACT_APP_API_URL} || 'http://localhost:5002';
-//   const socket = io(baseURL, {
-//     reconnection: true,
-//     reconnectionAttempts: 5,
-//     reconnectionDelay: 1000,
-//     query: { userId }
-//   });
+    if (userLeaveNotifications.length > 0) {
+      // Show the most recent notification
+      const latestNotification = userLeaveNotifications[0];
+      showSnackbar(latestNotification.message, "info");
 
-//   // Listen for new notifications
-//   socket.on('new-notification', (notification) => {
-//     console.log('Received real-time notification:', notification);
-    
-//     // If this is a leave notification, show a snackbar and refresh data
-//     if (notification.type === 'leave') {
-//       showSnackbar(notification.message, "info");
-      
-//       // Refresh leave data
-//       fetchLeaveRequests();
-//       fetchLeaveBalance();
-//       fetchLeaveStatistics();
-//     }
-//   });
+      // Mark notifications as read
+      userLeaveNotifications.forEach((notification) => {
+        if (notification._id) {
+          console.log(`Marking notification ${notification._id} as read`);
+          markAsRead(notification._id);
+        }
+      });
 
-//   // Join a room specific to this user
-//   socket.emit('join', userId);
-
-//   // Cleanup on component unmount
-//   return () => {
-//     socket.disconnect();
-//   };
-// }, []);
-
-// Add a socket connection for real-time notifications
-useEffect(() => {
-  const userId = localStorage.getItem("userId");
-  if (!userId) return;
-
-  console.log("Setting up socket connection for user:", userId);
-
-  // Get the base URL from your API configuration
-  // Determine the correct Socket.IO URL
-const getSocketUrl = () => {
-  // For production (EC2/ALB), use current domain so nginx can proxy
-  if (process.env.NODE_ENV === 'production') {
-    return window.location.origin;
-  }
-  // For development, use the environment variable or localhost
-  return process.env.REACT_APP_API_URL || 'http://localhost:5002';
-};
-
-const baseURL = getSocketUrl();
-const socket = io(baseURL, {
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    query: { userId }
-  });
-
-  socket.on('connect', () => {
-    console.log('Socket connected successfully');
-    // Join a room specific to this user
-    socket.emit('join', userId);
-  });
-
-  socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error);
-  });
-
-  // Listen for new notifications
-  socket.on('new-notification', (notification) => {
-    console.log('Received real-time notification:', notification);
-    
-    // If this is a leave notification, show a snackbar and refresh data
-    if (notification.type === 'leave') {
-      showSnackbar(notification.message, "info");
-      
       // Refresh leave data
       fetchLeaveRequests();
       fetchLeaveBalance();
       fetchLeaveStatistics();
     }
-  });
-
-  // Cleanup on component unmount
-  return () => {
-    console.log('Disconnecting socket');
-    socket.disconnect();
-  };
-}, []);
+  }, [notifications, markAsRead]);
 
   useEffect(() => {
-  // This will run whenever formData changes
-  console.log("Form data changed:", formData);
-  
-  // No need to do anything else as the render will show the updated days
-}, [formData]);
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
 
+    console.log("Setting up socket connection for user:", userId);
 
-// // Add this helper function to get the auth token
-//   const getAuthToken = () => {
-//     return localStorage.getItem('token');
-//   };
+    // Get the base URL from your API configuration
+    // Determine the correct Socket.IO URL
+    const getSocketUrl = () => {
+      // For production (EC2/ALB), use current domain so nginx can proxy
+      if (process.env.NODE_ENV === "production") {
+        return window.location.origin;
+      }
+      // For development, use the environment variable or localhost
+      return process.env.REACT_APP_API_URL || "http://localhost:5002";
+    };
 
-  // const fetchEmployeeData = async () => {
-  //   try {
-  //     setLoading(true);
-  //     // Get the user ID from localStorage or your auth context
-  //     const userId = localStorage.getItem('userId'); // Adjust based on your auth implementation
-      
-  //     if (!userId) {
-  //       showSnackbar("User not authenticated", "error");
-  //       setLoading(false);
-  //       return;
-  //     }
-      
-  //     const response = await axios.get(`${EMPLOYEE_API_URL}/by-user/${userId}`);
-      
-  //     if (response.data.success && response.data.data) {
-  //       const employeeData = response.data.data;
-  //       setEmployee({
-  //         code: employeeData.Emp_ID,
-  //         name: `${employeeData.personalInfo?.firstName || ''} ${employeeData.personalInfo?.lastName || ''}`,
-  //         department: employeeData.joiningDetails?.department || 'Not Assigned'
-  //       });
-  //       console.log("Employee data fetched:", employeeData);
-  //     } else {
-  //       showSnackbar("Failed to fetch employee data", "error");
-  //     }
-  //     setLoading(false);
-  //   } catch (error) {
-  //     console.error("Error fetching employee data:", error);
-  //     showSnackbar("Error fetching employee data", "error");
-  //     setLoading(false);
-  //   }
-  // };
+    const baseURL = getSocketUrl();
+    const socket = io(baseURL, {
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      query: { userId },
+    });
 
-  // const fetchLeaveRequests = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await axios.get(`${API_URL}/employee/${employee.code}`);
-  //     setLeaveRequests(response.data);
-  //     setLoading(false);
-  //   } catch (error) {
-  //     console.error("Error fetching leave requests:", error);
-  //     showSnackbar("Error fetching leave requests", "error");
-  //     setLoading(false);
-  //   }
-  // };
+    socket.on("connect", () => {
+      console.log("Socket connected successfully");
+      // Join a room specific to this user
+      socket.emit("join", userId);
+    });
 
-  // const fetchLeaveBalance = async () => {
-  //   try {
-  //     const response = await axios.get(`${API_URL}/balance/${employee.code}`);
-  //     setLeaveBalance(response.data);
-  //     console.log("Leave balance fetched:", response.data);
-  //   } catch (error) {
-  //     console.error("Error fetching leave balance:", error);
-  //     showSnackbar("Error fetching leave balance", "error");
-  //   }
-  // };
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
 
-  // const fetchLeaveStatistics = async () => {
-  //   try {
-  //     const response = await axios.get(
-  //       `${API_URL}/statistics/${employee.code}`
-  //     );
-  //     setStatistics(response.data);
-  //   } catch (error) {
-  //     console.error("Error fetching leave statistics:", error);
-  //   }
-  // };
+    // Listen for new notifications
+    socket.on("new-notification", (notification) => {
+      console.log("Received real-time notification:", notification);
 
-  // const fetchUpdatedEarnedLeaveBalance = async () => {
-  //   try {
-  //     // Call the new endpoint to update earned leave balance
-  //     await axios.post(`${API_URL}/update-earned-leave`);
+      // If this is a leave notification, show a snackbar and refresh data
+      if (notification.type === "leave") {
+        showSnackbar(notification.message, "info");
 
-  //     // Then fetch the updated balance
-  //     await fetchLeaveBalance();
+        // Refresh leave data
+        fetchLeaveRequests();
+        fetchLeaveBalance();
+        fetchLeaveStatistics();
+      }
+    });
 
-  //     showSnackbar("Earned leave balance updated successfully");
-  //   } catch (error) {
-  //     console.error("Error updating earned leave balance:", error);
-  //     showSnackbar("Error updating earned leave balance", "error");
-  //   }
-  // };
+    // Cleanup on component unmount
+    return () => {
+      console.log("Disconnecting socket");
+      socket.disconnect();
+    };
+  }, []);
 
+  useEffect(() => {
+    // This will run whenever formData changes
+    console.log("Form data changed:", formData);
 
-    // Update the fetchEmployeeData function
+    // No need to do anything else as the render will show the updated days
+  }, [formData]);
+
   const fetchEmployeeData = async () => {
     try {
       setLoading(true);
       // Get the user ID from localStorage or your auth context
-      const userId = localStorage.getItem('userId'); // Adjust based on your auth implementation
-      
+      const userId = localStorage.getItem("userId"); // Adjust based on your auth implementation
+
       if (!userId) {
         showSnackbar("User not authenticated", "error");
         setLoading(false);
         return;
       }
-    
-      const response = await api.get(
-        `${EMPLOYEE_API_URL}/by-user/${userId}`
-      );
-      
+
+      const response = await api.get(`${EMPLOYEE_API_URL}/by-user/${userId}`);
+
       if (response.data.success && response.data.data) {
         const employeeData = response.data.data;
         setEmployee({
           code: employeeData.Emp_ID,
-          name: `${employeeData.personalInfo?.firstName || ''} ${employeeData.personalInfo?.lastName || ''}`,
-          department: employeeData.joiningDetails?.department || 'Not Assigned'
+          name: `${employeeData.personalInfo?.firstName || ""} ${
+            employeeData.personalInfo?.lastName || ""
+          }`,
+          department: employeeData.joiningDetails?.department || "Not Assigned",
         });
         console.log("Employee data fetched:", employeeData);
       } else {
@@ -449,11 +290,9 @@ const socket = io(baseURL, {
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
-      
-      const response = await api.get(
-        `${API_URL}/employee/${employee.code}`
-      );
-      
+
+      const response = await api.get(`${API_URL}/employee/${employee.code}`);
+
       setLeaveRequests(response.data);
       setLoading(false);
     } catch (error) {
@@ -463,86 +302,79 @@ const socket = io(baseURL, {
     }
   };
 
-  // // Update the fetchLeaveBalance function
-  // const fetchLeaveBalance = async () => {
-  //   try {
-      
-  //     const response = await api.get(
-  //       `${API_URL}/balance/${employee.code}`
-  //     );
-      
-  //     setLeaveBalance(response.data);
-  //     console.log("Leave balance fetched:", response.data);
-  //   } catch (error) {
-  //     console.error("Error fetching leave balance:", error);
-  //     showSnackbar("Error fetching leave balance", "error");
-  //   }
-  // };
-
   const fetchLeaveBalance = async () => {
-  try {
-    setLoading(true);
-    
-    const response = await api.get(
-      `${API_URL}/balance/${employee.code}`
-    );
-    
-    setLeaveBalance(response.data);
-    console.log("Leave balance fetched:", response.data);
-  } catch (error) {
-    console.error("Error fetching leave balance:", error);
-    showSnackbar("Error fetching leave balance", "error");
-    
-    // Set default empty balance to prevent UI from staying in loading state
-    setLeaveBalance({
-      annual: { total: 15, used: 0, pending: 0 },
-      sick: { total: 12, used: 0, pending: 0 },
-      personal: { total: 5, used: 0, pending: 0 },
-      maternity: { total: 90, used: 0, pending: 0 },
-      paternity: { total: 15, used: 0, pending: 0 },
-      casual: { total: 12, used: 0, pending: 0 },
-      earned: { total: 15, used: 0, pending: 0 }
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
 
-const fetchLeaveStatistics = async () => {
-  try {      
-    const response = await api.get(
-      `${API_URL}/statistics/${employee.code}`
-    );
-    
-    setStatistics(response.data);
-  } catch (error) {
-    console.error("Error fetching leave statistics:", error);
-    
-    // Set default empty statistics to prevent UI from staying in loading state
-    setStatistics({
-      statistics: {
-        monthlyUsage: {
-          'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0,
-          'Jul': 0, 'Aug': 0, 'Sep': 0, 'Oct': 0, 'Nov': 0, 'Dec': 0
+      const response = await api.get(`${API_URL}/balance/${employee.code}`);
+
+      setLeaveBalance(response.data);
+      console.log("Leave balance fetched:", response.data);
+    } catch (error) {
+      console.error("Error fetching leave balance:", error);
+      showSnackbar("Error fetching leave balance", "error");
+
+      // Set default empty balance to prevent UI from staying in loading state
+      setLeaveBalance({
+        annual: { total: 15, used: 0, pending: 0 },
+        sick: { total: 12, used: 0, pending: 0 },
+        personal: { total: 5, used: 0, pending: 0 },
+        maternity: { total: 90, used: 0, pending: 0 },
+        paternity: { total: 15, used: 0, pending: 0 },
+        casual: { total: 12, used: 0, pending: 0 },
+        earned: { total: 15, used: 0, pending: 0 },
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLeaveStatistics = async () => {
+    try {
+      const response = await api.get(`${API_URL}/statistics/${employee.code}`);
+
+      setStatistics(response.data);
+    } catch (error) {
+      console.error("Error fetching leave statistics:", error);
+
+      // Set default empty statistics to prevent UI from staying in loading state
+      setStatistics({
+        statistics: {
+          monthlyUsage: {
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          },
+          leaveTypeUsage: {
+            annual: 0,
+            sick: 0,
+            personal: 0,
+            maternity: 0,
+            paternity: 0,
+            casual: 0,
+            earned: 0,
+          },
         },
-        leaveTypeUsage: {
-          'annual': 0, 'sick': 0, 'personal': 0, 'maternity': 0,
-          'paternity': 0, 'casual': 0, 'earned': 0
-        }
-      },
-      upcomingLeaves: []
-    });
-  }
-};
+        upcomingLeaves: [],
+      });
+    }
+  };
 
-
-  // // Update the fetchLeaveStatistics function
   // const fetchLeaveStatistics = async () => {
-  //   try {      
+  //   try {
   //     const response = await api.get(
   //       `${API_URL}/statistics/${employee.code}`
   //     );
-      
+
   //     setStatistics(response.data);
   //   } catch (error) {
   //     console.error("Error fetching leave statistics:", error);
@@ -552,12 +384,8 @@ const fetchLeaveStatistics = async () => {
   // Update the fetchUpdatedEarnedLeaveBalance function
   const fetchUpdatedEarnedLeaveBalance = async () => {
     try {
-      
       // Call the new endpoint to update earned leave balance
-      await api.post(
-        `${API_URL}/update-earned-leave`,
-        {}
-      );
+      await api.post(`${API_URL}/update-earned-leave`, {});
 
       // Then fetch the updated balance
       await fetchLeaveBalance();
@@ -589,253 +417,165 @@ const fetchLeaveStatistics = async () => {
     setOpenDialog(false);
   };
 
-const handleInputChange = (field, value) => {
-  let updatedFormData = { ...formData };
-  
-  if (field === "halfDay" && value === true) {
-    // If half day is selected, set end date equal to start date
-    updatedFormData = {
-      ...formData,
-      [field]: value,
-      endDate: formData.startDate,
-    };
-  } else if (field === "startDate" && formData.halfDay) {
-    // If changing start date while half day is selected, update end date too
-    updatedFormData = {
-      ...formData,
-      [field]: value,
-      endDate: value,
-    };
-  } else {
-    // Normal case
-    updatedFormData = {
-      ...formData,
-      [field]: value,
-    };
-  }
-  
-  // Update the form data
-  setFormData(updatedFormData);
-  
-  // Force a re-render to update the displayed number of days
-  // This is needed because the number of days might not update automatically
-  if (field === "startDate" || field === "endDate" || field === "halfDay") {
-    // Use setTimeout to ensure the state has been updated
-    setTimeout(() => {
-      const daysElement = document.getElementById('leave-days-count');
-      if (daysElement) {
-        daysElement.textContent = calculateBusinessDays(
-          updatedFormData.startDate,
-          updatedFormData.endDate,
-          updatedFormData.halfDay
-        );
-      }
-    }, 0);
-  }
-};
+  const handleInputChange = (field, value) => {
+    let updatedFormData = { ...formData };
+
+    if (field === "halfDay" && value === true) {
+      // If half day is selected, set end date equal to start date
+      updatedFormData = {
+        ...formData,
+        [field]: value,
+        endDate: formData.startDate,
+      };
+    } else if (field === "startDate" && formData.halfDay) {
+      // If changing start date while half day is selected, update end date too
+      updatedFormData = {
+        ...formData,
+        [field]: value,
+        endDate: value,
+      };
+    } else {
+      // Normal case
+      updatedFormData = {
+        ...formData,
+        [field]: value,
+      };
+    }
+
+    // Update the form data
+    setFormData(updatedFormData);
+
+    // Force a re-render to update the displayed number of days
+    // This is needed because the number of days might not update automatically
+    if (field === "startDate" || field === "endDate" || field === "halfDay") {
+      // Use setTimeout to ensure the state has been updated
+      setTimeout(() => {
+        const daysElement = document.getElementById("leave-days-count");
+        if (daysElement) {
+          daysElement.textContent = calculateBusinessDays(
+            updatedFormData.startDate,
+            updatedFormData.endDate,
+            updatedFormData.halfDay
+          );
+        }
+      }, 0);
+    }
+  };
 
   const calculateBusinessDays = (start, end, isHalfDay) => {
-  if (isHalfDay) return 0.5;
+    if (isHalfDay) return 0.5;
 
-  // Make sure we're working with Date objects
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  
-  // Log the dates for debugging
-  console.log("Calculating business days between:", startDate, endDate);
-  
-  let count = 0;
-  let currentDate = new Date(startDate);
+    // Make sure we're working with Date objects
+    const startDate = new Date(start);
+    const endDate = new Date(end);
 
-  // Ensure the dates are valid before proceeding
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    console.error("Invalid date objects:", { start, end });
-    return 0;
-  }
+    // Log the dates for debugging
+    console.log("Calculating business days between:", startDate, endDate);
 
-  while (currentDate <= endDate) {
-    // Only count weekdays (Monday to Friday)
-    if (!isWeekend(currentDate)) {
-      count++;
+    let count = 0;
+    let currentDate = new Date(startDate);
+
+    // Ensure the dates are valid before proceeding
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.error("Invalid date objects:", { start, end });
+      return 0;
     }
-    currentDate = addDays(currentDate, 1);
-  }
 
-  console.log("Calculated business days:", count);
-  return count;
-};
+    while (currentDate <= endDate) {
+      // Only count weekdays (Monday to Friday)
+      if (!isWeekend(currentDate)) {
+        count++;
+      }
+      currentDate = addDays(currentDate, 1);
+    }
 
-// const handleSubmit = async () => {
-//   try {
-//     setLoading(true);
+    console.log("Calculated business days:", count);
+    return count;
+  };
 
-//     const numberOfDays = calculateBusinessDays(
-//       formData.startDate,
-//       formData.endDate,
-//       formData.halfDay
-//     );
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
 
-//     // Check if there's sufficient balance
-//     const availableBalance = getAvailableBalance(formData.leaveType);
-//     console.log(
-//       `Requesting ${numberOfDays} days of ${formData.leaveType} leave`
-//     );
-//     console.log(`Available balance: ${availableBalance} days`);
-
-//     // Add this check to prevent submission when balance is insufficient
-//     if (numberOfDays > availableBalance) {
-//       showSnackbar(
-//         `Insufficient ${formData.leaveType} leave balance. Available: ${availableBalance} days, Requested: ${numberOfDays} days`,
-//         "error"
-//       );
-//       setLoading(false);
-//       return; // Stop execution here to prevent the API call
-//     }
-
-//     // Format dates as strings in YYYY-MM-DD format
-//     const formatDateToString = (date) => {
-//       return format(date, "yyyy-MM-dd");
-//     };
-
-//     // Get the current user ID from localStorage
-//     const userId = localStorage.getItem("userId");
-
-//     const leaveData = {
-//       employeeCode: employee.code,
-//       employeeName: employee.name,
-//       userId: userId, // Add this line to include userId
-//       leaveType: formData.leaveType,
-//       startDate: formatDateToString(formData.startDate),
-//       endDate: formatDateToString(formData.endDate),
-//       reason: formData.reason,
-//       halfDay: formData.halfDay,
-//       halfDayType: formData.halfDayType,
-//       numberOfDays,
-//     };
-
-//     console.log("Submitting leave request:", leaveData);
-
-//     const response = await api.post(
-//       API_URL, 
-//       leaveData
-//     );
-    
-//     console.log("Response:", response.data);
-
-//     setOpenDialog(false);
-//     fetchLeaveRequests();
-//     fetchLeaveBalance();
-//     fetchLeaveStatistics();
-//     showSnackbar("Leave request submitted successfully");
-//   } catch (error) {
-//     console.error("Error submitting leave request:", error);
-
-//     // Extract detailed error message from response
-//     let errorMessage = "Error submitting leave request";
-//     if (error.response) {
-//       console.log("Server error details:", error.response.data);
-//       errorMessage =
-//         error.response.data.message ||
-//         error.response.data.error ||
-//         errorMessage;
-//     }
-
-//     showSnackbar(errorMessage, "error");
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-// Update the handleSubmit function to include userId
-const handleSubmit = async () => {
-  try {
-    setLoading(true);
-
-    const numberOfDays = calculateBusinessDays(
-      formData.startDate,
-      formData.endDate,
-      formData.halfDay
-    );
-
-    // Check if there's sufficient balance
-    const availableBalance = getAvailableBalance(formData.leaveType);
-    console.log(
-      `Requesting ${numberOfDays} days of ${formData.leaveType} leave`
-    );
-    console.log(`Available balance: ${availableBalance} days`);
-
-    // Add this check to prevent submission when balance is insufficient
-    if (numberOfDays > availableBalance) {
-      showSnackbar(
-        `Insufficient ${formData.leaveType} leave balance. Available: ${availableBalance} days, Requested: ${numberOfDays} days`,
-        "error"
+      const numberOfDays = calculateBusinessDays(
+        formData.startDate,
+        formData.endDate,
+        formData.halfDay
       );
+
+      // Check if there's sufficient balance
+      const availableBalance = getAvailableBalance(formData.leaveType);
+      console.log(
+        `Requesting ${numberOfDays} days of ${formData.leaveType} leave`
+      );
+      console.log(`Available balance: ${availableBalance} days`);
+
+      // Add this check to prevent submission when balance is insufficient
+      if (numberOfDays > availableBalance) {
+        showSnackbar(
+          `Insufficient ${formData.leaveType} leave balance. Available: ${availableBalance} days, Requested: ${numberOfDays} days`,
+          "error"
+        );
+        setLoading(false);
+        return; // Stop execution here to prevent the API call
+      }
+
+      // Format dates as strings in YYYY-MM-DD format
+      const formatDateToString = (date) => {
+        return format(date, "yyyy-MM-dd");
+      };
+
+      // Get the current user ID from localStorage
+      const userId = localStorage.getItem("userId");
+
+      const leaveData = {
+        employeeCode: employee.code,
+        employeeName: employee.name,
+        userId: userId, // Add this line to include userId
+        leaveType: formData.leaveType,
+        startDate: formatDateToString(formData.startDate),
+        endDate: formatDateToString(formData.endDate),
+        reason: formData.reason,
+        halfDay: formData.halfDay,
+        halfDayType: formData.halfDayType,
+        numberOfDays,
+      };
+
+      console.log("Submitting leave request:", leaveData);
+
+      const response = await api.post(API_URL, leaveData);
+
+      console.log("Response:", response.data);
+
+      setOpenDialog(false);
+      fetchLeaveRequests();
+      fetchLeaveBalance();
+      fetchLeaveStatistics();
+      showSnackbar("Leave request submitted successfully");
+    } catch (error) {
+      console.error("Error submitting leave request:", error);
+
+      // Extract detailed error message from response
+      let errorMessage = "Error submitting leave request";
+      if (error.response) {
+        console.log("Server error details:", error.response.data);
+        errorMessage =
+          error.response.data.message ||
+          error.response.data.error ||
+          errorMessage;
+      }
+
+      showSnackbar(errorMessage, "error");
+    } finally {
       setLoading(false);
-      return; // Stop execution here to prevent the API call
     }
-
-    // Format dates as strings in YYYY-MM-DD format
-    const formatDateToString = (date) => {
-      return format(date, "yyyy-MM-dd");
-    };
-
-    // Get the current user ID from localStorage
-    const userId = localStorage.getItem("userId");
-
-    const leaveData = {
-      employeeCode: employee.code,
-      employeeName: employee.name,
-      userId: userId, // Add this line to include userId
-      leaveType: formData.leaveType,
-      startDate: formatDateToString(formData.startDate),
-      endDate: formatDateToString(formData.endDate),
-      reason: formData.reason,
-      halfDay: formData.halfDay,
-      halfDayType: formData.halfDayType,
-      numberOfDays,
-    };
-
-    console.log("Submitting leave request:", leaveData);
-
-    const response = await api.post(
-      API_URL, 
-      leaveData
-    );
-    
-    console.log("Response:", response.data);
-
-    setOpenDialog(false);
-    fetchLeaveRequests();
-    fetchLeaveBalance();
-    fetchLeaveStatistics();
-    showSnackbar("Leave request submitted successfully");
-  } catch (error) {
-    console.error("Error submitting leave request:", error);
-
-    // Extract detailed error message from response
-    let errorMessage = "Error submitting leave request";
-    if (error.response) {
-      console.log("Server error details:", error.response.data);
-      errorMessage =
-        error.response.data.message ||
-        error.response.data.error ||
-        errorMessage;
-    }
-
-    showSnackbar(errorMessage, "error");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleDeleteRequest = async (id) => {
     try {
       setLoading(true);
-      await api.delete(
-        `${API_URL}/${id}`
-      );
-      
+      await api.delete(`${API_URL}/${id}`);
+
       fetchLeaveRequests();
       fetchLeaveBalance();
       fetchLeaveStatistics();
@@ -848,20 +588,16 @@ const handleSubmit = async () => {
     }
   };
 
-
-const refreshLeaveBalance = async () => {
+  const refreshLeaveBalance = async () => {
     try {
-      setLoading(true); 
+      setLoading(true);
       // Call the recalculate endpoint
-      await api.post(
-        `${API_URL}/recalculate-balance/${employee.code}`,
-        {}
-      );
-      
+      await api.post(`${API_URL}/recalculate-balance/${employee.code}`, {});
+
       // Then fetch the updated balance
       await fetchLeaveBalance();
       await fetchLeaveStatistics();
-      
+
       showSnackbar("Leave balance recalculated successfully");
       setLoading(false);
     } catch (error) {
@@ -1127,7 +863,14 @@ const refreshLeaveBalance = async () => {
   // Show loading state if employee data is not yet loaded
   if (loading && !employee) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <CircularProgress />
         <Typography variant="h6" sx={{ ml: 2 }}>
           Loading employee data...
@@ -1139,12 +882,21 @@ const refreshLeaveBalance = async () => {
   // Show message if no employee data is found
   if (!loading && !employee) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", flexDirection: "column" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
+        }}
+      >
         <Typography variant="h6" color="error" sx={{ mb: 2 }}>
           Employee profile not found
         </Typography>
         <Typography variant="body1">
-          Please complete your employee registration before accessing leave requests.
+          Please complete your employee registration before accessing leave
+          requests.
         </Typography>
       </Box>
     );
@@ -1221,20 +973,22 @@ const refreshLeaveBalance = async () => {
                     borderRadius: 2,
                   }}
                 >
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-  <Button 
-    variant="outlined" 
-    size="small" 
-    onClick={() => {
-      fetchLeaveRequests();
-      fetchLeaveBalance();
-      fetchLeaveStatistics();
-    }} 
-    startIcon={<RefreshIcon />}
-  >
-    Refresh Data
-  </Button>
-</Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}
+                  >
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        fetchLeaveRequests();
+                        fetchLeaveBalance();
+                        fetchLeaveStatistics();
+                      }}
+                      startIcon={<RefreshIcon />}
+                    >
+                      Refresh Data
+                    </Button>
+                  </Box>
 
                   <Typography variant="h6" sx={{ mb: 2 }}>
                     Leave Usage by Month
@@ -1470,38 +1224,42 @@ const refreshLeaveBalance = async () => {
                       // </ResponsiveContainer>
 
                       // Replace the existing PieChart component with this updated version
-<ResponsiveContainer width="100%" height="100%">
-  <PieChart>
-    <Pie
-      data={getLeaveTypeChartData(statistics)}
-      cx="50%"
-      cy="50%"
-      labelLine={false}
-      outerRadius={isMobile ? 70 : 80}
-      fill="#8884d8"
-      dataKey="value"
-      nameKey="type"
-      label={({ name, percent }) => {
-        // Don't render labels on the pie slices at all
-        // We'll rely on the tooltip and legend instead
-        return null;
-      }}
-    >
-      {getLeaveTypeChartData(statistics).map(
-        (entry, index) => (
-          <Cell
-            key={`cell-${index}`}
-            fill={COLORS[index % COLORS.length]}
-          />
-        )
-      )}
-    </Pie>
-    <RechartsTooltip formatter={(value, name) => [`${value} days`, name]} />
-    <Legend layout={isMobile ? "horizontal" : "vertical"} verticalAlign={isMobile ? "bottom" : "middle"} align={isMobile ? "center" : "right"} />
-  </PieChart>
-</ResponsiveContainer>
-
-
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={getLeaveTypeChartData(statistics)}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={isMobile ? 70 : 80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            nameKey="type"
+                            label={({ name, percent }) => {
+                              // Don't render labels on the pie slices at all
+                              // We'll rely on the tooltip and legend instead
+                              return null;
+                            }}
+                          >
+                            {getLeaveTypeChartData(statistics).map(
+                              (entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={COLORS[index % COLORS.length]}
+                                />
+                              )
+                            )}
+                          </Pie>
+                          <RechartsTooltip
+                            formatter={(value, name) => [`${value} days`, name]}
+                          />
+                          <Legend
+                            layout={isMobile ? "horizontal" : "vertical"}
+                            verticalAlign={isMobile ? "bottom" : "middle"}
+                            align={isMobile ? "center" : "right"}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
                     ) : (
                       <Box
                         sx={{
@@ -1810,18 +1568,7 @@ const refreshLeaveBalance = async () => {
                 </Button>
               </Box>
             </Box>
-            {/* <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">
-                Leave Balance
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={fetchUpdatedEarnedLeaveBalance}
-              >
-                Update Earned Leave
-              </Button>
-            </Box> */}
+
             {leaveBalance ? (
               isMobile ? (
                 <Stack spacing={2}>
@@ -1918,8 +1665,26 @@ const refreshLeaveBalance = async () => {
           maxWidth="sm"
           fullWidth
           fullScreen={isMobile}
+          PaperProps={{
+            sx: {
+              width: isMobile ? "95%" : "700px",
+              maxWidth: "90vw",
+              borderRadius: "20px",
+              overflow: "hidden",
+              margin: "16px",
+            },
+          }}
         >
-          <DialogTitle>
+          <DialogTitle
+            sx={{
+              background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+              color: "white",
+              fontSize: isMobile ? "1.25rem" : "1.5rem",
+              fontWeight: 600,
+              padding: isMobile ? "16px 24px" : "24px 32px",
+              position: "relative",
+            }}
+          >
             Request Leave
             {isMobile && (
               <IconButton
@@ -2022,8 +1787,13 @@ const refreshLeaveBalance = async () => {
                 multiline
                 rows={4}
               />
-              {/* <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" color="textSecondary">
+
+              <Box sx={{ mt: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  id="leave-days-count"
+                >
                   Number of days:{" "}
                   {calculateBusinessDays(
                     formData.startDate,
@@ -2031,27 +1801,43 @@ const refreshLeaveBalance = async () => {
                     formData.halfDay
                   )}
                 </Typography>
-              </Box> */}
-              <Box sx={{ mt: 2 }}>
-  <Typography variant="body2" color="textSecondary" id="leave-days-count">
-    Number of days:{" "}
-    {calculateBusinessDays(
-      formData.startDate,
-      formData.endDate,
-      formData.halfDay
-    )}
-  </Typography>
-</Box>
-
+              </Box>
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: isMobile ? 2 : 3, pb: isMobile ? 3 : 2 }}>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button
+              onClick={handleCloseDialog}
+              sx={{
+                border: "2px solid #1976d2",
+                color: "#1976d2",
+                "&:hover": {
+                  border: "2px solid #64b5f6",
+                  backgroundColor: "#e3f2fd",
+                },
+                borderRadius: "8px",
+                px: 4,
+                py: 1,
+                fontWeight: 600,
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={handleSubmit}
               variant="contained"
               color="primary"
               disabled={!formData.reason || loading}
+              sx={{
+                background: "linear-gradient(45deg, #1976d2, #64b5f6)",
+                color: "white",
+                "&:hover": {
+                  background: "linear-gradient(45deg, #1565c0, #42a5f5)",
+                },
+                borderRadius: "8px",
+                px: 4,
+                py: 1,
+                fontWeight: 600,
+              }}
             >
               {loading ? <CircularProgress size={24} /> : "Submit"}
             </Button>

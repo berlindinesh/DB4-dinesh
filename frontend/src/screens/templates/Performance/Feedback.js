@@ -1162,7 +1162,7 @@ const handleAddFeedback = async (newFeedback, isEditing) => {
                   height: { xs: "auto", sm: 40 },
                   padding: { xs: "8px 16px", sm: "6px 16px" },
                   width: { xs: "100%", sm: "auto" },
-                  display: { xs: "none", sm: "flex" }, // Hide on xs (mobile), show on sm and up (iPad/desktop)
+                  display: { xs: "none", sm: "flex" }, 
                 }}
                 variant="outlined"
               >
@@ -1193,7 +1193,7 @@ const handleAddFeedback = async (newFeedback, isEditing) => {
               <Button
                 variant="contained"
                 onClick={() => setIsCreateModalOpen(true)}
-                startIcon={<Add />}
+                // startIcon={<Add />}
                 sx={{
                   height: { xs: "auto", sm: 40 },
                   borderRadius: "8px",
@@ -2407,27 +2407,7 @@ const handleAddFeedback = async (newFeedback, isEditing) => {
         }}
       >
         {isMobile ? (
-          // Mobile Card View
-          // <Box sx={{ p: 2 }}>
-          //   {filteredFeedbackData.length > 0 ? (
-          //     filteredFeedbackData.map((item) => renderMobileCard(item))
-          //   ) : (
-          //     <Box sx={{ py: 4, textAlign: "center" }}>
-          //       <Typography variant="body1" color="text.secondary">
-          //         No feedback found. Try adjusting your filters or create a new
-          //         feedback.
-          //       </Typography>
-          //       <Button
-          //         variant="outlined"
-          //         startIcon={<Add />}
-          //         onClick={() => setIsCreateModalOpen(true)}
-          //         sx={{ mt: 2 }}
-          //       >
-          //         Create Feedback
-          //       </Button>
-          //     </Box>
-          //   )}
-          // </Box>
+         
 
           <Box sx={{ p: 2 }}>
             {filteredFeedbackData.length > 0 ? (
@@ -2598,7 +2578,7 @@ const handleAddFeedback = async (newFeedback, isEditing) => {
                       </Typography>
                       <Button
                         variant="outlined"
-                        startIcon={<Add />}
+                        // startIcon={<Add />}
                         onClick={() => setIsCreateModalOpen(true)}
                         sx={{ mt: 2 }}
                       >
