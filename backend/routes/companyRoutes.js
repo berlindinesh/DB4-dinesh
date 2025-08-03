@@ -9,9 +9,11 @@ import {
   verifyResetToken,
   changePassword,
   verifyOtp,
+  verifyDualOtp,
   resendOtp,
   upload,
   getCompanySettings,
+  checkCompanyCode,
 } from '../controllers/companyController.js';
 import {
   login,
@@ -35,6 +37,7 @@ router.post('/login', login);
 
 // OTP verification routes
 router.post('/verify-otp', verifyOtp);
+router.post('/verify-dual-otp', verifyDualOtp);
 router.post('/resend-otp', resendOtp);
 
 // Password reset routes - public
@@ -64,6 +67,283 @@ router.get('/verification-status/:companyCode', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Check company code availability - public
+router.get('/check-code/:companyCode', checkCompanyCode);
+
+// Get payment link for company - public
+router.get('/payment-link/:companyCode', async (req, res) => {
+  try {
+    const { companyCode } = req.params;
+    
+    const company = await Company.findOne({ companyCode: companyCode.toUpperCase() });
+    
+    if (!company) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Company not found' 
+      });
+    }
+    
+    // Check if payment is already completed
+    if (company.paymentCompleted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment has already been completed for this company'
+      });
+    }
+    
+    // Check if company registration is complete (email verified)
+    if (company.pendingVerification) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company registration is not complete. Please verify email addresses first.'
+      });
+    }
+    
+    // Mark payment link as shared
+    if (!company.paymentLinkShared) {
+      company.paymentLinkShared = true;
+      company.paymentLinkSharedDate = new Date();
+      await company.save();
+    }
+    
+    res.json({
+      success: true,
+      company: {
+        name: company.name,
+        companyCode: company.companyCode,
+        contactEmail: company.contactEmail,
+        paymentRequired: true,
+        paymentLinkShared: true
+      },
+      paymentLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`,
+      message: 'Payment link is ready. Please complete the payment to activate your account.'
+    });
+    
+  } catch (error) {
+    console.error('Error getting payment link:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
+// Send payment link via email - public
+router.post('/send-payment-link/:companyCode', async (req, res) => {
+  try {
+    const { companyCode } = req.params;
+    
+    const company = await Company.findOne({ companyCode: companyCode.toUpperCase() });
+    
+    if (!company) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Company not found' 
+      });
+    }
+    
+    // Check if payment is already completed
+    if (company.paymentCompleted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment has already been completed for this company'
+      });
+    }
+    
+    // Check if company registration is complete (email verified)
+    if (company.pendingVerification) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company registration is not complete. Please verify email addresses first.'
+      });
+    }
+    
+    // Generate payment link
+    const paymentLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`;
+    
+    // Send payment link email
+    try {
+      const { sendPaymentLinkEmail } = await import('../utils/paymentMailer.js');
+      await sendPaymentLinkEmail(company, paymentLink);
+      
+      // Mark payment link as shared
+      company.paymentLinkShared = true;
+      company.paymentLinkSharedDate = new Date();
+      await company.save();
+      
+      res.json({
+        success: true,
+        message: `Payment link has been sent to ${company.contactEmail}`,
+        company: {
+          name: company.name,
+          companyCode: company.companyCode,
+          contactEmail: company.contactEmail
+        },
+        paymentLink
+      });
+      
+    } catch (emailError) {
+      console.error('Error sending payment link email:', emailError);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send payment link email',
+        error: emailError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error sending payment link:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
+// Get all pending payment companies (for admin use)
+router.get('/pending-payments', async (req, res) => {
+  try {
+    const pendingCompanies = await Company.find({
+      paymentCompleted: false,
+      pendingVerification: false,
+      isActive: false
+    }).select('name companyCode contactEmail createdAt paymentLinkShared paymentLinkSharedDate');
+    
+    const companiesWithLinks = pendingCompanies.map(company => ({
+      ...company.toObject(),
+      paymentLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`,
+      daysSinceRegistration: Math.floor((new Date() - company.createdAt) / (1000 * 60 * 60 * 24))
+    }));
+    
+    res.json({
+      success: true,
+      count: companiesWithLinks.length,
+      companies: companiesWithLinks
+    });
+    
+  } catch (error) {
+    console.error('Error getting pending payments:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
+// Send payment reminders to all pending companies
+router.post('/send-payment-reminders', async (req, res) => {
+  try {
+    const pendingCompanies = await Company.find({
+      paymentCompleted: false,
+      pendingVerification: false,
+      isActive: false
+    });
+    
+    let sent = 0;
+    let failed = 0;
+    const results = [];
+    
+    for (const company of pendingCompanies) {
+      try {
+        const daysSinceRegistration = Math.floor((new Date() - company.createdAt) / (1000 * 60 * 60 * 24));
+        const { sendPaymentReminderEmail } = await import('../utils/paymentMailer.js');
+        
+        await sendPaymentReminderEmail(company, Math.max(0, 365 - daysSinceRegistration));
+        
+        company.paymentLinkShared = true;
+        company.paymentLinkSharedDate = new Date();
+        await company.save();
+        
+        sent++;
+        results.push({
+          companyCode: company.companyCode,
+          contactEmail: company.contactEmail,
+          status: 'sent',
+          daysSinceRegistration
+        });
+        
+      } catch (emailError) {
+        failed++;
+        results.push({
+          companyCode: company.companyCode,
+          contactEmail: company.contactEmail,
+          status: 'failed',
+          error: emailError.message
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Payment reminders sent. ${sent} successful, ${failed} failed.`,
+      summary: { sent, failed, total: pendingCompanies.length },
+      results
+    });
+    
+  } catch (error) {
+    console.error('Error sending payment reminders:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
+// Test payment link system - for verification
+router.post('/test-payment-link/:companyCode', async (req, res) => {
+  try {
+    const { companyCode } = req.params;
+    
+    const company = await Company.findOne({ companyCode: companyCode.toUpperCase() });
+    
+    if (!company) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Company not found' 
+      });
+    }
+    
+    const paymentLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`;
+    
+    // Test all payment link functions
+    const tests = {
+      companyExists: !!company,
+      emailVerified: !company.pendingVerification,
+      paymentNotCompleted: !company.paymentCompleted,
+      paymentLinkGenerated: !!paymentLink,
+      emailConfigured: !!(process.env.USER && process.env.PASS),
+      razorpayConfigured: !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
+    };
+    
+    const allTestsPassed = Object.values(tests).every(test => test === true);
+    
+    res.json({
+      success: true,
+      message: 'Payment link system test completed',
+      companyCode: company.companyCode,
+      companyName: company.name,
+      contactEmail: company.contactEmail,
+      paymentLink,
+      tests,
+      allTestsPassed,
+      readyForPayment: allTestsPassed
+    });
+    
+  } catch (error) {
+    console.error('Error testing payment link:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during test',
+      error: error.message 
+    });
   }
 });
 

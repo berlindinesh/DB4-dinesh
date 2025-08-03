@@ -119,12 +119,15 @@ import { getUserModel } from '../models/User.js';
 // Authenticate middleware
 export const authenticate = async (req, res, next) => {
   try {
+    console.log("Authentication middleware called for:", req.method, req.url);
     console.log("Headers:", req.headers);
     
     // Get token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log("Missing or invalid Authorization header:", authHeader);
+      console.log("Request URL:", req.url);
+      console.log("Request method:", req.method);
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
     

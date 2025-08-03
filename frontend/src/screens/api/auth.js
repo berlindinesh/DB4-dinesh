@@ -394,6 +394,23 @@ const authService = {
     }
   },
   
+  // Verify dual OTP (admin and contact email)
+  verifyDualOtp: async (adminEmail, adminOtp, contactEmail, contactOtp, companyCode) => {
+    try {
+      const response = await api.post('companies/verify-dual-otp', { 
+        adminEmail, 
+        adminOtp, 
+        contactEmail, 
+        contactOtp, 
+        companyCode 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Dual OTP verification error:', error);
+      throw error;
+    }
+  },
+  
   // Resend OTP
   resendOtp: async (email) => {
     try {
@@ -462,6 +479,111 @@ const authService = {
       return response.data;
     } catch (error) {
       console.error('Change password error:', error);
+      throw error;
+    }
+  },
+  
+  // Check if company code is available
+  checkCompanyCode: async (companyCode) => {
+    try {
+      const response = await api.get(`companies/check-code/${companyCode}`);
+      return response;
+    } catch (error) {
+      console.error('Check company code error:', error);
+      throw error;
+    }
+  },
+  
+  // Payment related methods
+  createPaymentOrder: async (companyCode, adminEmail) => {
+    try {
+      const response = await api.post('payments/create-order', { 
+        companyCode, 
+        adminEmail 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Create payment order error:', error);
+      throw error;
+    }
+  },
+  
+  verifyPayment: async (paymentData) => {
+    try {
+      const response = await api.post('payments/verify', paymentData);
+      return response.data;
+    } catch (error) {
+      console.error('Verify payment error:', error);
+      throw error;
+    }
+  },
+  
+  handlePaymentFailure: async (failureData) => {
+    try {
+      const response = await api.post('payments/failure', failureData);
+      return response.data;
+    } catch (error) {
+      console.error('Handle payment failure error:', error);
+      throw error;
+    }
+  },
+  
+  getPaymentStatus: async (companyCode) => {
+    try {
+      const response = await api.get(`payments/status/${companyCode}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get payment status error:', error);
+      throw error;
+    }
+  },
+  
+  getPaymentConfig: async () => {
+    try {
+      const response = await api.get('payments/config');
+      return response.data;
+    } catch (error) {
+      console.error('Get payment config error:', error);
+      throw error;
+    }
+  },
+  
+  getPaymentLink: async (companyCode) => {
+    try {
+      const response = await api.get(`companies/payment-link/${companyCode}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get payment link error:', error);
+      throw error;
+    }
+  },
+  
+  sendPaymentLink: async (companyCode) => {
+    try {
+      const response = await api.post(`companies/send-payment-link/${companyCode}`);
+      return response.data;
+    } catch (error) {
+      console.error('Send payment link error:', error);
+      throw error;
+    }
+  },
+  
+  getPendingPayments: async () => {
+    try {
+      const response = await api.get('companies/pending-payments');
+      return response.data;
+    } catch (error) {
+      console.error('Get pending payments error:', error);
+      throw error;
+    }
+  },
+  
+  sendPaymentReminders: async () => {
+    try {
+      const response = await api.post('companies/send-payment-reminders');
+      return response.data;
+    } catch (error) {
+      console.error('Send payment reminders error:', error);
       throw error;
     }
   }

@@ -246,10 +246,15 @@ api.interceptors.request.use(
         config.url.includes("/auth/verify-email") ||
         config.url.includes("/auth/refresh-token") ||
         config.url.includes("/companies/register") ||
-        config.url.includes("/companies/verify"));
+        config.url.includes("/companies/verify") ||
+        config.url.includes("/companies/payment-link") ||
+        config.url.includes("/companies/send-payment-link") ||
+        config.url.includes("/companies/pending-payments") ||
+        config.url.includes("/companies/test-payment-link") ||
+        config.url.includes("/payments/"));
 
-    // Add headers if values exist
-    if (token) {
+    // Add headers if values exist - BUT NOT for auth endpoints  
+    if (token && !isAuthEndpoint) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log("Adding token to request:", token.substring(0, 20) + "...");
     } else if (!isAuthEndpoint) {
@@ -260,7 +265,7 @@ api.interceptors.request.use(
       );
     }
 
-    if (companyCode) {
+    if (companyCode && !isAuthEndpoint) {
       // IMPORTANT: Use consistent header case (your backend expects 'x-company-code')
       config.headers["x-company-code"] = companyCode;
       config.headers["X-Company-Code"] = companyCode; // Add both for compatibility

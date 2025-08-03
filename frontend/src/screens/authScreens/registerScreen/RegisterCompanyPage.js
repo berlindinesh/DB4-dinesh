@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import pincodeSearch from 'india-pincode-search';
 
@@ -26,6 +26,7 @@ import { motion } from 'framer-motion';
 import { FaEye, FaEyeSlash, FaUpload, FaImage } from 'react-icons/fa';
 import { Velustro } from "uvcanvas";
 import authService from '../../../screens/api/auth';
+import PaymentGateway from '../../../components/PaymentGateway';
 
 // pincodeSearch is imported directly, no need to instantiate
 
@@ -331,7 +332,7 @@ const CenteredContainer = styled(Box)(({ theme }) => ({
 }));
 
 // Steps for registration
-const steps = ['Company Information', 'Admin Account'];
+const steps = ['Company Information', 'Admin Account', 'Email Verification', 'Payment'];
 
 const RegisterCompanyPage = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -340,6 +341,17 @@ const RegisterCompanyPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
+  const [registrationData, setRegistrationData] = useState(null);
+  const [adminOtp, setAdminOtp] = useState(['', '', '', '', '', '']);
+  const [contactOtp, setContactOtp] = useState(['', '', '', '', '', '']);
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  
+  // Create refs for OTP inputs
+  const adminInputRefs = useRef([]);
+  const contactInputRefs = useRef([]);
   
   // Media queries for responsive design
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -402,6 +414,24 @@ const RegisterCompanyPage = () => {
   });
   
   const navigate = useNavigate();
+  
+  // Initialize refs
+  useEffect(() => {
+    adminInputRefs.current = adminInputRefs.current.slice(0, 6);
+    contactInputRefs.current = contactInputRefs.current.slice(0, 6);
+  }, []);
+  
+  // Timer for resend button
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timerId = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    } else if (timeLeft === 0) {
+      setResendDisabled(false);
+    }
+  }, [timeLeft]);
   
   // Helper function to capitalize first letter of each word (sentence case)
   const toSentenceCase = (str) => {
@@ -988,22 +1018,32 @@ const RegisterCompanyPage = () => {
       };
       
       // Handle next step
-      const handleNext = () => {
-        if (activeStep === 0) {
-          if (validateCompanyStep()) {
-            setActiveStep(1);
-          }
-        }
-      };
+      const handleNext = async () => {
+      if (activeStep === 0) {
+      if (validateCompanyStep()) {
+      setActiveStep(1);
+      }
+      } else if (activeStep === 1) {
+          if (validateAdminStep()) {
+        // Register company and move to OTP step
+        await handleCompanyRegistration();
+      }
+    }
+  };
       
       // Handle back step
       const handleBack = () => {
-        setActiveStep(0);
+        if (activeStep === 3) {
+          setActiveStep(2);
+        } else if (activeStep === 2) {
+          setActiveStep(1);
+        } else if (activeStep === 1) {
+          setActiveStep(0);
+        }
       };
       
-      // Handle form submission
-const handleSubmit = async (e) => {
-  e.preventDefault();
+      // Handle company registration and move to OTP step
+const handleCompanyRegistration = async () => {
   
   if (!validateAdminStep()) {
     return;
@@ -1076,17 +1116,19 @@ const handleSubmit = async (e) => {
     const response = await authService.registerCompany(formData);
     
     if (response.data.success) {
-      // Navigate to OTP verification page with email and success message
-      navigate('/verifyotp', {
-        state: {
-          email: adminData.email,
-          companyCode: companyData.companyCode,
-          message: 'Company registered successfully! Please check your email for the OTP to verify your account.',
-          type: 'success',
-          fromRegistration: true
-        }
+      // Store registration data and move to OTP verification step
+      setRegistrationData({
+        adminEmail: response.data.adminEmail,
+        contactEmail: response.data.contactEmail,
+        companyCode: response.data.companyCode,
+        requiresContactEmailVerification: response.data.requiresContactEmailVerification,
+        message: response.data.requiresContactEmailVerification 
+          ? 'Company registered successfully! Please check both email addresses for OTP verification codes.'
+          : 'Company registered successfully! Please check your email for the OTP verification code.'
       });
-
+      setActiveStep(2); // Move to OTP verification step
+      setTimeLeft(60); // Start countdown for resend
+      setResendDisabled(true);
     }
   } catch (err) {
     console.error('Registration error:', err);
@@ -1097,6 +1139,158 @@ const handleSubmit = async (e) => {
   } finally {
     setLoading(false);
   }
+};
+
+// Handle Admin OTP input change
+const handleAdminOtpChange = (index, value) => {
+  // Only allow numbers
+  if (!/^\d*$/.test(value)) return;
+  
+  // Update OTP state
+  const newOtp = [...adminOtp];
+  newOtp[index] = value;
+  setAdminOtp(newOtp);
+  
+  // Clear error when user types
+  if (error) setError('');
+  
+  // Auto-focus next input
+  if (value && index < 5) {
+    adminInputRefs.current[index + 1].focus();
+  }
+};
+
+// Handle Contact OTP input change
+const handleContactOtpChange = (index, value) => {
+  // Only allow numbers
+  if (!/^\d*$/.test(value)) return;
+  
+  // Update OTP state
+  const newOtp = [...contactOtp];
+  newOtp[index] = value;
+  setContactOtp(newOtp);
+  
+  // Clear error when user types
+  if (error) setError('');
+  
+  // Auto-focus next input
+  if (value && index < 5) {
+    contactInputRefs.current[index + 1].focus();
+  }
+};
+
+// Handle key press in Admin OTP input
+const handleAdminKeyDown = (index, e) => {
+  // Move to previous input on backspace if current input is empty
+  if (e.key === 'Backspace' && !adminOtp[index] && index > 0) {
+    adminInputRefs.current[index - 1].focus();
+  }
+};
+
+// Handle key press in Contact OTP input
+const handleContactKeyDown = (index, e) => {
+  // Move to previous input on backspace if current input is empty
+  if (e.key === 'Backspace' && !contactOtp[index] && index > 0) {
+    contactInputRefs.current[index - 1].focus();
+  }
+};
+
+// Handle OTP verification
+const handleVerifyOtp = async () => {
+  const adminOtpValue = adminOtp.join('');
+  const contactOtpValue = contactOtp.join('');
+  
+  // Validate admin OTP
+  if (adminOtpValue.length !== 6) {
+    setError('Please enter a valid 6-digit admin OTP');
+    return;
+  }
+  
+  // Validate contact OTP if required
+  if (registrationData.requiresContactEmailVerification && contactOtpValue.length !== 6) {
+    setError('Please enter a valid 6-digit contact email OTP');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    setError('');
+    
+    const response = await authService.verifyDualOtp(
+      registrationData.adminEmail,
+      adminOtpValue,
+      registrationData.contactEmail,
+      registrationData.requiresContactEmailVerification ? contactOtpValue : null,
+      registrationData.companyCode
+    );
+    
+    if (response.success) {
+      // Move to payment step
+      setActiveStep(3);
+      // Don't auto-open payment gateway, let user click button
+    }
+  } catch (err) {
+    console.error('OTP verification error:', err);
+    setError(err.response?.data?.message || 'OTP verification failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Handle resend OTP
+const handleResendOtp = async () => {
+  if (!registrationData?.adminEmail) {
+    setError('Admin email is required for resending OTP');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    setError('');
+    
+    await authService.resendOtp(registrationData.adminEmail);
+    
+    // Start countdown
+    setTimeLeft(60);
+    setResendDisabled(true);
+    
+    // Clear OTP inputs
+    setAdminOtp(['', '', '', '', '', '']);
+    setContactOtp(['', '', '', '', '', '']);
+  } catch (err) {
+    console.error('Resend OTP error:', err);
+    setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Handle payment success
+const handlePaymentSuccess = (paymentDetails) => {
+  setPaymentCompleted(true);
+  setShowPaymentGateway(false);
+  setLoading(false);
+  
+  // Navigate to success page or dashboard
+  navigate('/login', {
+    state: {
+      message: `Registration completed successfully! Payment of ₹${paymentDetails.amount} received. Please login to continue.`,
+      type: 'success',
+      paymentId: paymentDetails.paymentId
+    }
+  });
+};
+
+// Handle payment failure
+const handlePaymentFailure = (error) => {
+  setShowPaymentGateway(false);
+  setError(`Payment failed: ${error.message || 'Unknown error'}. Please try again.`);
+  setLoading(false);
+};
+
+// Handle payment gateway close
+const handlePaymentClose = () => {
+  setShowPaymentGateway(false);
 };
 
       
@@ -1298,7 +1492,7 @@ const handleSubmit = async (e) => {
                     
                     <Box 
                       component="form" 
-                      onSubmit={activeStep === steps.length - 1 ? handleSubmit : (e) => e.preventDefault()}
+                      onSubmit={(e) => e.preventDefault()}
                       sx={{ width: '100%' }}
                     >
                       {activeStep === 0 && (
@@ -1868,6 +2062,327 @@ const handleSubmit = async (e) => {
                         </motion.div>
                       )}
                       
+                      {activeStep === 2 && (
+                        <motion.div
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4, duration: 0.5 }}
+                        >
+                          {/* Email Verification Step */}
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              mb: isMobile ? 2 : 3, 
+                              color: 'white',
+                              fontWeight: 600,
+                              fontSize: {
+                                xs: '1.1rem',
+                                sm: '1.25rem',
+                                md: '1.5rem'
+                              },
+                              textAlign: 'center'
+                            }}
+                          >
+                            Verify Your Email
+                          </Typography>
+                          
+                          {registrationData && (
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                mb: 3, 
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                fontSize: isMobile ? '0.9rem' : '1rem',
+                                textAlign: 'center',
+                                maxWidth: '90%',
+                                mx: 'auto'
+                              }}
+                            >
+                              {registrationData.message}
+                            </Typography>
+                          )}
+                          
+                          {/* Admin Email OTP Section */}
+                          <Box sx={{ mb: 4 }}>
+                            <Typography 
+                              variant="subtitle1" 
+                              sx={{ 
+                                mb: 2, 
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                fontSize: isMobile ? '0.9rem' : '1rem',
+                                textAlign: 'center',
+                                fontWeight: 600
+                              }}
+                            >
+                              Admin Email OTP: <strong>{registrationData?.adminEmail}</strong>
+                            </Typography>
+                            
+                            <Box sx={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              gap: isMobile ? '6px' : '8px',
+                              mb: 2
+                            }}>
+                              {adminOtp.map((digit, index) => (
+                                <TextField
+                                  key={index}
+                                  inputRef={(el) => (adminInputRefs.current[index] = el)}
+                                  variant="outlined"
+                                  value={digit}
+                                  onChange={(e) => handleAdminOtpChange(index, e.target.value)}
+                                  onKeyDown={(e) => handleAdminKeyDown(index, e)}
+                                  inputProps={{
+                                    maxLength: 1,
+                                    inputMode: 'numeric',
+                                    pattern: '[0-9]*',
+                                    style: { 
+                                      textAlign: 'center',
+                                      fontSize: isMobile ? '1.2rem' : '1.5rem',
+                                      padding: isMobile ? '8px 0' : '12px 0',
+                                      color: 'white'
+                                    }
+                                  }}
+                                  disabled={loading}
+                                  autoFocus={index === 0}
+                                  size={isMobile ? "small" : "medium"}
+                                  sx={{
+                                    width: isMobile ? '40px' : '50px',
+                                    '& .MuiOutlinedInput-root': {
+                                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                      borderRadius: '8px',
+                                      '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.3)',
+                                      },
+                                      '&:hover fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                                      },
+                                      '&.Mui-focused fieldset': {
+                                        borderColor: '#4a90e2',
+                                        borderWidth: '2px',
+                                      },
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+                          
+                          {/* Contact Email OTP Section - Only show if different from admin email */}
+                          {registrationData?.requiresContactEmailVerification && (
+                            <Box sx={{ mb: 4 }}>
+                              <Typography 
+                                variant="subtitle1" 
+                                sx={{ 
+                                  mb: 2, 
+                                  color: 'rgba(255, 255, 255, 0.9)',
+                                  fontSize: isMobile ? '0.9rem' : '1rem',
+                                  textAlign: 'center',
+                                  fontWeight: 600
+                                }}
+                              >
+                                Contact Email OTP: <strong>{registrationData?.contactEmail}</strong>
+                              </Typography>
+                              
+                              <Box sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                gap: isMobile ? '6px' : '8px',
+                                mb: 2
+                              }}>
+                                {contactOtp.map((digit, index) => (
+                                  <TextField
+                                    key={index}
+                                    inputRef={(el) => (contactInputRefs.current[index] = el)}
+                                    variant="outlined"
+                                    value={digit}
+                                    onChange={(e) => handleContactOtpChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleContactKeyDown(index, e)}
+                                    inputProps={{
+                                      maxLength: 1,
+                                      inputMode: 'numeric',
+                                      pattern: '[0-9]*',
+                                      style: { 
+                                        textAlign: 'center',
+                                        fontSize: isMobile ? '1.2rem' : '1.5rem',
+                                        padding: isMobile ? '8px 0' : '12px 0',
+                                        color: 'white'
+                                      }
+                                    }}
+                                    disabled={loading}
+                                    size={isMobile ? "small" : "medium"}
+                                    sx={{
+                                      width: isMobile ? '40px' : '50px',
+                                      '& .MuiOutlinedInput-root': {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        borderRadius: '8px',
+                                        '& fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&:hover fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.5)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: '#f50057',
+                                          borderWidth: '2px',
+                                        },
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
+                          
+                          {/* Verify Button */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                            <StyledButton
+                              onClick={handleVerifyOtp}
+                              disabled={
+                                loading || 
+                                adminOtp.join('').length !== 6 || 
+                                (registrationData?.requiresContactEmailVerification && contactOtp.join('').length !== 6)
+                              }
+                              sx={{
+                                width: '100%',
+                                maxWidth: '300px',
+                                py: isMobile ? 1.2 : 1.5,
+                                fontSize: isMobile ? '0.9rem' : '1rem',
+                                position: 'relative'
+                              }}
+                            >
+                              {loading ? (
+                                <>
+                                  <CircularProgress 
+                                    size={24} 
+                                    sx={{ 
+                                      color: 'white',
+                                      position: 'absolute',
+                                      left: 'calc(50% - 12px)',
+                                      top: 'calc(50% - 12px)'
+                                    }} 
+                                  />
+                                  <span style={{ visibility: 'hidden' }}>Verify Email</span>
+                                </>
+                              ) : 'Verify Email'}
+                            </StyledButton>
+                            
+                            {/* Resend OTP */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  mb: 1,
+                                  color: 'rgba(255, 255, 255, 0.7)',
+                                  fontSize: isMobile ? '0.85rem' : '0.9rem'
+                                }}
+                              >
+                                Didn't receive the code?
+                              </Typography>
+                              
+                              <Button
+                                variant="text"
+                                onClick={handleResendOtp}
+                                disabled={loading || resendDisabled}
+                                sx={{ 
+                                  textTransform: 'none',
+                                  fontSize: isMobile ? '0.85rem' : '0.9rem',
+                                  fontWeight: 500,
+                                  color: '#4a90e2',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(74, 144, 226, 0.08)',
+                                  }
+                                }}
+                              >
+                                {resendDisabled
+                                  ? `Resend code in ${timeLeft} seconds`
+                                  : 'Resend verification code'}
+                              </Button>
+                            </Box>
+                          </Box>
+                        </motion.div>
+                      )}
+                      
+                      {activeStep === 3 && (
+                        <motion.div
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.4, duration: 0.5 }}
+                        >
+                          {/* Payment Step */}
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              mb: isMobile ? 2 : 3, 
+                              color: 'white',
+                              fontWeight: 600,
+                              fontSize: {
+                                xs: '1.1rem',
+                                sm: '1.25rem',
+                                md: '1.5rem'
+                              },
+                              textAlign: 'center'
+                            }}
+                          >
+                            Complete Payment
+                          </Typography>
+                          
+                          <Typography 
+                            variant="body1" 
+                            sx={{ 
+                              mb: 3, 
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              fontSize: isMobile ? '0.9rem' : '1rem',
+                              textAlign: 'center',
+                              maxWidth: '90%',
+                              mx: 'auto'
+                            }}
+                          >
+                            Complete your registration by paying the one-time setup fee of ₹20,000
+                          </Typography>
+                          
+                          {/* Payment Gateway will be shown in modal */}
+                          <Box sx={{ textAlign: 'center', mt: 4 }}>
+                            {!paymentCompleted ? (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: 'rgba(255, 255, 255, 0.8)',
+                                  fontSize: isMobile ? '0.8rem' : '0.9rem'
+                                }}
+                              >
+                                Click the "Proceed to Payment" button to complete your registration
+                              </Typography>
+                            ) : (
+                              <Box sx={{ 
+                                p: 3, 
+                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(76, 175, 80, 0.3)'
+                              }}>
+                                <Typography 
+                                  variant="h6" 
+                                  sx={{ 
+                                    color: '#4caf50',
+                                    mb: 1,
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  ✅ Payment Successful!
+                                </Typography>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: 'rgba(255, 255, 255, 0.9)'
+                                  }}
+                                >
+                                  Your registration is complete. You will be redirected to the login page.
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+                        </motion.div>
+                      )}
+                      
                       {/* Navigation Buttons */}
                       <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -1932,9 +2447,10 @@ const handleSubmit = async (e) => {
                               order: isMobile ? 1 : 2
                             }}
                           >
-                            {activeStep === steps.length - 1 ? (
+                            {activeStep === 2 ? (
+                              // On the OTP step, show Verify Email button
                               <StyledButton
-                                type="submit"
+                                onClick={handleVerifyOtp}
                                 variant="contained"
                                 disabled={loading}
                                 sx={{
@@ -1949,28 +2465,38 @@ const handleSubmit = async (e) => {
                                     md: '16px 32px'
                                   },
                                   width: isMobile ? '100%' : 'auto',
-                                  minWidth: isMobile ? 'auto' : '150px',
-                                  position: 'relative'
+                                  minWidth: isMobile ? 'auto' : '120px'
                                 }}
                               >
-                                {loading ? (
-                                  <>
-                                    <CircularProgress 
-                                      size={isMobile ? 20 : isTablet ? 22 : 24} 
-                                      sx={{ 
-                                        color: 'white',
-                                        position: 'absolute',
-                                        left: '50%',
-                                        top: '50%',
-                                        marginLeft: isMobile ? '-10px' : isTablet ? '-11px' : '-12px',
-                                        marginTop: isMobile ? '-10px' : isTablet ? '-11px' : '-12px'
-                                      }} 
-                                    />
-                                    <span style={{ visibility: 'hidden' }}>Register Company</span>
-                                  </>
-                                ) : 'Register Company'}
+                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Verify Email'}
                               </StyledButton>
+                            ) : activeStep === 3 ? (
+                              // On the payment step, show Proceed to Payment button
+                              !paymentCompleted ? (
+                                <StyledButton
+                                  onClick={() => setShowPaymentGateway(true)}
+                                  variant="contained"
+                                  disabled={loading}
+                                  sx={{
+                                    fontSize: {
+                                      xs: '0.85rem',
+                                      sm: '0.9rem',
+                                      md: '1rem'
+                                    },
+                                    padding: {
+                                      xs: '12px 24px',
+                                      sm: '14px 28px',
+                                      md: '16px 32px'
+                                    },
+                                    width: isMobile ? '100%' : 'auto',
+                                    minWidth: isMobile ? 'auto' : '140px'
+                                  }}
+                                >
+                                  Proceed to Payment
+                                </StyledButton>
+                              ) : null
                             ) : (
+                              // For other steps, show Next button
                               <StyledButton
                                 onClick={handleNext}
                                 variant="contained"
@@ -1990,7 +2516,7 @@ const handleSubmit = async (e) => {
                                   minWidth: isMobile ? 'auto' : '120px'
                                 }}
                               >
-                                Next
+                                {activeStep === 1 ? 'Register Company' : 'Next'}
                               </StyledButton>
                             )}
                           </motion.div>
@@ -2124,6 +2650,17 @@ const handleSubmit = async (e) => {
                 </RegisterContent>
               </Container>
             </CenteredContainer>
+            
+            {/* Payment Gateway Modal */}
+            <PaymentGateway
+              open={showPaymentGateway}
+              onClose={handlePaymentClose}
+              companyCode={registrationData?.companyCode}
+              adminEmail={registrationData?.adminEmail}
+              companyName={companyData?.name}
+              onPaymentSuccess={handlePaymentSuccess}
+              onPaymentFailure={handlePaymentFailure}
+            />
           </RegisterWrapper>
         </ThemeProvider>
       );

@@ -40,13 +40,8 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
       });
     }
     
-    // Validate userId is provided
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        error: 'User ID is required'
-      });
-    }
+    // User ID will be auto-generated if not provided
+    // No need to validate userId as required since it's auto-generated
     
     // Clean up empty fields to avoid unique constraint issues
     const cleanPersonalInfo = { ...personalInfo };
@@ -54,8 +49,11 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
     if (!cleanPersonalInfo.panNumber) delete cleanPersonalInfo.panNumber;
     if (!cleanPersonalInfo.email) delete cleanPersonalInfo.email;
     
-    // Check if employee with this userId already exists
-    let employee = await CompanyEmployee.findOne({ userId });
+    // Check if employee with this userId already exists (only if userId is provided)
+    let employee = null;
+    if (userId) {
+      employee = await CompanyEmployee.findOne({ userId });
+    }
     
     // Handle image URL based on storage type
     let imageUrl = null;
@@ -80,13 +78,19 @@ router.post('/personal-info', uploads.single('employeeImage'), async (req, res) 
       };
     } else {
       // Create a new employee instance
-      employee = new CompanyEmployee({
-        userId, // Include the userId
+      const employeeData = {
         personalInfo: {
           ...cleanPersonalInfo,
           employeeImage: imageUrl
         }
-      });
+      };
+      
+      // Only include userId if provided
+      if (userId) {
+        employeeData.userId = userId;
+      }
+      
+      employee = new CompanyEmployee(employeeData);
     }
     
     // Generate an employee ID if not already set

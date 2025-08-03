@@ -285,8 +285,9 @@ export const registerCompany = async (req, res) => {
         });
       }
       
-      // Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate OTPs for both admin email and company contact email
+      const adminOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const contactEmailOtp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       
       let finalPasswordHash;
@@ -307,8 +308,8 @@ export const registerCompany = async (req, res) => {
         finalPasswordHash = admin.password;
       }
       
-      // Create admin user
-      const newAdmin = new User({
+      // Create admin user with safer duplicate handling
+      const adminUserData = {
         firstName: admin.firstName,
         middleName: admin.middleName || '',
         lastName: admin.lastName,
@@ -319,11 +320,11 @@ export const registerCompany = async (req, res) => {
         companyCode: company.companyCode.toUpperCase(),
         isActive: true,
         isVerified: false,
-        otp,
+        otp: adminOtp,
         otpExpires
-      });
+      };
       
-      await newAdmin.save();
+      const newAdmin = await User.safeSave(adminUserData);
       console.log('Admin user created successfully:', {
         id: newAdmin._id,
         email: newAdmin.email,
@@ -341,7 +342,10 @@ export const registerCompany = async (req, res) => {
         industry: company.industry,
         isActive: false,
         adminUserId: newAdmin._id,
-        pendingVerification: true
+        pendingVerification: true,
+        contactEmailOtp: contactEmailOtp,
+        contactEmailOtpExpires: otpExpires,
+        contactEmailVerified: false
       });
       
       await newCompany.save();
@@ -360,24 +364,43 @@ export const registerCompany = async (req, res) => {
         console.error('Error initializing company database:', dbError);
       }
 
-            // Send OTP email
+            // Send OTP emails to both admin and company contact email
             try {
-              await sendOtpEmail(admin.email, otp, {
+              // Send OTP to admin email
+              await sendOtpEmail(admin.email, adminOtp, {
                 name: newAdmin.name,
-                companyName: company.name
+                companyName: company.name,
+                emailType: 'admin'
               });
-              console.log(`OTP sent successfully to ${admin.email}`);
+              console.log(`Admin OTP sent successfully to ${admin.email}`);
+              
+              // Send OTP to company contact email (if different from admin email)
+              if (company.contactEmail.toLowerCase() !== admin.email.toLowerCase()) {
+                await sendOtpEmail(company.contactEmail, contactEmailOtp, {
+                  name: 'Company Administrator',
+                  companyName: company.name,
+                  emailType: 'contact'
+                });
+                console.log(`Contact email OTP sent successfully to ${company.contactEmail}`);
+              } else {
+                console.log('Contact email same as admin email, sending only one OTP');
+                // If emails are the same, mark contact email as verified
+                newCompany.contactEmailVerified = true;
+                await newCompany.save();
+              }
             } catch (emailError) {
-              console.error('Error sending OTP email:', emailError);
+              console.error('Error sending OTP emails:', emailError);
             }
             
             console.log('=== REGISTRATION COMPLETED SUCCESSFULLY ===');
             
             res.status(201).json({
               success: true,
-              message: 'Registration initiated. Please verify your email with the OTP sent to complete registration.',
-              email: admin.email,
-              companyCode: company.companyCode.toUpperCase()
+              message: 'Registration initiated. Please verify both email addresses with the OTPs sent to complete registration.',
+              adminEmail: admin.email,
+              contactEmail: company.contactEmail,
+              companyCode: company.companyCode.toUpperCase(),
+              requiresContactEmailVerification: company.contactEmail.toLowerCase() !== admin.email.toLowerCase()
             });
       
           } catch (error) {
@@ -397,7 +420,158 @@ export const registerCompany = async (req, res) => {
       
 
 
-// Add a new controller function to verify OTP
+// Add a new controller function to verify dual OTP (admin and contact email)
+export const verifyDualOtp = async (req, res) => {
+  try {
+    const { adminEmail, adminOtp, contactEmail, contactOtp, companyCode } = req.body;
+    
+    console.log('Received dual verification request:', { 
+      adminEmail, 
+      adminOtp: adminOtp ? 'provided' : 'missing',
+      contactEmail, 
+      contactOtp: contactOtp ? 'provided' : 'missing',
+      companyCode 
+    });
+    
+    if (!adminEmail || !adminOtp || !companyCode) {
+      return res.status(400).json({ 
+        message: 'Admin email, admin OTP, and company code are required' 
+      });
+    }
+    
+    // Find user by admin email
+    const user = await User.findOne({ 
+      email: adminEmail.toLowerCase(),
+      companyCode: companyCode.toUpperCase()
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Admin user not found' });
+    }
+    
+    // Find company by company code
+    const company = await Company.findOne({ 
+      companyCode: companyCode.toUpperCase() 
+    });
+    
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+    
+    // Check admin OTP
+    if (user.otp !== adminOtp) {
+      return res.status(400).json({ message: 'Invalid admin OTP' });
+    }
+    
+    if (user.otpExpires < new Date()) {
+      return res.status(400).json({ message: 'Admin OTP has expired' });
+    }
+    
+    let contactEmailVerified = true;
+    
+    // Check contact email OTP only if it's different from admin email
+    if (contactEmail && contactEmail.toLowerCase() !== adminEmail.toLowerCase()) {
+      if (!contactOtp) {
+        return res.status(400).json({ 
+          message: 'Contact email OTP is required when contact email differs from admin email' 
+        });
+      }
+      
+      if (company.contactEmailOtp !== contactOtp) {
+        return res.status(400).json({ message: 'Invalid contact email OTP' });
+      }
+      
+      if (company.contactEmailOtpExpires < new Date()) {
+        return res.status(400).json({ message: 'Contact email OTP has expired' });
+      }
+      
+      // Mark contact email as verified
+      company.contactEmailVerified = true;
+      company.contactEmailOtp = undefined;
+      company.contactEmailOtpExpires = undefined;
+    }
+    
+    // Mark admin user as verified
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+    
+    // Activate company
+    company.isActive = true;
+    company.pendingVerification = false;
+    await company.save();
+    
+    console.log('Dual verification successful for:', {
+      adminEmail: user.email,
+      contactEmail: company.contactEmail,
+      companyCode: company.companyCode
+    });
+    
+    // Create admin user in company database
+    try {
+      const { getUserModel } = await import('../models/User.js');
+      const CompanyUserModel = await getUserModel(user.companyCode);
+      
+      const companyAdmin = new CompanyUserModel({
+        userId: user.userId,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        role: user.role,
+        companyCode: user.companyCode,
+        permissions: user.permissions,
+        isVerified: true,
+        isActive: true
+      });
+      
+      companyAdmin.$skipMiddleware = true;
+      await companyAdmin.save();
+      console.log('Admin user created in company database:', companyAdmin.email);
+      
+    } catch (error) {
+      console.error('Error creating admin in company database:', error);
+    }
+    
+    // Send payment link email after successful verification
+    try {
+      const paymentLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`;
+      const { sendPaymentLinkEmail } = await import('../utils/paymentMailer.js');
+      
+      await sendPaymentLinkEmail(company, paymentLink);
+      
+      // Mark payment link as shared
+      company.paymentLinkShared = true;
+      company.paymentLinkSharedDate = new Date();
+      await company.save();
+      
+      console.log('Payment link email sent to:', company.contactEmail);
+      
+    } catch (emailError) {
+      console.error('Error sending payment link email after verification:', emailError);
+      // Don't fail the verification process if email sending fails
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verification completed successfully',
+      adminVerified: true,
+      contactEmailVerified: contactEmailVerified
+    });
+    
+  } catch (error) {
+    console.error('Dual OTP verification error:', error);
+    res.status(500).json({ 
+      message: 'Server error during verification',
+      error: error.message 
+    });
+  }
+};
+
+// Add a new controller function to verify OTP (original single email verification)
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -1369,6 +1543,38 @@ export const resendOtp = async (req, res) => {
       error: error.message 
     });
   }
+};
 
+// Check if company code is available
+export const checkCompanyCode = async (req, res) => {
+  try {
+    const { companyCode } = req.params;
+    
+    if (!companyCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company code is required'
+      });
+    }
+    
+    // Check if company code already exists
+    const existingCompany = await Company.findOne({ 
+      companyCode: companyCode.toUpperCase() 
+    });
+    
+    res.status(200).json({
+      success: true,
+      available: !existingCompany,
+      message: existingCompany ? 'Company code already in use' : 'Company code is available'
+    });
+    
+  } catch (error) {
+    console.error('Check company code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error checking company code',
+      error: error.message
+    });
+  }
 };
 

@@ -75,14 +75,19 @@ export const sendOtpEmail = async (email, otp, userData = {}) => {
   try {
     const verifyLink = `${process.env.CLIENT_URL}/verify?email=${email}&otp=${otp}`;
     
-    // Get company name if available
+    // Get company name and email type if available
     const companyName = userData.companyName || 'HRMS';
     const userName = userData.name || 'Admin';
+    const emailType = userData.emailType || 'admin';
+    
+    // Customize subject and content based on email type
+    const isContactEmail = emailType === 'contact';
+    const subjectPrefix = isContactEmail ? 'Contact Email Verification' : 'Admin Account Verification';
     
     const mailOptions = {
       from: process.env.USER || `rickyharish30@gmail.com`,
       to: email,
-      subject: 'Account Verification - OTP Code',
+      subject: `${subjectPrefix} - OTP Code`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
           <div style="text-align: center; margin-bottom: 20px;">
@@ -91,7 +96,7 @@ export const sendOtpEmail = async (email, otp, userData = {}) => {
           
           <p style="margin-bottom: 15px;">Hello ${userName},</p>
           
-          <p style="margin-bottom: 15px;">Thank you for registering with our HRMS platform${companyName !== 'HRMS' ? ` for ${companyName}` : ''}. To complete your registration and verify your email address, please use the following One-Time Password (OTP):</p>
+          <p style="margin-bottom: 15px;">Thank you for registering with our HRMS platform${companyName !== 'HRMS' ? ` for ${companyName}` : ''}. ${isContactEmail ? 'To verify your company contact email address' : 'To complete your admin account setup and verify your email address'}, please use the following One-Time Password (OTP):</p>
           
           <div style="background-color: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 5px;">
             <h2 style="margin: 0; color: #333; letter-spacing: 5px; font-size: 24px;">${otp}</h2>

@@ -20,15 +20,52 @@ export const login = async (req, res) => {
     
     // First check if company exists and is active in main database
     const company = await Company.findOne({ 
-      companyCode: companyCode.toUpperCase(),
-      isActive: true
+      companyCode: companyCode.toUpperCase()
     });
     
     if (!company) {
-      console.log('Company not found or inactive:', companyCode);
+      console.log('Company not found:', companyCode);
       return res.status(401).json({ 
         success: false,
-        message: 'Invalid company code or company is inactive' 
+        message: 'Invalid company code' 
+      });
+    }
+    
+    // Check if company payment is completed
+    if (!company.paymentCompleted) {
+      console.log('Company payment not completed:', companyCode);
+      return res.status(402).json({ 
+        success: false,
+        message: 'Company registration payment is pending. Please complete the payment to access the system.',
+        requiresPayment: true,
+        companyCode: company.companyCode,
+        paymentLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`
+      });
+    }
+    
+    // Check if company plan has expired
+    if (company.isPaymentExpired || (company.planEndDate && new Date() > company.planEndDate)) {
+      // Mark as expired if not already done
+      if (!company.isPaymentExpired) {
+        await company.checkPaymentExpiry();
+      }
+      
+      console.log('Company plan expired:', companyCode);
+      return res.status(402).json({ 
+        success: false,
+        message: 'Your company plan has expired. Please renew to continue using the system.',
+        planExpired: true,
+        companyCode: company.companyCode,
+        planEndDate: company.planEndDate
+      });
+    }
+    
+    // Check if company is active
+    if (!company.isActive) {
+      console.log('Company not active:', companyCode);
+      return res.status(401).json({ 
+        success: false,
+        message: 'Company account is inactive' 
       });
     }
     
@@ -502,14 +539,14 @@ export const createUser = async (req, res) => {
       const transporter = nodemailer.createTransporter({
         service: 'gmail',
         auth: {
-          user: 'a.dineshsundar02@gmail.com',
+          user: process.env.USER,
           pass: 'xnbj tvjf odej ynit'
         }
       });
       
       // Send email
       await transporter.sendMail({
-        from: `"HRMS Support" <${'a.dineshsundar02@gmail.com'}>`,
+        from: `"HRMS Support" <${process.env.USER}>`,
         to: email,
         subject: 'Your HRMS Account',
         html: message

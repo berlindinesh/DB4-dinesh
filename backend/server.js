@@ -36,6 +36,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 
 import companyRoutes from './routes/companyRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import { authenticate, companyFilter } from './middleware/companyAuth.js';
 import invitationRoutes from './routes/invitationRoutes.js';
 //import authTestRoutes from './routes/authTestRoutes.js';
@@ -43,6 +44,7 @@ import invitationRoutes from './routes/invitationRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
 // import { startAllJobs } from './Jobs/index.js'; // Import the job scheduler
+import { startExpiryReminderScheduler } from './jobs/paymentExpiryScheduler.js';
 
 import { fileURLToPath } from 'url';
 import { dirname} from "path";
@@ -370,6 +372,9 @@ app.use('/api/s3', s3Routes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/invitations', invitationRoutes);
 
+// Payment routes
+app.use('/api/payments', paymentRoutes);
+
 // After creating the io instance
 app.set('io', io);
 
@@ -380,4 +385,11 @@ const PORT = process.env.PORT || 5002;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✨ Server running on port ${PORT}`.yellow.bold);
+  
+  // Start payment expiry reminder scheduler
+  try {
+    startExpiryReminderScheduler();
+  } catch (error) {
+    console.error('Failed to start payment expiry scheduler:', error);
+  }
 });

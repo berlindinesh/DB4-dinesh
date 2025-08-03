@@ -236,8 +236,9 @@ const onboardingFormSchema = new mongoose.Schema({
   userId: {
     type: String,
     ref: 'User',
-    required: true,
-    unique: true
+    required: false, // Allow auto-generation
+    unique: true,
+    sparse: true // Allow null values for unique constraint
   },
   Emp_ID: { 
     type: String,
@@ -424,6 +425,82 @@ onboardingFormSchema.statics.generateEmployeeNumber = async function() {
   const nextNumber = (currentNumber + 1).toString().padStart(4, '0');
   return `DB-${nextNumber}`;
 };
+
+// Auto-generate userId if not provided
+onboardingFormSchema.pre('save', async function(next) {
+  // Generate userId if not provided and we have personal info
+  if (!this.userId && this.personalInfo && this.personalInfo.firstName && this.personalInfo.lastName && this.personalInfo.email) {
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      try {
+        // Extract domain from email
+        const emailParts = this.personalInfo.email.split('@');
+        const domain = emailParts[1].split('.')[0];
+        
+        // Generate base for userId using first letter of first name, first letter of last name, and domain
+        const baseId = `${this.personalInfo.firstName.charAt(0)}${this.personalInfo.lastName.charAt(0)}-${domain}`.toUpperCase();
+        
+        // Find all existing userIds with this base pattern in this employee collection
+        const existingEmployees = await this.constructor.find({
+          userId: new RegExp(`^${baseId}-\\d{4}$`)
+        }, { userId: 1 }).sort({ userId: 1 });
+        
+        // Extract the numbers from existing userIds and find the next available one
+        const existingNumbers = existingEmployees.map(emp => {
+          const match = emp.userId.match(/-(\d{4})$/);
+          return match ? parseInt(match[1], 10) : 0;
+        }).filter(num => num > 0);
+        
+        // Remove duplicates and sort
+        const uniqueNumbers = [...new Set(existingNumbers)].sort((a, b) => a - b);
+        
+        // Find the next available number
+        let nextNumber = 1;
+        for (const num of uniqueNumbers) {
+          if (num === nextNumber) {
+            nextNumber++;
+          } else {
+            break;
+          }
+        }
+        
+        // Create userId with the next available sequential number
+        const candidateUserId = `${baseId}-${nextNumber.toString().padStart(4, '0')}`;
+        
+        // Double-check that this userId doesn't exist (race condition protection)
+        const exists = await this.constructor.findOne({ userId: candidateUserId });
+        if (exists) {
+          attempts++;
+          console.log(`Employee userId ${candidateUserId} exists, trying again. Attempt ${attempts}`);
+          continue;
+        }
+        
+        // Set the userId and break out of the loop
+        this.userId = candidateUserId;
+        console.log(`Generated unique employee userId: ${this.userId} for ${this.personalInfo.email} (attempt ${attempts + 1})`);
+        break;
+        
+      } catch (error) {
+        attempts++;
+        console.error(`Error generating employee userId (attempt ${attempts}):`, error);
+        
+        if (attempts >= maxAttempts) {
+          // Fallback to timestamp-based userId
+          this.userId = `EMP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+          console.log(`Using fallback employee userId: ${this.userId}`);
+          break;
+        }
+        
+        // Wait a small random time before retrying to reduce race conditions
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+      }
+    }
+  }
+  
+  next();
+});
 
 // Make sure the pre-save middleware is properly defined
 onboardingFormSchema.pre('save', async function(next) {

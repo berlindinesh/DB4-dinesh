@@ -115,27 +115,85 @@ userSchema.pre('save', function(next) {
 userSchema.pre('save', async function(next) {
   // Only generate userId if it's a new user AND userId is not already set
   if (this.isNew && !this.userId) {
-    try {
-      // Extract domain from email
-      const emailParts = this.email.split('@');
-      const domain = emailParts[1].split('.')[0];
-      
-      // Generate base for userId using first letter of first name, first letter of last name, and domain
-      const baseId = `${this.firstName.charAt(0)}${this.lastName.charAt(0)}-${domain}`.toUpperCase();
-      
-      // Find the count of existing users with similar userId pattern and same company code
-      const UserModel = await getUserModel(this.companyCode);
-      const count = await UserModel.countDocuments({
-        userId: new RegExp(`^${baseId}`),
-        companyCode: this.companyCode
-      });
-      
-      // Create userId with sequential number
-      this.userId = `${baseId}-${(count + 1).toString().padStart(4, '0')}`;
-    } catch (error) {
-      console.error('Error generating userId:', error);
-      // Fallback userId generation
-      this.userId = `USER-${Date.now()}`;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      try {
+        // Extract domain from email
+        const emailParts = this.email.split('@');
+        const domain = emailParts[1].split('.')[0];
+        
+        // Generate base for userId using first letter of first name, first letter of last name, and domain
+        const baseId = `${this.firstName.charAt(0)}${this.lastName.charAt(0)}-${domain}`.toUpperCase();
+        
+        // Check both main database and company database for existing userIds
+        const mainDbUsers = await MainUser.find({
+          userId: new RegExp(`^${baseId}-\\d{4}$`)
+        }, { userId: 1 }).sort({ userId: 1 });
+        
+        let companyDbUsers = [];
+        try {
+          const UserModel = await getUserModel(this.companyCode);
+          companyDbUsers = await UserModel.find({
+            userId: new RegExp(`^${baseId}-\\d{4}$`)
+          }, { userId: 1 }).sort({ userId: 1 });
+        } catch (companyError) {
+          console.log('Company database not accessible, using main database only:', companyError.message);
+        }
+        
+        // Combine results from both databases
+        const allExistingUsers = [...mainDbUsers, ...companyDbUsers];
+        
+        // Extract the numbers from existing userIds and find the next available one
+        const existingNumbers = allExistingUsers.map(user => {
+          const match = user.userId.match(/-(\d{4})$/);
+          return match ? parseInt(match[1], 10) : 0;
+        }).filter(num => num > 0);
+        
+        // Remove duplicates and sort
+        const uniqueNumbers = [...new Set(existingNumbers)].sort((a, b) => a - b);
+        
+        // Find the next available number
+        let nextNumber = 1;
+        for (const num of uniqueNumbers) {
+          if (num === nextNumber) {
+            nextNumber++;
+          } else {
+            break;
+          }
+        }
+        
+        // Create userId with the next available sequential number
+        const candidateUserId = `${baseId}-${nextNumber.toString().padStart(4, '0')}`;
+        
+        // Double-check that this userId doesn't exist (race condition protection)
+        const existsInMain = await MainUser.findOne({ userId: candidateUserId });
+        if (existsInMain) {
+          attempts++;
+          console.log(`UserId ${candidateUserId} exists in main DB, trying again. Attempt ${attempts}`);
+          continue;
+        }
+        
+        // Set the userId and break out of the loop
+        this.userId = candidateUserId;
+        console.log(`Generated unique userId: ${this.userId} for ${this.email} (attempt ${attempts + 1})`);
+        break;
+        
+      } catch (error) {
+        attempts++;
+        console.error(`Error generating userId (attempt ${attempts}):`, error);
+        
+        if (attempts >= maxAttempts) {
+          // Fallback to timestamp-based userId
+          this.userId = `USER-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+          console.log(`Using fallback userId: ${this.userId}`);
+          break;
+        }
+        
+        // Wait a small random time before retrying to reduce race conditions
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+      }
     }
   }
   next();
@@ -245,6 +303,43 @@ userSchema.statics.createWithPlainPassword = async function(userData, plainPassw
   user.password = await bcrypt.hash(plainPassword, saltRounds);
   
   return user;
+};
+
+// Static method to safely save user with duplicate key error handling
+userSchema.statics.safeSave = async function(userData) {
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  while (attempts < maxAttempts) {
+    try {
+      const user = new this(userData);
+      await user.save();
+      return user;
+    } catch (error) {
+      attempts++;
+      
+      // Check if it's a duplicate key error for userId
+      if (error.code === 11000 && error.keyPattern && error.keyPattern.userId) {
+        console.log(`Duplicate userId detected, retrying... (attempt ${attempts})`);
+        
+        if (attempts >= maxAttempts) {
+          // Force a new userId and try one more time
+          userData.userId = `USER-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+          console.log(`Using emergency fallback userId: ${userData.userId}`);
+          const user = new this(userData);
+          await user.save();
+          return user;
+        }
+        
+        // Remove the userId to force regeneration
+        delete userData.userId;
+        continue;
+      }
+      
+      // If it's not a duplicate key error, throw it
+      throw error;
+    }
+  }
 };
 
 // This model will be in the main database for global user authentication

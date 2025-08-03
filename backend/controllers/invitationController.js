@@ -235,9 +235,41 @@ export const createInvitation = async (req, res) => {
       // Assign permissions based on role
       newUser.assignPermissions();
 
-      // Skip middleware to prevent double hashing
+      // Skip middleware to prevent double hashing and handle duplicates
       newUser.$skipMiddleware = true;
-      await newUser.save();
+      
+      // Handle potential duplicate key errors
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      while (attempts < maxAttempts) {
+        try {
+          await newUser.save();
+          break; // Success, exit the loop
+        } catch (error) {
+          attempts++;
+          
+          // Check if it's a duplicate key error for userId
+          if (error.code === 11000 && error.keyPattern && error.keyPattern.userId) {
+            console.log(`Duplicate userId detected in invitation, retrying... (attempt ${attempts})`);
+            
+            if (attempts >= maxAttempts) {
+              // Use emergency fallback userId
+              newUser.userId = `USER-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+              console.log(`Using emergency fallback userId: ${newUser.userId}`);
+              await newUser.save();
+              break;
+            }
+            
+            // Remove userId to force regeneration on next save
+            newUser.userId = undefined;
+            continue;
+          }
+          
+          // If it's not a duplicate key error, throw it
+          throw error;
+        }
+      }
       
       console.log('User created in company database:', newUser._id);
       

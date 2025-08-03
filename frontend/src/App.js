@@ -19,6 +19,7 @@ import ResetPassword from './screens/authScreens/resetPassword/ResetPassword';
 import Settings from './screens/Settings';
 import { NotificationProvider } from './context/NotificationContext';
 import RegisterCompanyPage from './screens/authScreens/registerScreen/RegisterCompanyPage.js';
+import PaymentPage from './screens/authScreens/PaymentPage.js';
 import CompanySettings from './screens/authScreens/auth/CompanySettings.js';
 import { selectIsAuthenticated, selectAuthLoading , logoutUser } from './redux/authSlice';
 import ChangePassword from './screens/authScreens/ChangePassword.js';
@@ -73,6 +74,7 @@ function AppContent() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path='/reset-password/:token' element={<ResetPassword />} />
           <Route path='/register' element={<RegisterCompanyPage />} />
+          <Route path='/payment/:companyCode' element={<PaymentPage />} />
           <Route path='/verifyOtp' element={<VerifyOtpPage />} />
           <Route path='/verify-email' element={<VerifyOtpPage />} />
       

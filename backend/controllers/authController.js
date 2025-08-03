@@ -36,26 +36,25 @@ export const registerAuth = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     
-    // Create new user with all fields including userId
-    const newUser = new User({
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Create new user with all fields including userId using safeSave
+    const userData = {
       userId,
       firstName,
       middleName,
       lastName,
       name,
       email,
-      password: hashedPassword
-    });
-
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    newUser.otp = otp.toString();
-    newUser.otpExpires = otpExpires;
+      password: hashedPassword,
+      otp: otp.toString(),
+      otpExpires
+    };
     
-    // Save user to database
-    await newUser.save();
+    // Save user to database with duplicate key error handling
+    const newUser = await User.safeSave(userData);
 
     // Send OTP email
     await sendOtpEmail(email, otp);
