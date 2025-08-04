@@ -1,9 +1,11 @@
 
 import mongoose from "mongoose";
 import colors from 'colors';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Main connection URL
-const URL = `mongodb+srv://dbcloudtechnologies:ETmCZbQWjAcjYQc8@cluster0.wqr1jyr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const URL = process.env.MONGO_URI;
 
 // Store connections for each company
 const connections = {};
@@ -11,7 +13,14 @@ const connections = {};
 // Connect to main database
 const connectMainDB = async () => {
     try {
-        const conn = await mongoose.connect(URL);
+        //const conn = await mongoose.connect(URL);
+        const conn = await mongoose.connect(URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 30000, // 30 seconds
+            socketTimeoutMS: 45000,          // 45 seconds
+          });
+        // Verify connection was successful          
         console.log(`🚀 Main MongoDB Connected: ${conn.connection.host}`.cyan.underline);
         return conn;
     } catch (error) {
@@ -122,7 +131,17 @@ const getCompanyConnection = async (companyCode) => {
         console.log(`Creating new connection to ${dbName} for company ${companyCode}`);
         console.log(`Connection string: ${connectionString}`);
         
-        const connection = await mongoose.createConnection(connectionString);
+        //const connection = await mongoose.createConnection(connectionString);
+
+        const connection = mongoose.createConnection(connectionString, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+          });
+          
+          await new Promise((resolve, reject) => {
+            connection.once('open', resolve);
+            connection.on('error', reject);
+          });
         
         // Verify connection was successful
         if (!connection) {
