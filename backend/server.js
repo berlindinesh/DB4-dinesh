@@ -58,6 +58,7 @@ import rotatingWorktypeRoutes from './routes/rotatingWorktypeRoutes.js';
 import myLeaveRequestRoutes from './routes/myLeaveRequestRoutes.js';
 import leaveRequestRoutes from './routes/leaveRequestRoutes.js';
 import s3Routes from './routes/s3Routes.js';
+import userRoutes from './routes/userRoutes.js';
 
 // Determine directory name (for ES modules)
 const __filename = fileURLToPath(import.meta.url);
@@ -231,12 +232,15 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('Created uploads/contracts directory');
 }
 
+            // user management (some endpoints may be public/protected internally)
+
 // **Public Routes** (no authentication middleware)
 app.use('/api/auth', authRouter);
 app.use('/api/companies', companyRoutes); 
+app.use('/api/users', userRoutes);
 
 // **Protected Routes** (routes will handle their own auth checks)
-app.use('/api/users', userRoutes);            // user management (some endpoints may be public/protected internally)
+
 app.use('/api/employees', employeesRouter);
 app.use('/api/profiles', profileRouter);
 app.use(candidateRoutes);
