@@ -13,7 +13,7 @@ export const fetchCompanySettings = () => async (dispatch) => {
   dispatch({ type: FETCH_COMPANY_SETTINGS_REQUEST });
   
   try {
-    const response = await api.get('/api/companies/settings');
+    const response = await api.get('/companies/settings');
     
     dispatch({
       type: FETCH_COMPANY_SETTINGS_SUCCESS,
@@ -38,7 +38,7 @@ export const updateCompanySettings = (settingsData) => async (dispatch) => {
   try {
     console.log('Updating company settings with:', settingsData);
     
-    const response = await api.put('/api/companies/settings', settingsData);
+    const response = await api.put('/companies/settings', settingsData);
     
     dispatch({
       type: UPDATE_COMPANY_SETTINGS_SUCCESS,

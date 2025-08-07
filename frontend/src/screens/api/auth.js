@@ -289,7 +289,7 @@ const authService = {
           }
         }
         
-        const response = await api.post('companies/register', formData, {
+        const response = await api.post('/companies/register', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -299,7 +299,7 @@ const authService = {
         return response;
       } else {
         // Handle regular JSON data
-        const response = await api.post('companies/register', formData);
+        const response = await api.post('/companies/register', formData);
         return response;
       }
     } catch (error) {
@@ -321,7 +321,7 @@ const authService = {
       // Trim the password to remove any accidental whitespace
       const trimmedPassword = credentials.password.trim();
       
-      const response = await api.post('companies/login', {
+      const response = await api.post('/companies/login', {
         companyCode: credentials.companyCode.toUpperCase(),
         email: credentials.email.toLowerCase(),
         password: trimmedPassword
@@ -386,7 +386,7 @@ const authService = {
   // Verify OTP
   verifyOtp: async (email, otp) => {
     try {
-      const response = await api.post('companies/verify-otp', { email, otp });
+      const response = await api.post('/companies/verify-otp', { email, otp });
       return response.data;
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -397,7 +397,7 @@ const authService = {
   // Resend OTP
   resendOtp: async (email) => {
     try {
-      const response = await api.post('companies/resend-otp', { email });
+      const response = await api.post('/companies/resend-otp', { email });
       return response.data;
     } catch (error) {
       console.error('Resend OTP error:', error);
@@ -408,7 +408,7 @@ const authService = {
   // Request password reset
   forgotPassword: async (data) => {
     try {
-      const response = await api.post('companies/forgot-password', data);
+      const response = await api.post('/companies/forgot-password', data);
       return response.data;
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -419,7 +419,7 @@ const authService = {
   // Verify reset token
   verifyResetToken: async (data) => {
     try {
-      const response = await api.post('companies/verify-reset-token', data);
+      const response = await api.post('/companies/verify-reset-token', data);
       return response.data;
     } catch (error) {
       console.error('Verify reset token error:', error);
@@ -437,7 +437,7 @@ const authService = {
         passwordProvided: !!data.password
       });
       
-      const response = await api.post('companies/reset-password', {
+      const response = await api.post('/companies/reset-password', {
         token: data.token,
         email: data.email,
         companyCode: data.companyCode,
@@ -458,7 +458,7 @@ const authService = {
   // Change password (for authenticated users)
   changePassword: async (data) => {
     try {
-      const response = await api.post('companies/change-password', data);
+      const response = await api.post('/companies/change-password', data);
       return response.data;
     } catch (error) {
       console.error('Change password error:', error);

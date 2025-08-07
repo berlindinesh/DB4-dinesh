@@ -19,7 +19,7 @@ export class PayrollPDFService {
   static async fetchCompanyDetails(token, companyCode) {
     try {
       // Use the custom api instance with proper headers
-      const response = await api.get('/api/companies/details', {
+      const response = await api.get('/companies/details', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-Company-Code': companyCode

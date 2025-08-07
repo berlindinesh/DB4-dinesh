@@ -4,7 +4,7 @@ const userApi = {
   // Change password
   changePassword: async (passwordData) => {
     try {
-      const response = await api.post('companies/change-password', passwordData);
+      const response = await api.post('/companies/change-password', passwordData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

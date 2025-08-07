@@ -16,7 +16,7 @@ formData.append('formData', JSON.stringify({
 formData.append('employeeImage', values.employeeImage); // File object
 
 // 2. Axios POST to backend
-const response = await api.post('employees/personal-info', formData, {
+const response = await api.post('/employees/personal-info', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 
