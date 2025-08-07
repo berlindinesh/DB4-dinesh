@@ -76,11 +76,25 @@ const PaymentGateway = ({
   
   const fetchPaymentConfig = async () => {
     try {
+      setError(''); // Clear any previous errors
       const config = await authService.getPaymentConfig();
       setPaymentConfig(config.config);
     } catch (error) {
       console.error('Failed to fetch payment config:', error);
-      setError('Failed to load payment configuration');
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = 'Failed to load payment configuration';
+      if (error.response?.status === 401) {
+        errorMessage = 'Payment service is currently unavailable. Please try again later.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Payment service error. Please contact support if this persists.';
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setError(errorMessage);
     }
   };
   
@@ -254,7 +268,22 @@ const PaymentGateway = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert 
+                severity="error" 
+                sx={{ mb: 3 }}
+                action={
+                  !paymentConfig && (
+                    <Button 
+                      color="inherit" 
+                      size="small" 
+                      onClick={fetchPaymentConfig}
+                      disabled={loading}
+                    >
+                      Retry
+                    </Button>
+                  )
+                }
+              >
                 {error}
               </Alert>
             </motion.div>

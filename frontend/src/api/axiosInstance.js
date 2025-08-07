@@ -327,6 +327,20 @@ api.interceptors.response.use(
 
     // Handle session expiration
     if (error.response && error.response.status === 401) {
+      // IMPORTANT: Skip auth handling for payment and public endpoints
+      const isPublicEndpoint = originalRequest.url && (
+        originalRequest.url.includes("/payments/") ||
+        originalRequest.url.includes("/auth/") ||
+        originalRequest.url.includes("/companies/register") ||
+        originalRequest.url.includes("/companies/verify") ||
+        originalRequest.url.includes("/companies/payment-link")
+      );
+      
+      if (isPublicEndpoint) {
+        console.log("401 error on public endpoint, not redirecting to login:", originalRequest.url);
+        return Promise.reject(error);
+      }
+      
       // Clear local storage and redirect to login if token is invalid
       if (
         error.response.data?.message === "Invalid token" ||

@@ -317,6 +317,14 @@ app.use('/api/users', userRoutes);
 app.use("/api/auth", authRouter);
 app.use("/api/companies", companyRoutes); // Company routes handle their own authentication
 
+// CRITICAL: Payment routes MUST be here (before ANY routes with authentication middleware)
+app.use('/api/payments', (req, res, next) => {
+  console.log(`🔓 PAYMENT ROUTE: ${req.method} ${req.url} - NO AUTH REQUIRED`);
+  console.log(`🔗 Origin: ${req.headers.origin || 'unknown'}`);
+  console.log(`🔑 Authorization header: ${req.headers.authorization ? 'PRESENT (IGNORING)' : 'NOT PRESENT'}`);
+  next();
+}, paymentRoutes);
+
 // Protected routes - these routes should handle their own authentication
 app.use("/api/employees", employeesRouter);
 app.use("/api/profiles", profileRouter);
@@ -368,12 +376,11 @@ app.use('/api/leave-requests', leaveRequestRoutes);
 app.use('/api/s3', s3Routes);
 // app.use('/api/documents', documentRoute);
 
+// Payment routes already registered above as public routes
+
 // User management routes
 app.use('/api/roles', roleRoutes);
 app.use('/api/invitations', invitationRoutes);
-
-// Payment routes
-app.use('/api/payments', paymentRoutes);
 
 // After creating the io instance
 app.set('io', io);

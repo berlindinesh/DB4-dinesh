@@ -33,17 +33,26 @@ export const createPaymentOrder = async (req, res) => {
     
     const { companyCode, adminEmail } = req.body;
     
-    if (!companyCode || !adminEmail) {
+    if (!companyCode) {
       return res.status(400).json({
         success: false,
-        message: 'Company code and admin email are required'
+        message: 'Company code is required'
       });
     }
     
-    // Verify company exists and is verified
+    console.log(`🔍 Searching for company: ${companyCode}`);
+    console.log(`🔍 Admin email provided: ${adminEmail || 'Not provided'}`);
+    
     const company = await Company.findOne({ 
       companyCode: companyCode.toUpperCase() 
     });
+    
+    console.log(`🔍 Company found:`, company ? {
+      name: company.name,
+      isActive: company.isActive,
+      pendingVerification: company.pendingVerification,
+      contactEmailVerified: company.contactEmailVerified
+    } : 'NOT FOUND');
     
     if (!company) {
       return res.status(404).json({
@@ -52,24 +61,50 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
     
-    if (!company.isActive || company.pendingVerification) {
-      return res.status(400).json({
-        success: false,
-        message: 'Company verification is pending. Please complete email verification first.'
-      });
+    // For payment creation, we allow companies that are still in verification process
+    // Payment is part of the registration flow, so pendingVerification is OK
+    if (!company.contactEmailVerified) {
+      console.log('⚠️ Company contact email not verified yet, but allowing payment for registration');
     }
     
-    // Check if admin exists
-    const admin = await User.findOne({ 
-      email: adminEmail.toLowerCase(),
-      companyCode: companyCode.toUpperCase(),
-      role: 'admin'
+    console.log(`✅ Company verification status:`, {
+      isActive: company.isActive,
+      pendingVerification: company.pendingVerification,
+      contactEmailVerified: company.contactEmailVerified
     });
     
+    // Find admin user - if adminEmail provided, try that first, otherwise find any admin for company
+    let admin;
+    
+    if (adminEmail) {
+      admin = await User.findOne({ 
+        email: adminEmail.toLowerCase(),
+        companyCode: companyCode.toUpperCase(),
+        role: 'admin'
+      });
+      console.log(`🔍 Admin search with email ${adminEmail}:`, admin ? 'FOUND' : 'NOT FOUND');
+    }
+    
+    // If admin not found with provided email (or no email provided), find any admin for this company
     if (!admin) {
+      console.log(`🔍 Searching for any admin user for company ${companyCode}`);
+      admin = await User.findOne({ 
+        companyCode: companyCode.toUpperCase(),
+        role: 'admin'
+      });
+      
+      if (admin) {
+        console.log(`✅ Found admin for company: ${admin.email}`);
+      }
+    }
+    
+    if (!admin) {
+      console.log(`No admin found for company ${companyCode}. Available emails:`, 
+        await User.find({ companyCode: companyCode.toUpperCase() }).select('email role'));
+        
       return res.status(404).json({
         success: false,
-        message: 'Admin user not found'
+        message: `Admin user not found for company ${companyCode}. Please ensure the company registration is complete.`
       });
     }
     

@@ -1283,9 +1283,23 @@ const handlePaymentSuccess = (paymentDetails) => {
 
 // Handle payment failure
 const handlePaymentFailure = (error) => {
-  setShowPaymentGateway(false);
-  setError(`Payment failed: ${error.message || 'Unknown error'}. Please try again.`);
+  console.log('Payment failure handled, staying on payment page:', error);
+  
+  // Keep the payment gateway open so user can retry
+  // setShowPaymentGateway(false); // Don't close the gateway
+  
+  // Show error message but don't redirect
+  const errorMessage = error?.response?.data?.message || 
+                      error?.message || 
+                      'Payment failed. Please try again.';
+  
+  setError(`Payment failed: ${errorMessage}`);
   setLoading(false);
+  
+  // Prevent any auto-redirects by explicitly staying on current page
+  if (window.history && window.history.pushState) {
+    window.history.pushState(null, '', window.location.pathname);
+  }
 };
 
 // Handle payment gateway close
