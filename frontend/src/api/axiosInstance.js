@@ -205,13 +205,29 @@ import axios from "axios";
 import { store } from "../redux/store";
 
 // Determine the correct API base URL
+// const getApiBaseUrl = () => {
+//   // For production (EC2/ALB), use relative URLs so nginx can proxy
+//   if (process.env.NODE_ENV === "production") {
+//     return "/api";
+//   }
+//   // For development, use the environment variable or localhost
+//   return `${process.env.REACT_APP_API_URL || "http://localhost:5002"}/api`;
+// };
+
 const getApiBaseUrl = () => {
-  // For production (EC2/ALB), use relative URLs so nginx can proxy
+  // For production, use relative path (assumes frontend is reverse-proxied via NGINX or ALB)
   if (process.env.NODE_ENV === "production") {
     return "/api";
   }
-  // For development, use the environment variable or localhost
-  return `${process.env.REACT_APP_API_URL || "http://localhost:5002"}/api`;
+
+  // Normalize and ensure trailing slash is handled properly
+  const base = process.env.REACT_APP_API_URL || "http://localhost:5002";
+
+  // Remove any trailing slash to avoid double slashes
+  const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
+
+  // Append /api
+  return `${cleanBase}/api`;
 };
 
 const api = axios.create({
