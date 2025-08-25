@@ -6,61 +6,70 @@ import { PAYMENT_CONFIG } from '../config/payment.js';
 // Run every day at 9:00 AM
 const SCHEDULE = '0 9 * * *';
 
-// Process plan expiry reminders
+// Helper function to determine reminder type and if it should be sent
+const determineReminderType = (daysLeft, company) => {
+  if (daysLeft <= 0 && !company.hasReminderBeenSent('expiry_notification')) {
+    return { type: 'expiry_notification', shouldSend: true };
+  }
+  
+  if (daysLeft === 1 && !company.hasReminderBeenSent('1_day_reminder')) {
+    return { type: '1_day_reminder', shouldSend: true };
+  }
+  
+  if (daysLeft === 5 && !company.hasReminderBeenSent('5_day_reminder')) {
+    return { type: '5_day_reminder', shouldSend: true };
+  }
+  
+  return { type: null, shouldSend: false };
+};
+
+// Helper function to process a single company's reminders
+const processCompanyReminder = async (company) => {
+  const daysLeft = company.getDaysUntilExpiry();
+  const { type: reminderType, shouldSend } = determineReminderType(daysLeft, company);
+  
+  if (!shouldSend || !reminderType) {
+    return;
+  }
+  
+  await sendPlanExpiryReminder(company, daysLeft);
+  await company.addReminderSent(reminderType);
+  
+  console.log(`✅ Sent ${reminderType} to ${company.name} (${daysLeft} days left)`);
+};
+
+// Helper function to process expired companies
+const processExpiredCompanies = async () => {
+  const expiredCompanies = await Company.getExpiredCompanies();
+  console.log(`Found ${expiredCompanies.length} expired companies to process`);
+  
+  for (const company of expiredCompanies) {
+    try {
+      await company.checkPaymentExpiry();
+      console.log(`✅ Marked ${company.name} as expired`);
+    } catch (error) {
+      console.error(`❌ Error marking ${company.name} as expired:`, error);
+    }
+  }
+};
+
+// Process plan expiry reminders (Refactored to reduce complexity)
 export const processExpiryReminders = async () => {
   try {
     console.log('🔄 Starting plan expiry reminder check...');
     
-    // Get companies that need reminders
     const companies = await Company.getCompaniesNeedingReminders();
     console.log(`Found ${companies.length} companies needing reminders`);
     
     for (const company of companies) {
       try {
-        const daysLeft = company.getDaysUntilExpiry();
-        
-        // Determine reminder type
-        let reminderType = null;
-        let shouldSend = false;
-        
-        if (daysLeft <= 0 && !company.hasReminderBeenSent('expiry_notification')) {
-          reminderType = 'expiry_notification';
-          shouldSend = true;
-        } else if (daysLeft === 1 && !company.hasReminderBeenSent('1_day_reminder')) {
-          reminderType = '1_day_reminder';
-          shouldSend = true;
-        } else if (daysLeft === 5 && !company.hasReminderBeenSent('5_day_reminder')) {
-          reminderType = '5_day_reminder';
-          shouldSend = true;
-        }
-        
-        if (shouldSend && reminderType) {
-          // Send reminder email
-          await sendPlanExpiryReminder(company, daysLeft);
-          
-          // Mark reminder as sent
-          await company.addReminderSent(reminderType);
-          
-          console.log(`✅ Sent ${reminderType} to ${company.name} (${daysLeft} days left)`);
-        }
-        
+        await processCompanyReminder(company);
       } catch (error) {
         console.error(`❌ Error processing reminders for ${company.name}:`, error);
       }
     }
     
-    // Process expired companies
-    const expiredCompanies = await Company.getExpiredCompanies();
-    console.log(`Found ${expiredCompanies.length} expired companies to process`);
-    
-    for (const company of expiredCompanies) {
-      try {
-        await company.checkPaymentExpiry();
-        console.log(`✅ Marked ${company.name} as expired`);
-      } catch (error) {
-        console.error(`❌ Error marking ${company.name} as expired:`, error);
-      }
-    }
+    await processExpiredCompanies();
     
     console.log('✅ Plan expiry reminder check completed');
     

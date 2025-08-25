@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=lcov",
+    "test:sonar": "jest --coverage --coverageReporters=lcov --passWithNoTests",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "data:import": "node seeder",
