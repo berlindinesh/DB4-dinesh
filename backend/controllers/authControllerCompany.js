@@ -6,6 +6,257 @@ import { sendOtpEmail } from '../utils/mailer.js';
 import bcrypt from 'bcrypt';
 import { markInvitationAccepted } from './invitationController.js';
 
+// Helper function to validate company status
+const validateCompanyStatus = async (companyCode) => {
+  const company = await Company.findOne({ 
+    companyCode: companyCode.toUpperCase()
+  });
+  
+  if (!company) {
+    return {
+      isValid: false,
+      response: { 
+        status: 401,
+        data: { success: false, message: 'Invalid company code' }
+      }
+    };
+  }
+  
+  if (!company.paymentCompleted) {
+    return {
+      isValid: false,
+      response: {
+        status: 402,
+        data: {
+          success: false,
+          message: 'Company registration payment is pending. Please complete the payment to access the system.',
+          requiresPayment: true,
+          companyCode: company.companyCode,
+          paymentLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`
+        }
+      }
+    };
+  }
+  
+  if (company.isPaymentExpired || (company.planEndDate && new Date() > company.planEndDate)) {
+    if (!company.isPaymentExpired) {
+      await company.checkPaymentExpiry();
+    }
+    
+    return {
+      isValid: false,
+      response: {
+        status: 402,
+        data: {
+          success: false,
+          message: 'Your company plan has expired. Please renew to continue using the system.',
+          planExpired: true,
+          companyCode: company.companyCode,
+          planEndDate: company.planEndDate
+        }
+      }
+    };
+  }
+  
+  if (!company.isActive) {
+    return {
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Company account is inactive' }
+      }
+    };
+  }
+  
+  return { isValid: true, company };
+};
+
+// Helper function to authenticate user in company database
+const authenticateCompanyUser = async (email, password, companyCode) => {
+  const CompanyUserModel = await getUserModel(companyCode);
+  const user = await CompanyUserModel.findOne({ 
+    email: email.toLowerCase()
+  });
+  
+  if (!user) {
+    return { found: false };
+  }
+  
+  if (!user.password) {
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Account setup incomplete. Please contact administrator.' }
+      }
+    };
+  }
+  
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  
+  if (!isPasswordValid) {
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Invalid email or password' }
+      }
+    };
+  }
+  
+  if (!user.isActive && !user.isFirstLogin) {
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Your account is inactive. Please contact your administrator.' }
+      }
+    };
+  }
+  
+  return { found: true, isValid: true, user };
+};
+
+// Helper function to handle first login
+const handleFirstLogin = async (user, companyCode) => {
+  if (!user.isFirstLogin) {
+    user.lastLogin = new Date();
+    user.lastModified = new Date();
+    user.$skipMiddleware = true;
+    await user.save();
+    return;
+  }
+  
+  try {
+    if (user.invitationId) {
+      await markInvitationAccepted(user._id, companyCode);
+    }
+    
+    user.isFirstLogin = false;
+    user.isActive = true;
+    user.lastLogin = new Date();
+    user.lastModified = new Date();
+    user.$skipMiddleware = true;
+    await user.save();
+    
+    console.log('User activated and first login completed');
+  } catch (invitationError) {
+    console.error('Error handling first login:', invitationError);
+  }
+};
+
+// Helper function to authenticate main database user
+const authenticateMainUser = async (email, password, companyCode, company) => {
+  const user = await MainUser.findOne({ 
+    email: email.toLowerCase(), 
+    companyCode: companyCode.toUpperCase() 
+  });
+  
+  if (!user) {
+    return {
+      found: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Invalid email or password' }
+      }
+    };
+  }
+  
+  if (!user.isVerified) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+    
+    try {
+      await sendOtpEmail(email, otp, {
+        name: user.name,
+        companyName: company.name
+      });
+    } catch (emailError) {
+      console.error('Error sending OTP email:', emailError);
+    }
+    
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 403,
+        data: {
+          success: false,
+          message: 'Email not verified. A verification code has been sent to your email.',
+          requiresVerification: true,
+          email: user.email
+        }
+      }
+    };
+  }
+  
+  if (!user.isActive) {
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Your account is inactive. Please contact your administrator.' }
+      }
+    };
+  }
+  
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  
+  if (!isPasswordValid) {
+    return {
+      found: true,
+      isValid: false,
+      response: {
+        status: 401,
+        data: { success: false, message: 'Invalid email or password' }
+      }
+    };
+  }
+  
+  return { found: true, isValid: true, user };
+};
+
+// Helper function to create user in company database
+const createCompanyUser = async (mainUser, companyCode) => {
+  try {
+    const CompanyUserModel = await getUserModel(companyCode);
+    
+    const companyUser = new CompanyUserModel({
+      userId: mainUser.userId || `USER-${Date.now()}`,
+      firstName: mainUser.firstName,
+      middleName: mainUser.middleName,
+      lastName: mainUser.lastName,
+      name: mainUser.name,
+      email: mainUser.email,
+      password: mainUser.password,
+      role: mainUser.role,
+      companyCode: mainUser.companyCode,
+      permissions: mainUser.permissions,
+      isVerified: true,
+      isActive: true,
+      lastLogin: new Date(),
+      lastModified: new Date()
+    });
+    
+    companyUser.$skipMiddleware = true;
+    await companyUser.save();
+    console.log('User created in company database:', companyUser.email);
+    
+    return companyUser;
+  } catch (dbError) {
+    console.error('Error creating user in company database:', dbError);
+    return null;
+  }
+};
+
 // Login user
 export const login = async (req, res) => {
   try {
@@ -18,167 +269,29 @@ export const login = async (req, res) => {
       passwordLength: password ? password.length : 0
     });
     
-    // First check if company exists and is active in main database
-    const company = await Company.findOne({ 
-      companyCode: companyCode.toUpperCase()
-    });
-    
-    if (!company) {
-      console.log('Company not found:', companyCode);
-      return res.status(401).json({ 
-        success: false,
-        message: 'Invalid company code' 
-      });
+    // Validate company status
+    const companyValidation = await validateCompanyStatus(companyCode);
+    if (!companyValidation.isValid) {
+      const { status, data } = companyValidation.response;
+      return res.status(status).json(data);
     }
     
-    // Check if company payment is completed
-    if (!company.paymentCompleted) {
-      console.log('Company payment not completed:', companyCode);
-      return res.status(402).json({ 
-        success: false,
-        message: 'Company registration payment is pending. Please complete the payment to access the system.',
-        requiresPayment: true,
-        companyCode: company.companyCode,
-        paymentLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/${company.companyCode}`
-      });
-    }
+    const { company } = companyValidation;
     
-    // Check if company plan has expired
-    if (company.isPaymentExpired || (company.planEndDate && new Date() > company.planEndDate)) {
-      // Mark as expired if not already done
-      if (!company.isPaymentExpired) {
-        await company.checkPaymentExpiry();
-      }
-      
-      console.log('Company plan expired:', companyCode);
-      return res.status(402).json({ 
-        success: false,
-        message: 'Your company plan has expired. Please renew to continue using the system.',
-        planExpired: true,
-        companyCode: company.companyCode,
-        planEndDate: company.planEndDate
-      });
-    }
-    
-    // Check if company is active
-    if (!company.isActive) {
-      console.log('Company not active:', companyCode);
-      return res.status(401).json({ 
-        success: false,
-        message: 'Company account is inactive' 
-      });
-    }
-    
-    // Try to find user in company-specific database first
-    let user = null;
-    let isCompanyUser = false;
-    
+    // Try to authenticate user in company database first
     try {
-      // Get company-specific User model
-      const { getUserModel } = await import('../models/User.js');
-      const CompanyUserModel = await getUserModel(companyCode);
+      const companyUserAuth = await authenticateCompanyUser(email, password, companyCode);
       
-      // Find user in company database
-      user = await CompanyUserModel.findOne({ 
-        email: email.toLowerCase()
-      });
-      
-      if (user) {
-        isCompanyUser = true;
-        console.log('User found in company database:', {
-          id: user._id,
-          email: user.email,
-          companyCode: user.companyCode,
-          isFirstLogin: user.isFirstLogin,
-          isActive: user.isActive,
-          passwordLength: user.password ? user.password.length : 0,
-          isPasswordHashed: user.password ? user.password.startsWith('$2') : false
-        });
-        
-        // Check if user account is set up properly
-        if (!user.password) {
-          console.log('User has no password set');
-          return res.status(401).json({
-            success: false,
-            message: 'Account setup incomplete. Please contact administrator.'
-          });
+      if (companyUserAuth.found) {
+        if (!companyUserAuth.isValid) {
+          const { status, data } = companyUserAuth.response;
+          return res.status(status).json(data);
         }
         
-        // Verify password using direct bcrypt comparison
-        console.log('Attempting password verification for:', user.email);
-        console.log('DEBUG - Password comparison details:', {
-          providedPassword: password,
-          storedPasswordLength: user.password.length,
-          isHashFormat: user.password.startsWith('$2'),
-          userEmail: user.email
-        });
+        const user = companyUserAuth.user;
+        await handleFirstLogin(user, companyCode);
         
-        let isPasswordValid = false;
-        try {
-          // Use direct bcrypt comparison for reliability
-          isPasswordValid = await bcrypt.compare(password, user.password);
-          console.log('Password comparison result:', isPasswordValid);
-        } catch (compareError) {
-          console.error('Password comparison error:', compareError);
-          return res.status(500).json({
-            success: false,
-            message: 'Authentication error. Please try again.'
-          });
-        }
-        
-        if (!isPasswordValid) {
-          console.log('Password verification failed for user:', user.email);
-          return res.status(401).json({
-            success: false,
-            message: 'Invalid email or password'
-          });
-        }
-        
-        console.log('Password verified successfully for user:', user.email);
-        
-        // Check if user is active (allow first login even if inactive)
-        if (!user.isActive && !user.isFirstLogin) {
-          return res.status(401).json({ 
-            success: false,
-            message: 'Your account is inactive. Please contact your administrator.' 
-          });
-        }
-        
-        // Handle first login - mark invitation as accepted and activate user
-        if (user.isFirstLogin) {
-          console.log('First login detected for user:', user.email);
-          
-          try {
-            // Mark invitation as accepted
-            if (user.invitationId) {
-              await markInvitationAccepted(user._id, companyCode);
-              console.log('Invitation marked as accepted for user:', user.email);
-            }
-            
-            // Update user status
-            user.isFirstLogin = false;
-            user.isActive = true;
-            user.lastLogin = new Date();
-            user.lastModified = new Date();
-            
-            // Skip middleware to avoid password rehashing
-            user.$skipMiddleware = true;
-            await user.save();
-            
-            console.log('User activated and first login completed');
-          } catch (invitationError) {
-            console.error('Error handling first login:', invitationError);
-            // Continue with login even if invitation update fails
-          }
-        } else {
-          // Update last login for existing users
-          user.lastLogin = new Date();
-          user.lastModified = new Date();
-          user.$skipMiddleware = true;
-          await user.save();
-        }
-        
-        // Generate JWT token
+        // Generate JWT token and return success
         const token = jwt.sign(
           { 
             userId: user._id, 
@@ -203,7 +316,7 @@ export const login = async (req, res) => {
             role: user.role,
             permissions: user.permissions,
             companyCode: user.companyCode,
-            isFirstLogin: false // Always false after successful login
+            isFirstLogin: false
           }
         });
       }
@@ -216,100 +329,19 @@ export const login = async (req, res) => {
     }
     
     // If user not found in company database, check main database
-    user = await MainUser.findOne({ 
-      email: email.toLowerCase(), 
-      companyCode: companyCode.toUpperCase() 
-    });
+    const mainUserAuth = await authenticateMainUser(email, password, companyCode, company);
     
-    if (!user) {
-      console.log('User not found in any database:', email);
-      return res.status(401).json({ 
-        success: false,
-        message: 'Invalid email or password' 
-      });
+    if (!mainUserAuth.found || !mainUserAuth.isValid) {
+      const { status, data } = mainUserAuth.response;
+      return res.status(status).json(data);
     }
     
-    // Check if user is verified
-    if (!user.isVerified) {
-      // Generate new OTP for unverified users
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-      
-      user.otp = otp;
-      user.otpExpires = otpExpires;
-      await user.save();
-      
-      // Send OTP email
-      try {
-        await sendOtpEmail(email, otp, {
-          name: user.name,
-          companyName: company.name
-        });
-      } catch (emailError) {
-        console.error('Error sending OTP email:', emailError);
-      }
-      
-      return res.status(403).json({ 
-        success: false,
-        message: 'Email not verified. A verification code has been sent to your email.',
-        requiresVerification: true,
-        email: user.email
-      });
-    }
+    let user = mainUserAuth.user;
     
-    // Check if user is active
-    if (!user.isActive) {
-      return res.status(401).json({ 
-        success: false,
-        message: 'Your account is inactive. Please contact your administrator.' 
-      });
-    }
-    
-    // Verify password for main database user
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Password match result for main user:', isPasswordValid);
-    
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-    
-    // If user is verified in main DB but not in company DB, create in company DB
-    try {
-      // Get company-specific User model
-      const CompanyUserModel = await getUserModel(companyCode);
-      
-      // Create user in company database
-      const companyUser = new CompanyUserModel({
-        userId: user.userId || `USER-${Date.now()}`,
-        firstName: user.firstName,
-        middleName: user.middleName,
-        lastName: user.lastName,
-        name: user.name,
-        email: user.email,
-        password: user.password, // Already hashed
-        role: user.role,
-        companyCode: user.companyCode,
-        permissions: user.permissions,
-        isVerified: true,
-        isActive: true,
-        lastLogin: new Date(),
-        lastModified: new Date()
-      });
-      
-      // Skip middleware to avoid password rehashing
-      companyUser.$skipMiddleware = true;
-      await companyUser.save();
-      console.log('User created in company database:', companyUser.email);
-      
-      // Use the company user for the rest of the login process
+    // Create user in company database if not exists
+    const companyUser = await createCompanyUser(user, companyCode);
+    if (companyUser) {
       user = companyUser;
-      isCompanyUser = true;
-    } catch (dbError) {
-      console.error('Error creating user in company database:', dbError);
-      // Continue with main user if company user creation fails
     }
     
     // Generate JWT token
@@ -317,8 +349,7 @@ export const login = async (req, res) => {
       { 
         userId: user._id, 
         companyCode: user.companyCode, 
-        role: user.role,
-        isCompanyUser
+        role: user.role
       },
       process.env.JWT_SECRET || 'your_jwt_secret',
       { expiresIn: '24h' }
@@ -764,6 +795,86 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// Helper function to find user for password reset
+const findUserForPasswordReset = async (token, email, companyCode) => {
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+  
+  // Try company database first
+  try {
+    const CompanyUserModel = await getUserModel(companyCode);
+    const user = await CompanyUserModel.findOne({
+      email: email.toLowerCase(),
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (user) {
+      return { user, isCompanyUser: true };
+    }
+  } catch (dbError) {
+    console.error('Error accessing company database:', dbError);
+  }
+  
+  // Try main database
+  const user = await MainUser.findOne({
+    email: email.toLowerCase(),
+    companyCode: companyCode.toUpperCase(),
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() }
+  });
+  
+  return user ? { user, isCompanyUser: false } : null;
+};
+
+// Helper function to update password in both databases
+const updatePasswordInBothDatabases = async (user, newPassword, companyCode, isCompanyUser) => {
+  // Update password in current user
+  user.password = newPassword;
+  user.resetPasswordToken = null;
+  user.resetPasswordExpires = null;
+  user.lastModified = new Date();
+  await user.save();
+  
+  // Update in the other database as well
+  if (isCompanyUser) {
+    try {
+      const mainUser = await MainUser.findOne({ 
+        email: user.email.toLowerCase(), 
+        companyCode: companyCode.toUpperCase() 
+      });
+      
+      if (mainUser) {
+        mainUser.password = user.password;
+        mainUser.resetPasswordToken = null;
+        mainUser.resetPasswordExpires = null;
+        await mainUser.save();
+      }
+    } catch (error) {
+      console.error('Error updating main user password:', error);
+    }
+  } else {
+    try {
+      const CompanyUserModel = await getUserModel(companyCode);
+      const companyUser = await CompanyUserModel.findOne({
+        email: user.email.toLowerCase()
+      });
+      
+      if (companyUser) {
+        companyUser.password = user.password;
+        companyUser.resetPasswordToken = null;
+        companyUser.resetPasswordExpires = null;
+        companyUser.lastModified = new Date();
+        await companyUser.save();
+      }
+    } catch (error) {
+      console.error('Error updating company user password:', error);
+    }
+  }
+};
+
 // Reset password
 export const resetPassword = async (req, res) => {
   try {
@@ -775,49 +886,14 @@ export const resetPassword = async (req, res) => {
       });
     }
     
-    // Hash the token from the URL
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    // Find user for password reset
+    const userResult = await findUserForPasswordReset(token, email, companyCode);
     
-    // Try to find user in company database first
-    let user = null;
-    let isCompanyUser = false;
-    
-    try {
-      // Get company-specific User model
-      const CompanyUserModel = await getUserModel(companyCode);
-      
-      // Find user in company database
-      user = await CompanyUserModel.findOne({
-        email: email.toLowerCase(),
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: { $gt: Date.now() }
-      });
-      
-      if (user) {
-        isCompanyUser = true;
-        console.log('User found in company database for password reset:', user.email);
-      }
-    } catch (dbError) {
-      console.error('Error accessing company database:', dbError);
-      // Continue to check main database
+    if (!userResult) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
     }
     
-    // If not found in company database, check main database
-    if (!user) {
-      user = await MainUser.findOne({
-        email: email.toLowerCase(),
-        companyCode: companyCode.toUpperCase(),
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: { $gt: Date.now() }
-      });
-      
-      if (!user) {
-        return res.status(400).json({ message: 'Invalid or expired token' });
-      }
-    }
+    const { user, isCompanyUser } = userResult;
     
     // Update password
     user.password = password;

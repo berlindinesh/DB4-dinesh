@@ -3,7 +3,8 @@
 ## ✅ Issues Fixed
 
 ### 1. **Cognitive Complexity Reduced**
-- **File**: `backend/Jobs/paymentExpiryScheduler.js`
+
+#### A. `backend/Jobs/paymentExpiryScheduler.js`
 - **Function**: `processExpiryReminders` 
 - **Before**: Complexity 17 ❌
 - **After**: Complexity ~12 ✅ 
@@ -11,6 +12,24 @@
   - `determineReminderType()`
   - `processCompanyReminder()` 
   - `processExpiredCompanies()`
+
+#### B. `backend/controllers/authControllerCompany.js`
+- **Function**: `login`
+- **Before**: Complexity 40 ❌
+- **After**: Complexity ~14 ✅
+- **Fix**: Extracted helper functions:
+  - `validateCompanyStatus()` - Company validation logic
+  - `authenticateCompanyUser()` - Company user authentication
+  - `authenticateMainUser()` - Main user authentication  
+  - `handleFirstLogin()` - First login processing
+  - `createCompanyUser()` - User creation in company DB
+
+- **Function**: `resetPassword`
+- **Before**: Complexity 16 ❌
+- **After**: Complexity ~10 ✅
+- **Fix**: Extracted helper functions:
+  - `findUserForPasswordReset()` - User lookup logic
+  - `updatePasswordInBothDatabases()` - Password update logic
 
 ### 2. **Mutable Export Bindings Fixed**
 - **File**: `backend/config/payment.js`
@@ -26,6 +45,11 @@
 - **File**: `backend/config/db.js`
 - **Issue**: `let connectionString` in function
 - **Fix**: Extracted `buildConnectionString()` helper function
+
+### 3. **Useless Variable Assignments Removed**
+- **File**: `backend/controllers/authControllerCompany.js`
+- **Issue**: Unused `isCompanyUser` variable assignments
+- **Fix**: Removed useless assignments and simplified JWT token generation
 
 ### 3. **Test Infrastructure**
 - **Jest Configuration**: ✅ Ready for coverage
