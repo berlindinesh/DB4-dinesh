@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api, { getAssetUrl } from "../api/axiosInstance";
 import {
   Container,
@@ -29,390 +29,100 @@ import { useSidebar } from "../Context";
 import NotificationSidebar from "./NotificationSidebar";
 import { useNotifications } from "../context/NotificationContext";
 
-// Utility Components
-const ProfileImage = ({ imageUrl, initials }) => (
-  <>
-    <img
-      src={imageUrl}
-      alt="Profile"
-      style={{
-        width: "28px",
-        height: "28px",
-        borderRadius: "50%",
-        objectFit: "cover",
-        border: "1px solid white",
-      }}
-      onError={(e) => {
-        e.target.style.display = "none";
-        e.target.nextSibling.style.display = "flex";
-      }}
-    />
-    <div
-      style={{
-        width: "28px",
-        height: "28px",
-        borderRadius: "50%",
-        backgroundColor: "#6366f1",
-        color: "white",
-        display: "none",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "12px",
-        fontWeight: "bold",
-        border: "1px solid white",
-      }}
-    >
-      {initials}
-    </div>
-  </>
-);
-
-const TimerButtonContent = ({ isLoading, isTimerRunning, timer, formatTime }) => {
-  if (isLoading) {
-    return <Spinner animation="border" size="sm" />;
-  }
-  return isTimerRunning ? (
-    <>
-      <div className="timer-icon-container">
-        <FaSignOutAlt className="timer-icon rotate" />
-      </div>
-      <div className="timer-content">
-        <span className="timer-label">Check-out</span>
-        <span className="timer-value">{formatTime(timer)}</span>
-      </div>
-    </>
-  ) : (
-    <>
-      <div className="timer-icon-container">
-        <FaSignInAlt className="timer-icon beat" />
-      </div>
-      <div className="timer-content">
-        <span className="timer-label">Check-in</span>
-      </div>
-    </>
-  );
-};
-// Custom hooks
-const useProfileMenu = () => {
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const profileMenuRef = useRef(null);
-
-  const handleProfileToggle = useCallback((e) => {
-    e.stopPropagation();
-    setShowProfileMenu(prev => !prev);
-  }, []);
-
-  const closeProfileMenu = useCallback(() => {
-    setShowProfileMenu(false);
-  }, []);
-
-  return {
-    showProfileMenu,
-    profileMenuRef,
-    handleProfileToggle,
-    closeProfileMenu
-  };
-};
-
-const useTimesheet = (employeeId, token) => {
-  const [timer, setTimer] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const timerIntervalRef = useRef(null);
-  const timerStartTimeRef = useRef(null);
-
-  const startTimerWithTime = useCallback((checkInTime) => {
-    setStartTime(checkInTime);
-    setIsTimerRunning(true);
-    timerStartTimeRef.current = checkInTime;
-    localStorage.setItem("checkInTime", checkInTime.toISOString());
-    
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-    }
-    
-    timerIntervalRef.current = setInterval(() => {
-      const currentTime = new Date();
-      const elapsedSeconds = Math.floor((currentTime - checkInTime) / 1000);
-      setTimer(elapsedSeconds);
-    }, 1000);
-  }, []);
-
-  const cleanupTimesheet = useCallback(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-    }
-  }, []);
-
-  const formatTime = useCallback((seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  }, []);
-
-  return {
-    timer,
-    isTimerRunning,
-    startTime,
-    isLoading,
-    setIsLoading,
-    startTimerWithTime,
-    cleanupTimesheet,
-    formatTime,
-    setIsTimerRunning,
-    setTimer,
-    setStartTime
-  };
-};
-
-// Utility functions
-const getUserDisplayName = (profileData, employeeId) => {
-  if (profileData?.personalInfo) {
-    const { firstName, lastName } = profileData.personalInfo;
-    return `${firstName || ""} ${lastName || ""}`.trim() || employeeId;
-  }
-  return employeeId;
-};
-
-const getUserInitials = (profileData, employeeId) => {
-  if (profileData?.personalInfo) {
-    const { firstName, lastName } = profileData.personalInfo;
-    const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : "";
-    const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : "";
-    return firstInitial + lastInitial;
-  }
-  return employeeId ? employeeId.charAt(0).toUpperCase() : "U";
-};
 const Header = () => {
+  // First, get all the hooks and context values
   const { toggleSidebar } = useSidebar();
   const { getUserUnreadCount } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
 
-  // State management
+  // Then declare all your state variables
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [showNotificationSidebar, setShowNotificationSidebar] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [navExpanded, setNavExpanded] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
+
+  // Create refs
+  const profileMenuRef = useRef(null);
+  const navbarCollapseRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+  const timerStartTimeRef = useRef(null);
+
+  // Get data from localStorage
+  const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
+  const employeeId =
+    profileData?.Emp_ID || localStorage.getItem("employeeId") || "EMP123";
+
+  // Now you can safely use userId
+  const userUnreadCount = getUserUnreadCount(userId);
+
   const [companyLogo, setCompanyLogo] = useState(
     "https://res.cloudinary.com/dfl9rotoy/image/upload/v1741065300/logo2-removebg-preview_p6juhh.png"
   );
+
   const [logoLoading, setLogoLoading] = useState(false);
 
-  const navbarCollapseRef = useRef(null);
-  const isLoggedIn = Boolean(localStorage.getItem("token"));
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
-  const employeeId = profileData?.Emp_ID || localStorage.getItem("employeeId") || "EMP123";
+  // Add a new useEffect to fetch the company logo
+  useEffect(() => {
+    const fetchCompanyLogo = async () => {
+      if (!isLoggedIn) return;
 
-  // Custom hooks
-  const {
-    showProfileMenu,
-    profileMenuRef,
-    handleProfileToggle,
-    closeProfileMenu
-  } = useProfileMenu();
-
-  const {
-    timer,
-    isTimerRunning,
-    isLoading,
-    startTimerWithTime,
-    cleanupTimesheet,
-    formatTime,
-    setIsLoading,
-    setIsTimerRunning,
-    setTimer,
-    setStartTime
-  } = useTimesheet(employeeId, token);
-
-  const userUnreadCount = getUserUnreadCount(userId);
-
-  // Toast message handler
-  const showToastMessage = useCallback((message) => {
-    setToastMessage(message);
-    setShowToast(true);
-  }, []);
-
-  // Profile image handler
-  const getProfileImageUrl = useCallback(() => {
-    if (profileData?.personalInfo?.employeeImage) {
-      return getAssetUrl(profileData.personalInfo.employeeImage);
-    }
-    return null;
-  }, [profileData]);
-
-  // Navigation handlers
-  const handleNavToggle = useCallback(() => {
-    setNavExpanded(prev => !prev);
-    if (navExpanded) {
-      closeProfileMenu();
-    }
-  }, [navExpanded, closeProfileMenu]);
-
-  const closeNavbar = useCallback(() => {
-    setNavExpanded(false);
-    const navbarCollapse = document.querySelector(".navbar-collapse");
-    if (navbarCollapse?.classList.contains("show")) {
-      const navbarToggler = document.querySelector(".navbar-toggler");
-      navbarToggler?.click();
-    }
-  }, []);
-  // Timer and timesheet handlers
-  const handleTimerClick = useCallback(async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    try {
-      const employeeName = getUserDisplayName(profileData, employeeId);
-      
-      if (isTimerRunning) {
-        const checkOutTime = new Date();
-        const durationInSeconds = Math.floor((checkOutTime - new Date(startTime)) / 1000);
-        await timesheetService.checkOut(employeeId, durationInSeconds, token);
-        cleanupTimesheet();
-        setIsTimerRunning(false);
-        setTimer(0);
-        setStartTime(null);
-        localStorage.removeItem("checkInTime");
-        showToastMessage("Successfully logged out");
-      } else {
-        try {
-          const response = await timesheetService.checkIn(employeeId, employeeName, token);
-          startTimerWithTime(new Date(response.data.checkInTime));
-          showToastMessage(response.data.warning || "Successfully logged in");
-        } catch (error) {
-          if (error.response?.status === 400 && error.response?.data?.message === "Already checked in") {
-            const shouldForceCheckIn = window.confirm(
-              "You have an active session. This might be due to an unexpected shutdown. Would you like to start a new session?"
-            );
-            if (shouldForceCheckIn) {
-              const forceResponse = await timesheetService.forceCheckIn(employeeId, employeeName, token);
-              startTimerWithTime(new Date(forceResponse.data.checkInTime));
-              showToastMessage(forceResponse.data.message || "New session started");
-            }
-          } else {
-            throw error;
-          }
+      try {
+        setLogoLoading(true);
+        const response = await api.get("/companies/logo");
+        if (response.data && response.data.logoUrl) {
+          // Use getAssetUrl to handle both S3 and local URLs properly
+          const processedLogoUrl = getAssetUrl(response.data.logoUrl);
+          setCompanyLogo(processedLogoUrl);
         }
+      } catch (error) {
+        console.error("Error fetching company logo:", error);
+        // Keep the default logo if there's an error
+      } finally {
+        setLogoLoading(false);
       }
-    } catch (error) {
-      console.error("Timesheet operation failed:", error);
-      showToastMessage("Operation failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, isTimerRunning, startTime, employeeId, token, profileData, cleanupTimesheet, startTimerWithTime, showToastMessage]);
+    };
 
-  // Logout handler
-  const handleLogout = useCallback(async () => {
-    try {
-      cleanupTimesheet();
-      setProfileData(null);
-      await dispatch(logoutUser());
-      
-      // Clear localStorage
-      const itemsToClear = ['token', 'employeeId', 'userId', 'checkInTime', 'companyCode', 'tokenExpiry', 'userInfo', 'refreshToken'];
-      itemsToClear.forEach(item => localStorage.removeItem(item));
-      
-      showToastMessage("Successfully logged out");
-      navigate("/login", {
-        state: { authError: "You have been logged out successfully." },
-        replace: true
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-      localStorage.clear();
-      navigate("/login", {
-        state: { authError: "Logout completed." },
-        replace: true
-      });
-    }
-  }, [cleanupTimesheet, dispatch, navigate, showToastMessage]);
+    fetchCompanyLogo();
+  }, [isLoggedIn]);
 
-  // Path indicator handler
-  const getPathIndicator = useCallback(() => {
-    const path = location.pathname.split("/").filter(Boolean);
-    
-    if (path.includes("reset-password")) {
-      return (
-        <nav aria-label="breadcrumb">
-          <button 
-            className="path-link"
-            onClick={() => navigate("/")}
-            onKeyDown={(e) => e.key === 'Enter' && navigate("/")}
-            style={{ cursor: "pointer", color: "#fff", background: "none", border: "none" }}
-          >
-            Home
-          </button>
-          {" > Reset Password"}
-        </nav>
-      );
-    }
-
-    return path.map((segment, index) => {
-      const displaySegment = segment.split("-")
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ")
-        .substring(0, 20);
-
-      return (
-        <span key={`${segment}-${index}`}>
-          <button
-            className="path-link"
-            onClick={() => navigate(`/${path.slice(0, index + 1).join("/")}`)}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(`/${path.slice(0, index + 1).join("/")}`)}
-            style={{ cursor: "pointer", color: "#fff", background: "none", border: "none" }}
-          >
-            {displaySegment}
-          </button>
-          {index < path.length - 1 && " > "}
-        </span>
-      );
-    });
-  }, [location.pathname, navigate]);
-
-  // Effects
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const token = localStorage.getItem("token");
+    // If token exists but is expired or invalid, handle accordingly
+    if (token) {
+      // You could add token validation logic here if needed
+    }
   }, []);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      const initializeTimesheet = async () => {
-        try {
-          const response = await timesheetService.getTodayTimesheet(employeeId, token);
-          const timesheet = response.data.timesheet;
-          if (timesheet?.status === "active") {
-            startTimerWithTime(new Date(timesheet.checkInTime));
-          }
-        } catch (error) {
-          console.error("Error initializing timesheet:", error);
-          showToastMessage("Failed to load timesheet status");
-        }
-      };
-      
-      initializeTimesheet();
-      return cleanupTimesheet;
-    }
-  }, [isLoggedIn, employeeId, token, startTimerWithTime, cleanupTimesheet, showToastMessage]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!token || !userId) return;
-      
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      if (!token || !userId) {
+        return; // Don't fetch if not logged in
+      }
+
       try {
         setProfileLoading(true);
+        // Use the by-user endpoint from employeesRouter.js with authentication
         const response = await api.get(`/employees/by-user/${userId}`);
+
         if (response.data.success) {
           setProfileData(response.data.data);
+
+          // Store employee ID in localStorage if not already there
           if (response.data.data.Emp_ID) {
             localStorage.setItem("employeeId", response.data.data.Emp_ID);
           }
@@ -425,28 +135,396 @@ const Header = () => {
     };
 
     fetchUserProfile();
-  }, [token, userId]);
+  }, []);
 
+  // Get profile image URL
+  const getProfileImageUrl = () => {
+    if (profileData?.personalInfo?.employeeImage) {
+      return getAssetUrl(profileData.personalInfo.employeeImage);
+    }
+    return null;
+  };
+
+  const toggleNotificationSidebar = () => {
+    setShowNotificationSidebar(!showNotificationSidebar);
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (profileData?.personalInfo) {
+      const { firstName, lastName } = profileData.personalInfo;
+      return `${firstName || ""} ${lastName || ""}`.trim() || employeeId;
+    }
+    return employeeId;
+  };
+
+  // Get user initials for fallback
+  const getUserInitials = () => {
+    if (profileData?.personalInfo) {
+      const { firstName, lastName } = profileData.personalInfo;
+      const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : "";
+      const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : "";
+      return firstInitial + lastInitial;
+    }
+    return employeeId ? employeeId.charAt(0).toUpperCase() : "U";
+  };
+
+  // Add this useEffect to handle window resize
   useEffect(() => {
-    const fetchCompanyLogo = async () => {
-      if (!isLoggedIn) return;
-      
-      try {
-        setLogoLoading(true);
-        const response = await api.get("/companies/logo");
-        if (response.data?.logoUrl) {
-          setCompanyLogo(getAssetUrl(response.data.logoUrl));
-        }
-      } catch (error) {
-        console.error("Error fetching company logo:", error);
-      } finally {
-        setLogoLoading(false);
-      }
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
     };
 
-    fetchCompanyLogo();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      initializeTimesheet();
+      return cleanupTimesheet;
+    }
   }, [isLoggedIn]);
 
+  const initializeTimesheet = async () => {
+    try {
+      const response = await timesheetService.getTodayTimesheet(
+        employeeId,
+        token
+      );
+      const timesheet = response.data.timesheet;
+
+      if (timesheet && timesheet.status === "active") {
+        const checkInTime = new Date(timesheet.checkInTime);
+        startTimerWithTime(checkInTime);
+      }
+    } catch (error) {
+      console.error("Error initializing timesheet:", error);
+      showToastMessage("Failed to load timesheet status");
+    }
+  };
+
+  const startTimerWithTime = (checkInTime) => {
+    setStartTime(checkInTime);
+    setIsTimerRunning(true);
+    timerStartTimeRef.current = checkInTime;
+    localStorage.setItem("checkInTime", checkInTime.toISOString());
+
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    timerIntervalRef.current = setInterval(() => {
+      const currentTime = new Date();
+      const elapsedSeconds = Math.floor((currentTime - checkInTime) / 1000);
+      setTimer(elapsedSeconds);
+    }, 1000);
+  };
+
+  const cleanupTimesheet = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+  };
+
+  const handleTimerClick = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      if (isTimerRunning) {
+        // Check-out logic remains the same
+        const checkInTime = new Date(startTime);
+        const checkOutTime = new Date();
+        const durationInSeconds = Math.floor(
+          (checkOutTime - checkInTime) / 1000
+        );
+
+        await timesheetService.checkOut(employeeId, durationInSeconds, token);
+        cleanupTimesheet();
+        setIsTimerRunning(false);
+        setTimer(0);
+        setStartTime(null);
+        localStorage.removeItem("checkInTime");
+        showToastMessage("Successfully logged out");
+      } else {
+        // Enhanced check-in logic
+        const employeeName = getUserDisplayName();
+
+        try {
+          // Try normal check-in first
+          const response = await timesheetService.checkIn(
+            employeeId,
+            employeeName,
+            token
+          );
+
+          const checkInTime = new Date(response.data.checkInTime);
+          startTimerWithTime(checkInTime);
+
+          // Show warning if there was an auto check-out
+          if (response.data.warning) {
+            showToastMessage(response.data.warning, "warning");
+          } else {
+            showToastMessage("Successfully logged in");
+          }
+        } catch (error) {
+          if (
+            error.response?.status === 400 &&
+            error.response?.data?.message === "Already checked in"
+          ) {
+            // Show confirmation dialog for force check-in
+            const shouldForceCheckIn = window.confirm(
+              "You have an active session. This might be due to an unexpected shutdown. " +
+                "Would you like to start a new session? (This will auto-complete the previous session)"
+            );
+
+            if (shouldForceCheckIn) {
+              const forceResponse = await timesheetService.forceCheckIn(
+                employeeId,
+                employeeName,
+                token
+              );
+
+              const checkInTime = new Date(forceResponse.data.checkInTime);
+              startTimerWithTime(checkInTime);
+              showToastMessage(
+                forceResponse.data.message || "New session started"
+              );
+            }
+          } else {
+            throw error; // Re-throw other errors
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Timesheet operation failed:", error);
+      showToastMessage("Operation failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Replace the handleNavToggle function with this more direct approach
+  const handleNavToggle = () => {
+    setNavExpanded(!navExpanded);
+
+    // If we're closing the navbar, also close the profile menu
+    if (navExpanded) {
+      setShowProfileMenu(false);
+    }
+  };
+
+  // Replace the closeNavbar function with this more direct approach
+  const closeNavbar = () => {
+    setNavExpanded(false);
+
+    // Direct DOM manipulation to ensure the navbar closes
+    const navbarToggler = document.querySelector(".navbar-toggler");
+    const navbarCollapse = document.querySelector(".navbar-collapse");
+
+    if (navbarCollapse && navbarCollapse.classList.contains("show")) {
+      // If the navbar is expanded, click the toggle button to collapse it
+      if (navbarToggler) {
+        navbarToggler.click();
+      } else {
+        // Fallback: manually remove the 'show' class
+        navbarCollapse.classList.remove("show");
+      }
+    }
+  };
+
+  const handleProfileToggle = (e) => {
+    // Prevent event propagation to avoid immediate closing on mobile
+    e.stopPropagation();
+    setShowProfileMenu((prev) => !prev);
+  };
+
+  const handleClickOutside = (e) => {
+    if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+      setShowProfileMenu(false);
+    }
+  };
+
+  // Add this function to handle dropdown item clicks
+  const handleDropdownItemClick = (callback) => {
+    // Close the dropdown first
+    setShowProfileMenu(false);
+    // Close the navbar on mobile
+    closeNavbar();
+    // Then execute the callback (like navigation)
+    if (callback) callback();
+  };
+
+  // Add this useEffect to handle clicks outside the navbar
+  useEffect(() => {
+    function handleClickOutside(event) {
+      // If the navbar is expanded and the click is outside the navbar
+      if (
+        navExpanded &&
+        !event.target.closest(".navbar-collapse") &&
+        !event.target.closest(".navbar-toggler")
+      ) {
+        closeNavbar();
+      }
+
+      // Close profile menu when clicking outside
+      if (
+        showProfileMenu &&
+        !event.target.closest(".profile-dropdown-container") &&
+        !event.target.closest(".custom-dropdown-menu")
+      ) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    // Add event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      // Remove event listener on cleanup
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [navExpanded, showProfileMenu]);
+
+  const handleLogout = async () => {
+    try {
+      // Clean up timesheet first
+      cleanupTimesheet();
+
+      // Clear profile data
+      setProfileData(null);
+
+      // Dispatch Redux logout action
+      await dispatch(logoutUser());
+
+      // Clear all localStorage items
+      localStorage.removeItem("token");
+      localStorage.removeItem("employeeId");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("checkInTime");
+      localStorage.removeItem("companyCode");
+      localStorage.removeItem("tokenExpiry"); // Clear token expiry if you're using it
+
+      // Clear any other auth-related items
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("refreshToken");
+
+      // Show logout message
+      showToastMessage("Successfully logged out");
+
+      // Navigate to login immediately
+      navigate("/login", {
+        state: {
+          authError: "You have been logged out successfully.",
+        },
+        replace: true,
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+
+      // Even if there's an error, force logout by clearing everything
+      cleanupTimesheet();
+      setProfileData(null);
+
+      // Clear localStorage regardless of error
+      localStorage.clear();
+
+      // Navigate to login
+      navigate("/login", {
+        state: {
+          authError: "Logout completed.",
+        },
+        replace: true,
+      });
+    }
+  };
+
+  const getPathIndicator = () => {
+    const path = location.pathname.split("/").filter(Boolean);
+
+    // Special case for sensitive routes
+    if (path.includes("reset-password")) {
+      return (
+        <span>
+          <span
+            className="path-link"
+            onClick={() => navigate("/")}
+            style={{
+              cursor: "pointer",
+              color: "#fff",
+              textDecoration: "none",
+              "&:hover": {
+                textDecoration: "underline",
+              },
+            }}
+          >
+            Home
+          </span>
+          {" > "}
+          <span
+            className="path-link"
+            style={{
+              color: "#fff",
+              textDecoration: "none",
+            }}
+          >
+            Reset Password
+          </span>
+        </span>
+      );
+    }
+
+    // Regular path handling for other routes
+    return path.map((segment, index) => {
+      // Format the segment for display (capitalize, replace hyphens with spaces)
+      let displaySegment = segment
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
+      // Truncate very long segments (like tokens)
+      if (displaySegment.length > 20) {
+        displaySegment = displaySegment.substring(0, 10) + "...";
+      }
+
+      return (
+        <span key={index}>
+          <span
+            className="path-link"
+            onClick={() => navigate(`/${path.slice(0, index + 1).join("/")}`)}
+            style={{
+              cursor: "pointer",
+              color: "#fff",
+              textDecoration: "none",
+              "&:hover": {
+                textDecoration: "underline",
+              },
+            }}
+          >
+            {displaySegment}
+          </span>
+          {index < path.length - 1 && " > "}
+        </span>
+      );
+    });
+  };
 
   return (
     <>
@@ -468,16 +546,11 @@ const Header = () => {
         >
           <Container fluid>
             {isLoggedIn && (
-              <Button 
-                variant="link" 
-                className="me-3" 
-                onClick={toggleSidebar}
-                aria-label="Toggle sidebar"
-              >
+              <Button variant="link" className="me-3" onClick={toggleSidebar}>
                 <FaBars size={28} color="white" />
               </Button>
             )}
-            
+
             <LinkContainer to="/">
               <Navbar.Brand className="brand">
                 {logoLoading ? (
@@ -486,45 +559,75 @@ const Header = () => {
                   <img
                     src={companyLogo}
                     alt="Company Logo"
-                    className="responsive-logo"
                     style={{
                       width: "auto",
                       maxHeight: "80px",
                       marginLeft: "0",
                       verticalAlign: "middle",
                     }}
+                    className="responsive-logo"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "https://res.cloudinary.com/dfl9rotoy/image/upload/v1741065300/logo2-removebg-preview_p6juhh.png";
+                      e.target.src =
+                        "https://res.cloudinary.com/dfl9rotoy/image/upload/v1741065300/logo2-removebg-preview_p6juhh.png";
                     }}
                   />
                 )}
               </Navbar.Brand>
             </LinkContainer>
 
-            <div className="path-indicator" role="navigation" aria-label="Breadcrumb">
-              {getPathIndicator()}
-            </div>
+            <div className="path-indicator">{getPathIndicator()}</div>
 
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            <Navbar.Collapse id="basic-navbar-nav" className="navbar-collapse-container">
+            <Navbar.Collapse
+              id="basic-navbar-nav"
+              className="navbar-collapse-container"
+            >
               <Nav className="ms-auto align-items-center">
                 <div className="d-flex align-items-center">
+                  {/* upto this */}
                   {isLoggedIn && (
                     <div className="check-in-out-box">
                       <Button
-                        className={`timer-button ${isTimerRunning ? "active" : ""}`}
-                        onClick={handleTimerClick}
-                        title={isTimerRunning ? "Click to Check-out" : "Click to Check-in"}
+                        className={`timer-button ${
+                          isTimerRunning ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          handleTimerClick();
+                          closeNavbar();
+                        }}
+                        title={
+                          isTimerRunning
+                            ? "Click to Check-out"
+                            : "Click to Check-in"
+                        }
                         aria-label={isTimerRunning ? "Check out" : "Check in"}
                         disabled={isLoading}
                       >
-                        <TimerButtonContent 
-                          isLoading={isLoading}
-                          isTimerRunning={isTimerRunning}
-                          timer={timer}
-                          formatTime={formatTime}
-                        />
+                        {isLoading ? (
+                          <Spinner animation="border" size="sm" />
+                        ) : isTimerRunning ? (
+                          <>
+                            <div className="timer-icon-container">
+                              <FaSignOutAlt className="timer-icon rotate" />
+                            </div>
+                            <div className="timer-content">
+                              <span className="timer-label">Check-out</span>
+                              <span className="timer-value">{`${formatTime(
+                                timer
+                              )}`}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="timer-icon-container">
+                              <FaSignInAlt className="timer-icon beat" />
+                            </div>
+                            <div className="timer-content">
+                              <span className="timer-label">Check-in</span>
+                            </div>
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}
@@ -535,16 +638,14 @@ const Header = () => {
                       navigate("/");
                       closeNavbar();
                     }}
-                    aria-label="Home"
                   >
-                    <FaHome size={32} />
+                    <FaHome size={32} title="Home" />
                   </Nav.Link>
-
                   {isLoggedIn && (
                     <Nav.Link
                       className="icon-link ms-3 position-relative"
                       onClick={toggleNotificationSidebar}
-                      aria-label="Notifications"
+                      title="Notifications"
                     >
                       <FaBell size={24} />
                       {userUnreadCount > 0 && (
@@ -564,98 +665,232 @@ const Header = () => {
                       )}
                     </Nav.Link>
                   )}
-
                   <div className="profile-dropdown-container">
                     {windowWidth <= 1024 ? (
                       <>
-                        <button
+                        <div
                           className="profile-dropdown-toggle"
-                          onClick={handleProfileToggle}
-                          onKeyDown={(e) => e.key === 'Enter' && handleProfileToggle(e)}
-                          aria-label="Toggle profile menu"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowProfileMenu(!showProfileMenu);
+                          }}
                           style={{
                             display: "flex",
                             alignItems: "center",
                             cursor: "pointer",
-                            background: "none",
-                            border: "none",
-                            padding: "8px",
                           }}
                         >
-                          <ProfileImage 
-                            imageUrl={getProfileImageUrl()} 
-                            initials={getUserInitials(profileData, employeeId)}
-                          />
-                        </button>
+                          {profileLoading ? (
+                            <Spinner
+                              animation="border"
+                              size="sm"
+                              variant="light"
+                            />
+                          ) : isLoggedIn && getProfileImageUrl() ? (
+                            <>
+                              <img
+                                src={getProfileImageUrl()}
+                                alt="Profile"
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  objectFit: "cover",
+                                  border: "1px solid white",
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#6366f1",
+                                  color: "white",
+                                  display: "none",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px",
+                                  fontWeight: "bold",
+                                  border: "1px solid white",
+                                }}
+                              >
+                                {getUserInitials()}
+                              </div>
+                            </>
+                          ) : (
+                            <FaUserCircle size={28} color="white" />
+                          )}
+                        </div>
 
                         {showProfileMenu && (
-                          <div className="custom-dropdown-menu" role="menu">
-                            {/* Profile menu items */}
+                          <div className="custom-dropdown-menu">
                             {isLoggedIn ? (
                               <>
                                 <div className="dropdown-header d-flex align-items-center px-3 py-2">
-                                  <strong>{getUserDisplayName(profileData, employeeId)}</strong>
+                                  <strong>{getUserDisplayName()}</strong>
                                   {profileData?.Emp_ID && (
-                                    <small className="ms-2 text-muted">({profileData.Emp_ID})</small>
+                                    <small className="ms-2 text-muted">
+                                      ({profileData.Emp_ID})
+                                    </small>
                                   )}
                                 </div>
-                                <button
+                                <div
                                   className="dropdown-item"
                                   onClick={() => {
                                     setShowProfileMenu(false);
                                     closeNavbar();
-                                    navigate("/Dashboards/profile");
+                                    navigate("Dashboards/profile");
                                   }}
-                                  role="menuitem"
                                 >
-                                  <FaUserCircle className="me-2" /> My Profile
-                                </button>
-                                <button
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <FaUserCircle
+                                      style={{
+                                        fontSize: "24px",
+                                        marginBottom: "5px",
+                                      }}
+                                    />
+                                    <span>My Profile</span>
+                                  </div>
+                                </div>
+                                <div
                                   className="dropdown-item"
                                   onClick={() => {
+                                    console.log(
+                                      "Change password clicked, navigating to /auth/change-password"
+                                    );
                                     setShowProfileMenu(false);
                                     closeNavbar();
-                                    navigate("/auth/change-password");
+                                    navigate("/auth/change-password"); // Update this path to match your router configuration
                                   }}
-                                  role="menuitem"
                                 >
-                                  <FaCog className="me-2" /> Change Password
-                                </button>
-                                <button
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <FaCog
+                                      style={{
+                                        fontSize: "24px",
+                                        marginBottom: "5px",
+                                      }}
+                                    />
+                                    <span>Change Password</span>
+                                  </div>
+                                </div>
+                                <div
                                   className="dropdown-item logout-item"
                                   onClick={() => {
                                     setShowProfileMenu(false);
                                     closeNavbar();
                                     handleLogout();
                                   }}
-                                  role="menuitem"
                                 >
-                                  <FaSignOutAlt className="me-2" /> Logout
-                                </button>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <FaSignOutAlt
+                                      style={{
+                                        fontSize: "24px",
+                                        marginBottom: "5px",
+                                      }}
+                                    />
+                                    <span>Logout</span>
+                                  </div>
+                                </div>
                               </>
                             ) : (
-                              <button
+                              <div
                                 className="dropdown-item login-item"
                                 onClick={() => {
                                   setShowProfileMenu(false);
                                   closeNavbar();
                                   navigate("/login");
                                 }}
-                                role="menuitem"
                               >
-                                <FaSignInAlt className="me-2" /> Login
-                              </button>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <FaSignInAlt
+                                    style={{
+                                      fontSize: "24px",
+                                      marginBottom: "5px",
+                                    }}
+                                  />
+                                  <span>Login</span>
+                                </div>
+                              </div>
                             )}
                           </div>
                         )}
                       </>
                     ) : (
+                      // Desktop version with similar changes
                       <NavDropdown
                         title={
-                          <ProfileImage 
-                            imageUrl={getProfileImageUrl()} 
-                            initials={getUserInitials(profileData, employeeId)}
-                          />
+                          profileLoading ? (
+                            <Spinner
+                              animation="border"
+                              size="sm"
+                              variant="light"
+                            />
+                          ) : isLoggedIn && getProfileImageUrl() ? (
+                            <>
+                              <img
+                                src={getProfileImageUrl()}
+                                alt="Profile"
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  objectFit: "cover",
+                                  border: "1px solid white",
+                                }}
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  e.target.nextSibling.style.display = "flex";
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#6366f1",
+                                  color: "white",
+                                  display: "none",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "12px",
+                                  fontWeight: "bold",
+                                  border: "1px solid white",
+                                }}
+                              >
+                                {getUserInitials()}
+                              </div>
+                            </>
+                          ) : (
+                            <FaUserCircle size={28} color="white" />
+                          )
                         }
                         id="profile-dropdown"
                         show={showProfileMenu}
@@ -665,8 +900,54 @@ const Header = () => {
                         className="profile-dropdown ms-3"
                         menuVariant="dark"
                       >
-                        {/* Desktop dropdown items */}
-                        {/* Similar items as mobile, but using NavDropdown.Item */}
+                        {isLoggedIn ? (
+                          <>
+                            <div className="dropdown-header d-flex align-items-center px-3 py-2">
+                              <strong>{getUserDisplayName()}</strong>
+                              {profileData?.Emp_ID && (
+                                <small className="ms-2 text-muted">
+                                  ({profileData.Emp_ID})
+                                </small>
+                              )}
+                            </div>
+                            <NavDropdown.Item
+                              onClick={() =>
+                                handleDropdownItemClick(() =>
+                                  navigate("/Dashboards/profile")
+                                )
+                              }
+                            >
+                              My Profile
+                            </NavDropdown.Item>
+                            <NavDropdown.Item
+                              onClick={() =>
+                                handleDropdownItemClick(() =>
+                                  navigate("/change-password")
+                                )
+                              }
+                            >
+                              Change Password
+                            </NavDropdown.Item>
+                            <NavDropdown.Divider />
+                            <NavDropdown.Item
+                              onClick={() =>
+                                handleDropdownItemClick(handleLogout)
+                              }
+                              className="logout-item"
+                            >
+                              <FaSignOutAlt className="me-2" /> Logout
+                            </NavDropdown.Item>
+                          </>
+                        ) : (
+                          <NavDropdown.Item
+                            onClick={() =>
+                              handleDropdownItemClick(() => navigate("/login"))
+                            }
+                            className="login-item"
+                          >
+                            <FaSignInAlt className="me-2" /> Login
+                          </NavDropdown.Item>
+                        )}
                       </NavDropdown>
                     )}
                   </div>
