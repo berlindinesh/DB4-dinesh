@@ -19,23 +19,7 @@ import {
   Badge,
 } from "react-bootstrap";
 import { toast } from "react-toastify";
-import WorkTypeAndShift from "./workTypeAndShift/WorkTypeAndShift";
-import Attendance from "./attendance/Attendance";
-import Leave from "./leave/Leave";
-import Payroll from "./payroll/Payroll";
-import AllowanceAndDeduction from "./allowanceAndDeduction/AllowanceAndDeduction";
-import PenaltyAccount from "./penaltyAccount/PenaltyAccount";
-import Assets from "./assets/Assets";
-import Performance from "./performance/Performance";
 import Documents from "./documents/Documents";
-import BonusPoints from "./bonusPoints/BonusPoints";
-import ScheduledInterview from "./scheduledInterview/ScheduledInterview";
-import Resignation from "./resignation/Resignation";
-import {
-  updateContract,
-  getContractsByEmployeeId,
-  deleteContract,
-} from "../../../services/contractServices";
 import "./ProfilePage.css";
 
 // Validation functions
@@ -2174,7 +2158,7 @@ const updateWorkInfo = async () => {
                     </Tab.Container>
                   </Tab.Pane> 
 
-                  {/* Other Tab Panes */}
+                  {/* Other Tab Panes
                   <Tab.Pane eventKey="workTypeAndShift">
                     <WorkTypeAndShift employeeId={employeeId} />
                   </Tab.Pane>
@@ -2221,7 +2205,7 @@ const updateWorkInfo = async () => {
 
                   <Tab.Pane eventKey="resignation">
                     <Resignation employeeId={employeeId} />
-                  </Tab.Pane>
+                  </Tab.Pane> */}
                 </Tab.Content>
               </Tab.Container>
             </Card.Body>
