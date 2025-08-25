@@ -56,17 +56,22 @@ export const updateRegistrationFee = (newAmountInINR) => {
 };
 
 // Initialize Razorpay instance
-let razorpayInstance;
+const createRazorpayInstance = () => {
+  try {
+    return new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  } catch (error) {
+    console.error('Failed to initialize Razorpay:', error);
+    return null;
+  }
+};
 
-try {
-  razorpayInstance = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-  
+const razorpayInstance = createRazorpayInstance();
+
+if (razorpayInstance) {
   console.log('Razorpay initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize Razorpay:', error);
 }
 
 export { razorpayInstance };

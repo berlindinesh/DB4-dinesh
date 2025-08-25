@@ -3,16 +3,25 @@ import multer from 'multer';
 import path from 'path';
 
 // Check if S3 packages are available
-let multerS3 = null;
-let uuid = null;
+const loadS3Packages = async () => {
+  try {
+    const multerS3Module = await import('multer-s3');
+    const uuidModule = await import('uuid');
+    console.log('📦 S3 packages loaded successfully');
+    return {
+      multerS3: multerS3Module.default,
+      uuid: uuidModule.v4
+    };
+  } catch (error) {
+    console.log('📦 S3 packages not installed, using local storage');
+    return {
+      multerS3: null,
+      uuid: null
+    };
+  }
+};
 
-try {
-  multerS3 = (await import('multer-s3')).default;
-  uuid = (await import('uuid')).v4;
-  console.log('📦 S3 packages loaded successfully');
-} catch (error) {
-  console.log('📦 S3 packages not installed, using local storage');
-}
+const { multerS3, uuid } = await loadS3Packages();
 
 // AWS S3 Configuration
 const s3Client = new S3Client({
@@ -32,16 +41,20 @@ const s3Storage = multerS3 ? multerS3({
   key: function (req, file, cb) {
     // Extract company code and user info
     const companyCode = req.companyCode || 'unknown';
-    let userId = 'unknown';
     
-    try {
-      if (req.body.formData) {
-        const formData = JSON.parse(req.body.formData);
-        userId = formData.userId || req.user?.userId || 'unknown';
+    const getUserId = () => {
+      try {
+        if (req.body.formData) {
+          const formData = JSON.parse(req.body.formData);
+          return formData.userId || req.user?.userId || 'unknown';
+        }
+      } catch (e) {
+        return req.user?.userId || 'unknown';
       }
-    } catch (e) {
-      userId = req.user?.userId || 'unknown';
-    }
+      return 'unknown';
+    };
+    
+    const userId = getUserId();
     
     const fileExtension = path.extname(file.originalname);
     const uniqueId = uuid ? uuid() : Date.now();
@@ -99,17 +112,21 @@ const companyLogoS3Storage = multerS3 ? multerS3({
   bucket: BUCKET_NAME,
   key: function (req, file, cb) {
     // For company logos, use company code from form data
-    let companyCode = 'unknown';
-    
-    try {
-      if (req.body.companyCode) {
-        companyCode = req.body.companyCode;
-      } else if (req.body.company && JSON.parse(req.body.company).companyCode) {
-        companyCode = JSON.parse(req.body.company).companyCode;
+    const getCompanyCode = () => {
+      try {
+        if (req.body.companyCode) {
+          return req.body.companyCode;
+        } 
+        if (req.body.company && JSON.parse(req.body.company).companyCode) {
+          return JSON.parse(req.body.company).companyCode;
+        }
+      } catch (e) {
+        console.log('Could not extract company code from request body');
       }
-    } catch (e) {
-      console.log('Could not extract company code from request body');
-    }
+      return 'unknown';
+    };
+    
+    const companyCode = getCompanyCode();
     
     const fileExtension = path.extname(file.originalname);
     const uniqueId = uuid ? uuid() : Date.now();

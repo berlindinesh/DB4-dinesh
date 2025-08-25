@@ -50,37 +50,28 @@ const getCompanyConnection = async (companyCode) => {
         const dbName = `hrms_${companyCode.toLowerCase()}`;
         
         // Fix: Properly construct the connection URL
-        // Parse the MongoDB connection string correctly
-        let connectionString;
-        
-        if (URL.includes('mongodb+srv://')) {
-            // For MongoDB Atlas connections
-            // Format: mongodb+srv://username:password@cluster.mongodb.net/dbName?options
-            const baseUrl = URL.split('?')[0];
-            const queryParams = URL.split('?')[1] || '';
-            
-            // Remove any trailing slash from baseUrl and ensure no double slash before dbName
-            const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-            
-            // Check if the URL already includes a database name
-            if (cleanBaseUrl.includes('/mongodb.net/')) {
-                // Replace existing database name
-                connectionString = cleanBaseUrl.replace(/\/([^\/]+)$/, `/${dbName}?${queryParams}`);
+        const buildConnectionString = () => {
+            if (URL.includes('mongodb+srv://')) {
+                // For MongoDB Atlas connections
+                const baseUrl = URL.split('?')[0];
+                const queryParams = URL.split('?')[1] || '';
+                const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+                
+                if (cleanBaseUrl.includes('/mongodb.net/')) {
+                    return cleanBaseUrl.replace(/\/([^\/]+)$/, `/${dbName}?${queryParams}`);
+                }
+                return `${cleanBaseUrl}/${dbName}?${queryParams}`;
             } else {
-                // Add database name
-                connectionString = `${cleanBaseUrl}/${dbName}?${queryParams}`;
+                // For standard MongoDB connections
+                const urlParts = URL.split('?');
+                const baseUrl = urlParts[0].replace(/\/$/, '');
+                const queryParams = urlParts[1] || '';
+                const hostPart = baseUrl.split('/').slice(0, 3).join('/');
+                return `${hostPart}/${dbName}?${queryParams}`;
             }
-        } else {
-            // For standard MongoDB connections
-            // Format: mongodb://username:password@host:port/dbName?options
-            const urlParts = URL.split('?');
-            const baseUrl = urlParts[0].replace(/\/$/, '');
-            const queryParams = urlParts[1] || '';
-            
-            // Check if the URL already includes a database name after the host:port
-            const hostPart = baseUrl.split('/').slice(0, 3).join('/');
-            connectionString = `${hostPart}/${dbName}?${queryParams}`;
-        }
+        };
+        
+        const connectionString = buildConnectionString();
         
         console.log(`Creating new connection to ${dbName} for company ${companyCode}`);
         console.log(`Connection string: ${connectionString}`);
