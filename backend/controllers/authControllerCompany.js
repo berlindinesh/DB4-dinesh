@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import { markInvitationAccepted } from './invitationController.js';
 
 // Helper function to validate company status
-const validateCompanyStatus = async (companyCode) => {
+export const validateCompanyStatus = async (companyCode) => {
   const company = await Company.findOne({ 
     companyCode: companyCode.toUpperCase()
   });
@@ -72,7 +72,7 @@ const validateCompanyStatus = async (companyCode) => {
 };
 
 // Helper function to authenticate user in company database
-const authenticateCompanyUser = async (email, password, companyCode) => {
+export const authenticateCompanyUser = async (email, password, companyCode) => {
   const CompanyUserModel = await getUserModel(companyCode);
   const user = await CompanyUserModel.findOne({ 
     email: email.toLowerCase()
@@ -121,7 +121,7 @@ const authenticateCompanyUser = async (email, password, companyCode) => {
 };
 
 // Helper function to handle first login
-const handleFirstLogin = async (user, companyCode) => {
+export const handleFirstLogin = async (user, companyCode) => {
   if (!user.isFirstLogin) {
     user.lastLogin = new Date();
     user.lastModified = new Date();
@@ -149,7 +149,7 @@ const handleFirstLogin = async (user, companyCode) => {
 };
 
 // Helper function to authenticate main database user
-const authenticateMainUser = async (email, password, companyCode, company) => {
+export const authenticateMainUser = async (email, password, companyCode, company) => {
   const user = await MainUser.findOne({ 
     email: email.toLowerCase(), 
     companyCode: companyCode.toUpperCase() 
@@ -225,7 +225,7 @@ const authenticateMainUser = async (email, password, companyCode, company) => {
 };
 
 // Helper function to create user in company database
-const createCompanyUser = async (mainUser, companyCode) => {
+export const createCompanyUser = async (mainUser, companyCode) => {
   try {
     const CompanyUserModel = await getUserModel(companyCode);
     

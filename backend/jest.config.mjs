@@ -1,5 +1,9 @@
 export default {
   testEnvironment: 'node',
+  transform: {},
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1'
+  },
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
@@ -25,8 +29,6 @@ export default {
       statements: 20
     }
   },
-  testMatch: [
-    '**/tests/**/*.test.js'
-  ],
+  testMatch: ['**/tests/**/*.test.js'],
   testTimeout: 30000
 };
