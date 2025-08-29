@@ -1,3 +1,4 @@
+import React from 'react';
 import './App.css';
 import { Route, BrowserRouter, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -25,7 +26,7 @@ import { selectIsAuthenticated, selectAuthLoading , logoutUser } from './redux/a
 import ChangePassword from './screens/authScreens/ChangePassword.js';
 
 // Create a wrapper component to use hooks
-function AppContent() {
+export function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const loading = useSelector(selectAuthLoading);
   const dispatch = useDispatch();
