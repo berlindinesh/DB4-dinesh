@@ -66,7 +66,7 @@ export const createApplicantProfile = async (req, res) => {
       return res.status(400).json({
         error: 'Validation error',
         message: error.message,
-        details: Object.values(error.errors).map(err => err.message)
+        details: error.errors ? Object.values(error.errors).map(err => err.message) : []
       });
     }
     
