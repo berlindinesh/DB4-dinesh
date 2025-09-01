@@ -290,7 +290,11 @@ const ResignationReview = () => {
         {
           status: reviewStatus,
           reviewNotes: reviewNotes,
-          reviewedBy: `${currentUser.personalInfo.firstName} ${currentUser.personalInfo.lastName}`,
+          reviewedBy: currentUser?.personalInfo 
+            ? `${currentUser.personalInfo.firstName} ${currentUser.personalInfo.lastName}`
+            : currentUser?.firstName && currentUser?.lastName
+            ? `${currentUser.firstName} ${currentUser.lastName}`
+            : currentUser?.name || 'Admin',
           reviewedAt: new Date(),
         }
       );
