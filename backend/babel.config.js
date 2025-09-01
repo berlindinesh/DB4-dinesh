@@ -1,8 +1,8 @@
 export default {
-    presets: [
-      ['@babel/preset-env', { 
-        targets: { node: 'current' },
-        modules: false
-      }]
-    ]
-  };
+  presets: [
+    ['@babel/preset-env', {
+      targets: { node: 'current' },
+      modules: false
+    }]
+  ]
+};
