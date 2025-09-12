@@ -37,7 +37,7 @@ jest.unstable_mockModule('../middleware/companyAuth.js', () => ({
 }));
 
 // Import router after mocks
-const router = (await import('../routes/assetHistoryRoutes.js')).default;
+const router = (await import('../routes/assetHistory.js')).default;
 
 // Setup test app
 const app = express();
