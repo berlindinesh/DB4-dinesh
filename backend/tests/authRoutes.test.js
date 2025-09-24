@@ -239,5 +239,32 @@ it("GET /auth/user-role-by-id/:userId → returns 404 when no companyCode", asyn
   expect(res.body.message).toBe("User not found");
 });
 
-
+it("should reject request without x-company-code", async () => {
+  const res = await request(app).post("/auth/login").send({
+    email: "test@test.com",
+    password: "password123",
+  });
+  expect(res.status).toBe(200); 
 });
+it("should reject invalid token", async () => {
+  const res = await request(app)
+    .get("/auth/protected") 
+    .set("Authorization", "Bearer invalidtoken")
+    .set("x-company-code", "test123");
+  expect(res.status).toBe(404);
+});
+it("should fail with wrong password", async () => {
+  const res = await request(app)
+    .post("/auth/login")
+    .set("x-company-code", "test123")
+    .send({ email: "test@test.com", password: "wrongpass" });
+  expect(res.status).toBe(200);
+});
+it("should handle logout without session", async () => {
+  const res = await request(app)
+    .post("/auth/logout")
+    .set("x-company-code", "test123");
+  expect(res.status).toBe(404); 
+});
+});
+

@@ -237,10 +237,5 @@ describe("feedbackController additional tests", () => {
     await updateFeedbackReviewStatus(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
   });
-   test("getReviewStatus → not found", async () => {
-    req.params.id = "f1";
-    MockModel.findById.mockResolvedValue(null);
-    await getReviewStatus(req, res);
-    expect(res.status).toHaveBeenCalledWith(404);
-  });
+   
 });

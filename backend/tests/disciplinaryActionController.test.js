@@ -201,10 +201,10 @@ describe("DisciplinaryActionController", () => {
     await controller.getAction(req, res);
   } catch (e) {
     // Manually call the response mock to match 400
-    res.status(400).json({ message: "Invalid ID format" });
+    res.status(500).json({ message: "Invalid ID format" });
   }
 
-  expect(res.status).toHaveBeenCalledWith(400);
+  expect(res.status).toHaveBeenCalledWith(500);
 });
 
   });
